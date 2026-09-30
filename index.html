@@ -162,7 +162,9 @@ input.big{font-family:var(--f-num);font-size:1.5rem;padding:10px 12px;text-align
 .cambig svg{width:44px;height:44px}
 .nfres{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
 .nfres b{font-family:var(--f-display);font-size:1.3rem}
-.hint.apel{margin:6px 0 -2px}.nfres span{color:var(--muted);font-size:.88rem}
+.hint.apel{margin:-4px 0 4px;font-size:.78rem}
+.pz.comnota{border-bottom:0;padding-bottom:2px}
+.pz select.falta{border-color:var(--warn);color:var(--warn)}.nfres span{color:var(--muted);font-size:.88rem}
 .compbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 12px;border-radius:8px;background:var(--warn-soft);color:var(--fg)}
 
 /* tabelas */
@@ -381,6 +383,12 @@ const PROD=[
  {c:'2003',n:'Linguiça toscana',g:'Suíno',peca:'outros',cx:false,custo:15.9,preco:23.9,d:6},
  {c:'3001',n:'Coxa e sobrecoxa',g:'Frango',peca:'outros',cx:false,custo:9.9,preco:14.9,d:8},
  {c:'3002',n:'Peito de frango',g:'Frango',peca:'outros',cx:false,custo:13.5,preco:19.9,d:6},
+ /* miúdos: códigos do PDV (CB ... KG) */
+ {c:'33714',n:'Fígado',g:'Bovino',peca:'outros',miudo:true,cx:false,custo:12.45,preco:18.99,d:0},
+ {c:'33715',n:'Coração',g:'Bovino',peca:'outros',miudo:true,cx:false,custo:0,preco:0,d:0},
+ {c:'33718',n:'Mocotó',g:'Bovino',peca:'outros',miudo:true,cx:false,custo:10.18,preco:15.98,d:0},
+ {c:'33719',n:'Bucho',g:'Bovino',peca:'outros',miudo:true,cx:false,custo:0,preco:0,d:0},
+ {c:'34120',n:'Rabo',g:'Bovino',peca:'outros',miudo:true,cx:false,custo:21.91,preco:39.99,d:0},
 ];
 PROD.forEach(p=>{p.bov=p.g==='Bovino';p.sub=p.g==='Bovino'?'Carnes bovinas':p.g});
 const PCX={c:'CX',n:'Caixas fechadas',g:'Bovino',bov:true,peca:null,pecas:[],cx:false,custo:0,preco:0,d:0,sistema:true}; /* pesagem de caixa sem abrir */
@@ -460,7 +468,9 @@ const PERFIS={conferente:'Conferente',gerente:'Gerente',gestor:'Gestor'};
 const KEY='acougue-conferencia-v5';
 const MES0=todayISO().slice(0,7);
 function newDraft(loja){return{loja:loja||1,rec:null,chave:'',nf:'',forn:'',data:todayISO(),hora:'',fotos:[],pes:[],grupo:null,modo:'caixa',cont:[],prod:null,peso:'',tara:'0',comp:null}}
-function newRf(loja){return{loja:loja||1,via:null,chave:'',nf:'',forn:'',data:todayISO(),fotos:[],tr:'',di:'',co:'',out:[{c:'',kg:''}],link:null,edit:null}}
+function newRf(loja){return{loja:loja||1,via:null,chave:'',nf:'',forn:'',data:todayISO(),fotos:[],out:linhasPadrao(),link:null,edit:null}}
+/* pesos da nota: uma linha por item (peça inteira "G:traseiro" ou produto do cadastro), na ordem da nota */
+const linhasPadrao=()=>['traseiro','dianteiro','costela'].map(g=>({c:'G:'+g,kg:''}));
 function newNForm(loja){return{loja:loja||1,nf:'',forn:'',data:todayISO(),kg:'',v:''}}
 function newCd(loja){return{loja:loja||1,data:todayISO(),modo:'app',pes:[],prod:null,peso:'',linhas:[{c:'',kg:''}]}}
 const S={role:'conferente',loja:1,tab:'nf',openId:null,filtro:'todas',nfiltro:'todas',mesC:MES0,mesN:MES0,bal:{a:CONTS[0],b:CONTS[2]},set:structuredClone(DEF_SET),
@@ -679,6 +689,7 @@ const chaveApel=desc=>limpa(desc).trim().slice(0,120);
 function matchProd(desc){const a=S.apel?.[chaveApel(desc)]?.c;if(a&&PM[a])return a;const d=limpa(desc);return prodList().filter(p=>!p.sistema).filter(p=>p.n.length>3&&!p.inteira&&!/^PC/.test(p.c)).sort((a,b)=>b.n.length-a.n.length).find(p=>d.includes(limpa(p.n)))?.c||null}
 function prodsDoGrupo(g){const ps=prodList();
   if(g==='caixaria')return ps.filter(p=>p.cx);
+  if(g==='miudos'&&ps.some(p=>p.miudo))return ps.filter(p=>p.miudo);
   if(g==='outros'||!GRB[g])return ps.filter(p=>!pecasOf(p).length);
   return ps.filter(p=>pecasOf(p).includes(g))}
 const grupoPadrao=c=>{const p=PM[c];if(!p)return 'outros';const ps=pecasOf(p);if(ps.length)return ps[0];return p.cx?'caixaria':'outros'};
@@ -1111,6 +1122,10 @@ function vDet(){
 }
 
 /* ---------- NOTA FISCAL: receber a nota na doca (todos) ---------- */
+const optsLinha=sel=>{const ps=prodList().filter(p=>!p.sistema), o=(p,t)=>`<option value="${p}"${sel===p?' selected':''}>${esc(t)}</option>`;
+  return `<option value="">Escolha o produto</option>`+['traseiro','dianteiro','costela'].map(g=>o('G:'+g,GRB[g])).join('')
+    +`<optgroup label="Miúdos">${ps.filter(p=>p.miudo).map(p=>o(p.c,p.n)).join('')}${o('MIUDO','Outros miúdos')}</optgroup>`
+    +`<optgroup label="Cortes e outros">${ps.filter(p=>!p.miudo&&(p.cx||!pecasOf(p).length)).map(p=>o(p.c,p.n)).join('')}</optgroup>`};
 const optsOutros=sel=>`<option value="">Outro item</option>`+[...prodList().filter(p=>p.cx||!pecasOf(p).length),PM.MIUDO].map(p=>`<option value="${p.c}"${sel===p.c?' selected':''}>${esc(p.n)}</option>`).join('');
 function vNF(){
   const f=S.rf, g=S.role!=='conferente', ed=f.edit?S.recs.find(r=>r.id===f.edit):null;
@@ -1125,8 +1140,7 @@ function vNF(){
   const pesoIn=(id,nome,v)=>`<label class="pz" for="${id}"><b>${nome}</b><input id="${id}" inputmode="decimal" placeholder="0,000" value="${esc(v)}"><span>kg</span></label>`;
   const pesos=noSis?`<div class="okline"><span class="pill ok">Esta nota já está no sistema</span></div>`
     :`<div class="field"><span class="lbl">Pesos da nota fiscal</span>
-      ${pesoIn('rtr','Traseiro',f.tr)}${pesoIn('rdi','Dianteiro',f.di)}${pesoIn('rco','Costela',f.co)}
-      ${f.out.map((o,i)=>`${o.desc?`<p class="hint apel">Na nota: <b>${esc(o.desc)}</b>${o.c?'':' · escolha o produto'}</p>`:''}<div class="pz"><select id="ro-c-${i}" aria-label="Outro item">${optsOutros(o.c)}</select><input id="ro-kg-${i}" inputmode="decimal" placeholder="0,000" value="${esc(o.kg)}" aria-label="Peso em kg"><span>kg</span>${f.out.length>1?`<button type="button" class="x" data-act="ro-rm" data-i="${i}" aria-label="Remover item">×</button>`:''}</div>`).join('')}
+      ${f.out.map((o,i)=>`<div class="pz${o.desc?' comnota':''}"><select id="ro-c-${i}" aria-label="Item da nota"${o.c?'':' class="falta"'}>${optsLinha(o.c)}</select><input id="ro-kg-${i}" inputmode="decimal" placeholder="0,000" value="${esc(o.kg)}" aria-label="Peso em kg"><span>kg</span>${f.out.length>1?`<button type="button" class="x" data-act="ro-rm" data-i="${i}" aria-label="Remover item">×</button>`:''}</div>${o.desc?`<p class="hint apel">${i+1}. ${esc(o.desc)}${o.c?'':' · <b>escolha o produto</b>'}</p>`:''}`).join('')}
       <button type="button" class="btn sm" data-act="ro-add" style="align-self:flex-start">+ Outro item</button></div>`;
   const recebidas=S.recs.filter(r=>(!S.loja||r.loja===S.loja)&&(g||r.uid===S.user||!confDoRec(r))).sort((a,b)=>(b.data+b.hora).localeCompare(a.data+a.hora)).slice(0,30);
   const aguard=recebidas.filter(r=>!confDoRec(r)).length;
@@ -1389,8 +1403,9 @@ function applyChave(ch){
 /* pesos digitados da DANFE: peças fixas + outros itens escolhendo a carne */
 function digDoForm(f){
   const dig=[];
-  [['traseiro',f.tr],['dianteiro',f.di],['costela',f.co]].forEach(([g,v])=>{const k=num(v);if(k>0)dig.push({g,kg:r3(k)})});
-  f.out.forEach(o=>{const k=num(o.kg);if(o.c&&k>0)dig.push({g:o.c==='MIUDO'?'outros':(PM[o.c]?.cx?'caixaria':'outros'),c:o.c,kg:r3(k)})});
+  f.out.forEach(o=>{const k=num(o.kg);if(!o.c||!(k>0))return;
+    if(o.c.startsWith('G:'))dig.push({g:o.c.slice(2),kg:r3(k)});
+    else dig.push({g:o.c==='MIUDO'?'outros':(PM[o.c]?.cx?'caixaria':'outros'),c:o.c,kg:r3(k)})});
   return dig;
 }
 function addPes(){
@@ -1431,21 +1446,18 @@ function aplicarLeitura(n,modelo){
   if(n.chave)f.chave=n.chave;
   const F=FCNPJ[n.emitente_cnpj];
   if(F)f.forn=F.id;
-  const soma={traseiro:0,dianteiro:0,costela:0}, out={}; let semCarne=0, somaKg=0;
+  const linhas=[]; let semCarne=0, somaKg=0;
   (n.itens||[]).forEach(it=>{
     if(it.unidade&&!/KG/.test(it.unidade))return;
     somaKg+=it.quantidade;
-    const item={desc:it.descricao,ncm:it.ncm}, g=classNF(item);
-    if(soma[g]!=null){soma[g]+=it.quantidade;return}
+    const ap=S.apel?.[chaveApel(it.descricao)]?.c, g=classNF({desc:it.descricao,ncm:it.ncm});
     const miudo=/^0206|^0504/.test(String(it.ncm||''))||/miud|figado|mocoto|bucho|rumen|coracao|rabo|lingua|tripa/.test(norm(it.descricao));
-    const c=matchProd(it.descricao)||(miudo?'MIUDO':'');
-    const k=c||('?'+it.descricao);if(!c)semCarne++; /* sem cadastro: vira linha para escolher o produto, e o app aprende */
-    (out[k]||(out[k]={c,desc:c?'':it.descricao,kg:0})).kg+=it.quantidade;
+    const c=ap&&(ap.startsWith('G:')||PM[ap])?ap:['traseiro','dianteiro','costela'].includes(g)?'G:'+g:(matchProd(it.descricao)||(miudo?'MIUDO':''));
+    if(!c)semCarne++; /* sem cadastro: a linha pede o produto, e o app aprende */
+    linhas.push({c,kg:fmt(it.quantidade),desc:it.descricao});
   });
-  f.tr=soma.traseiro?fmt(soma.traseiro):'';f.di=soma.dianteiro?fmt(soma.dianteiro):'';f.co=soma.costela?fmt(soma.costela):'';
-  const linhas=Object.values(out).map(o=>({c:o.c,kg:fmt(o.kg),...(o.desc?{desc:o.desc}:{})}));
   if(!F&&/^\d{14}$/.test(n.emitente_cnpj||'')){f.forn='c'+n.emitente_cnpj;f.fornNome=n.emitente_nome||('CNPJ '+fmtCNPJ(n.emitente_cnpj))} /* fornecedor sem cadastro: usa o da nota */
-  f.out=linhas.length?linhas:[{c:'',kg:''}];
+  f.out=linhas.length?linhas:linhasPadrao();
   f.falhou=false;f.corr=false;
   f.ia={modelo,soma:r3(somaKg),pl:+n.peso_liquido||0,emitente:F?'':`${n.emitente_nome} (CNPJ ${fmtCNPJ(n.emitente_cnpj)})`,semCarne,itens:(n.itens||[]).length};
 }
@@ -1516,9 +1528,8 @@ const A={
       toast(dig.length?`Nota recebida com ${dig.length} peso(s) digitado(s). Toque em Conferir quando for pesar.`:'Nota recebida. Toque em Conferir quando for pesar.')}
     S.rf=newRf(f.loja);save();render()},
   'rec-edit':el=>{const r=S.recs.find(x=>x.id===el.dataset.id);if(!r)return;
-    const fx=k=>{const v=(r.dig||[]).filter(d=>d.g===k&&!d.c).reduce((s,d)=>s+d.kg,0);return v?String(v).replace('.',','):''};
-    const out=(r.dig||[]).filter(d=>d.c).map(d=>({c:d.c,kg:String(d.kg).replace('.',',')}));
-    S.rf={...newRf(r.loja),edit:r.id,via:r.dig?'manual':'foto',chave:r.chave||'',nf:r.nf,forn:r.forn,data:r.data,fotos:[...(r.fotos||[])],tr:fx('traseiro'),di:fx('dianteiro'),co:fx('costela'),out:out.length?out:[{c:'',kg:''}]};
+    const out=(r.dig||[]).map(d=>({c:d.c||('G:'+d.g),kg:String(d.kg).replace('.',',')}));
+    S.rf={...newRf(r.loja),edit:r.id,via:r.dig?'manual':'foto',chave:r.chave||'',nf:r.nf,forn:r.forn,data:r.data,fotos:[...(r.fotos||[])],out:out.length?out:linhasPadrao()};
     nfOpen().rec=true;save();render();scrollTo(0,0)},
   'rec-del':el=>{S.recDel=el.dataset.id;render()},
   'rec-del-no':()=>{S.recDel=null;render()},
@@ -1679,7 +1690,7 @@ document.addEventListener('change',e=>{const t=e.target,id=t.id||'';
     S.prods[p.c]=p;save();return}
   if((m=id.match(/^cl-(c|kg)-(\d+)$/))){const l=S.cd.linhas[+m[2]];if(!l)return;l[m[1]]=t.value;save();document.getElementById('cres').innerHTML=cresHTML();return}
   if((m=id.match(/^ro-(c|kg)-(\d+)$/))){const o=S.rf.out[+m[2]];if(!o)return;o[m[1]]=t.value;
-    if(m[1]==='c'&&o.desc&&t.value){S.apel[chaveApel(o.desc)]={c:t.value,desc:o.desc,forn:S.rf.forn,por:quemSou(),em:nowBR()};toast(`Aprendido: “${o.desc}” = ${PM[t.value]?.n||t.value}.`)}
+    if(m[1]==='c'&&o.desc&&t.value){S.apel[chaveApel(o.desc)]={c:t.value,desc:o.desc,forn:S.rf.forn,por:quemSou(),em:nowBR()};toast(`Aprendido: “${o.desc}” = ${t.value.startsWith('G:')?GRB[t.value.slice(2)]:PM[t.value]?.n||t.value}.`)}
     save();render();return}
   if(id.startsWith('n-')){const k=id.slice(2);S.nForm[k]=k==='nf'?t.value.replace(/\D/g,'').replace(/^0+/,''):t.value;return}
   if(id.startsWith('u-')){const k=id.slice(2);S.uForm[k]=t.value;if(k==='perfil')render();return}
@@ -1696,7 +1707,6 @@ document.addEventListener('input',e=>{const t=e.target;let m;
   else if(t.id==='peso'||t.id==='tara'){S.draft[t.id]=t.value;document.getElementById('lcd').innerHTML=lcdHTML();save()}
   else if(t.id==='cpeso'){S.cd.peso=t.value;document.getElementById('clcd').innerHTML=clcdHTML();save()}
   else if(t.id==='rchave'){const v=t.value.replace(/\D/g,'');if(v.length===44&&v!==S.rf.chave){applyChave(v);render()}}
-  else if(/^r(tr|di|co)$/.test(t.id)){S.rf[t.id.slice(1)]=t.value;save()}
   else if(/^ro-kg-\d+$/.test(t.id)){const o=S.rf.out[+t.id.split('-')[2]];if(o){o.kg=t.value;save()}}
 });
 document.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const t=e.target;
