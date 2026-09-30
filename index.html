@@ -1120,7 +1120,7 @@ function vNF(){
   const recebHTML=()=>`${lojaLinha}${escolha}${!via?'':via==='xml'?formXML:formNota()}`;
   const fotoCampo=`<div class="field"><span class="lbl">Foto da DANFE</span>
       <div class="fotos">${fotos}<label class="foto-add"><input id="rfotos" type="file" accept="image/*" capture="environment" multiple class="vh">+ Foto</label></div>
-      ${f.lendo?'<p><span class="pill warn">Lendo a nota…</span></p>':f.ia?`<p><span class="pill ok">Nota lida pela foto · confira os dados</span></p>${f.ia.emitente?`<p class="hint">Fornecedor lido: ${esc(f.ia.emitente)}. Não está cadastrado; escolha na lista.</p>`:''}${f.ia.semCarne?`<p class="hint">${f.ia.semCarne} item(ns) da nota não foram reconhecidos; confira os pesos.</p>`:''}`:''}</div>`;
+      ${LENDO===f?'<p><span class="pill warn">Lendo a nota…</span></p>':f.ia?`<p><span class="pill ok">Nota lida pela foto · confira os dados</span></p>${f.ia.emitente?`<p class="hint">Fornecedor lido: ${esc(f.ia.emitente)}. Não está cadastrado; escolha na lista.</p>`:''}${f.ia.semCarne?`<p class="hint">${f.ia.semCarne} item(ns) da nota não foram reconhecidos; confira os pesos.</p>`:''}`:''}</div>`;
   const formNota=()=>`${via==='foto'?fotoCampo:''}
     <div class="grid2">
       <div class="field"><label for="rnf">Nº da nota</label><input id="rnf" inputmode="numeric" value="${esc(f.nf)}"></div>
@@ -1129,7 +1129,7 @@ function vNF(){
     </div>
     ${via==='foto'?'':fotoCampo}
     ${via==='manual'||f.ia?pesos:''}
-    <div class="inrow"><button type="button" class="btn pri" data-act="rsave">${ed?'Salvar correção':'Salvar nota recebida'}</button>${ed?'<button type="button" class="btn" data-act="rcancel">Cancelar</button>':''}</div>`;
+    <div class="inrow"><button type="button" class="btn pri" data-act="rsave"${LENDO===f?' disabled':''}>${LENDO===f?'Lendo a nota…':ed?'Salvar correção':'Salvar nota recebida'}</button>${ed?'<button type="button" class="btn" data-act="rcancel">Cancelar</button>':''}</div>`;
   const listaHTML=()=>`<div class="rows">${recebidas.length?recebidas.map(r=>{const c=confDoRec(r),trav=r.lock||!!c;
       return `<div class="row static"><div class="row-main"><b>NF ${esc(r.nf)} · ${esc(fnome(r))}</b><span>${S.loja?'':esc(lojaNome(r.loja))+' · '}${dBR(r.data)} ${r.hora} · ${esc(r.por)}${g?` · ${r.dig?'pesos digitados':'às cegas'} · ${notaDe(r)?'XML ✓':'aguardando XML'}`:''}</span></div>
       <div class="row-side">${S.recDel===r.id?`<span class="hint">Excluir esta nota?</span><div class="inrow"><button type="button" class="btn sm" data-act="rec-del-no">Não</button><button type="button" class="btn sm pri" data-act="rec-del-ok" data-id="${r.id}">Excluir</button></div>`
@@ -1373,13 +1373,13 @@ function addPeca(){
 }
 function readImg(file,max=900,q=.7){return new Promise(res=>{const fr=new FileReader();fr.onload=()=>{const img=new Image();img.onload=()=>{const sc=Math.min(1,max/Math.max(img.width,img.height)),cv=document.createElement('canvas');cv.width=Math.round(img.width*sc);cv.height=Math.round(img.height*sc);cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);res(cv.toDataURL('image/jpeg',q))};img.onerror=()=>res(null);img.src=fr.result};fr.onerror=()=>res(null);fr.readAsDataURL(file)})}
 /* leitura da DANFE pela foto (função ler-danfe no servidor, com o Gemini) */
-async function lerDanfe(dataUrl){
-  const f=S.rf;
+let LENDO=null; /* formulário cuja foto está sendo lida; resultado que chega depois de salvar/cancelar é descartado */
+async function lerDanfe(f,dataUrl){
   try{if(!dataUrl)throw new Error('Não consegui abrir a foto.');
-    const r=await fn('ler-danfe',{imagem:dataUrl});aplicarLeitura(r.nota,r.modelo);
+    const r=await fn('ler-danfe',{imagem:dataUrl});if(S.rf!==f)return;aplicarLeitura(r.nota,r.modelo);
     toast('Nota lida. Confira os dados e salve.')}
-  catch(e){toast(e.message||'Não consegui ler a foto. Digite os dados.')}
-  finally{f.lendo=false;save();render()}
+  catch(e){if(S.rf===f)toast(e.message||'Não consegui ler a foto. Digite os dados.')}
+  finally{if(LENDO===f)LENDO=null;save();render()}
 }
 function aplicarLeitura(n,modelo){
   const f=S.rf, fmt=v=>String(r3(v)).replace('.',',');
@@ -1449,6 +1449,7 @@ const A={
   instalar:async()=>{if(!INSTALL)return;INSTALL.prompt();const r=await INSTALL.userChoice.catch(()=>null);INSTALL=null;if(r?.outcome==='accepted')toast('App instalado. Abra pelo ícone na tela do celular.');render()},
   'inst-ok':()=>{try{localStorage.setItem('acougue-inst-ok','1')}catch(e){}render()},
   rsave:()=>{const f=S.rf;
+    if(LENDO===f){toast('Aguarde terminar a leitura da foto.');return}
     if(!f.nf||!f.forn){toast('Informe o número da nota e o fornecedor.');return}
     const via=f.via||(f.edit?'manual':'foto');
     const noSis=notaDe({loja:f.loja,forn:f.forn,nf:f.nf}), dig=noSis||(via!=='manual'&&!f.ia)?[]:digDoForm(f);
@@ -1565,8 +1566,8 @@ const C={
   rnf:t=>{S.rf.nf=t.value.replace(/\D/g,'').replace(/^0+/,'');save();render()},
   rchave:t=>{const v=t.value.replace(/\D/g,'');if(v!==S.rf.chave){applyChave(v);render()}},
   rfotos:async t=>{const fs=[...t.files];if(!fs.length)return;
-    const ler=S.rf.via==='foto'&&!S.rf.edit&&!S.rf.ia;
-    if(ler){S.rf.lendo=true;render();lerDanfe(await readImg(fs[0],2000,.82))}else toast('Enviando foto…');
+    const ler=S.rf.via==='foto'&&!S.rf.edit&&!S.rf.ia&&LENDO!==S.rf;
+    if(ler){const f=LENDO=S.rf;render();lerDanfe(f,await readImg(fs[0],2000,.82))}else toast('Enviando foto…');
     for(const f of fs){const u=await readImg(f);if(u)S.rf.fotos.push(await subirFoto(u,S.rf.loja))}save();render();if(!ler)toast(fs.length>1?'Fotos salvas.':'Foto salva.')},
   xml:async t=>{const f=t.files[0];if(!f)return;
     try{const x=parseXML(await f.text()),c=getConf(S.openId);
