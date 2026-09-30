@@ -407,7 +407,7 @@ const PROD=[
  {c:'52743',n:'Chambari',g:'Bovino',peca:'dianteiro',pecas:['dianteiro','traseiro'],feito:true,cx:false,custo:36.88,preco:34.69,d:0},
  {c:'37608',n:'Corte americano',g:'Bovino',peca:'dianteiro',feito:true,cx:false,custo:12.89,preco:29.99,d:0},
  {c:'1012',n:'Filé mignon',g:'Bovino',peca:'traseiro',cx:true,custo:0,preco:0,d:0},
- {c:'1013',n:'Cordão filé mignon',g:'Bovino',peca:'traseiro',cx:true,custo:0,preco:0,d:0},
+ {c:'1013',n:'Cordão do filé mignon',g:'Bovino',peca:'traseiro',cx:true,custo:0,preco:0,d:0},
  {c:'1014',n:'Paleta',g:'Bovino',peca:'dianteiro',cx:true,custo:0,preco:0,d:0},
  {c:'1015',n:'Peito',g:'Bovino',peca:'dianteiro',cx:true,custo:0,preco:0,d:0},
  {c:'52744',n:'Charque',g:'Bovino',peca:'outros',cx:false,custo:37.3,preco:58.99,d:0},
@@ -434,15 +434,16 @@ const prodList=()=>Object.values(PM).filter(p=>!p.sistema).sort((a,b)=>(b.inteir
 const pecasOf=p=>p?.pecas||(p?.peca&&p.peca!=='outros'?[p.peca]:[]);
 const nomePes=x=>x.c==='CX'?`Caixa ${x.nc||''}${x.cont?.length?' · '+x.cont.map(c=>PM[c]?.n||c).join(' / '):''}`:(PM[x.c]?.n||x.c);
 const lojaModo=id=>S.lojas.find(l=>l.id===id)?.modo||'ambos';
-const FORN=[
+/* fornecedores: cadastro em Ajustes → Fornecedores (fica em S.set.forns); estes dois vêm prontos */
+const DEF_FORN=[
  {id:'kr',cnpj:'10348616000101',nome:'Frigorífico Krause',g:'Bovino'},
- {id:'cc',cnpj:'05012512000191',nome:'Frigorífico Cacoal',g:'Bovino'},
- {id:'bf',cnpj:'21456987000132',nome:'Frigorífico Boi Forte (exemplo)',g:'Bovino'},
- {id:'vv',cnpj:'32587410000154',nome:'Frigorífico Vale Verde (exemplo)',g:'Bovino'},
- {id:'ss',cnpj:'43698521000176',nome:'Suínos do Sul (exemplo)',g:'Suíno'},
- {id:'as',cnpj:'54709632000198',nome:'Avícola Serra (exemplo)',g:'Frango'},
+ {id:'cc',cnpj:'05012512000191',nome:'Frigocal (Frigorífico Cacoal)',g:'Bovino'},
 ];
-const FM=Object.fromEntries(FORN.map(f=>[f.id,f])), FCNPJ=Object.fromEntries(FORN.map(f=>[f.cnpj,f]));
+const FORN=[], FM={}, FCNPJ={};
+function refazForn(){const l=S.set?.forns?.length?S.set.forns:DEF_FORN;
+  FORN.length=0;l.forEach(f=>FORN.push(f));FORN.sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  for(const k in FM)delete FM[k];for(const k in FCNPJ)delete FCNPJ[k];
+  FORN.forEach(f=>{FM[f.id]=f;if(f.cnpj)FCNPJ[f.cnpj]=f})}
 const ENTREGAS=[
  {f:'bf',wd:[1],cob:7,cods:['1001','1002','1003','1004','1005','1006','1007','1009']},
  {f:'vv',wd:[4],cob:7,cods:['1008','1010','1011']},
@@ -499,7 +500,7 @@ function gerar(){
 const G=gerar();
 
 /* ---------- estado ---------- */
-const DEF_SET={tolAt:3,tolCrit:6,perdaEsp:{traseiro:25,dianteiro:25,costela:0,caixaria:0,outros:0},taras:[{n:'Caixa plástica',kg:.9},{n:'Gancho',kg:1.5}],confPesos:true,pecas:[...GR.map(g=>({...g})),{k:'miudos',n:'Miúdos'}],perdaAt:25,perdaCrit:30,zap:{1:'',2:'',3:'',4:'',5:'',dir:''}};
+const DEF_SET={tolAt:3,tolCrit:6,perdaEsp:{traseiro:25,dianteiro:25,costela:0,caixaria:0,outros:0},taras:[{n:'Caixa plástica',kg:.9},{n:'Gancho',kg:1.5}],confPesos:true,forns:DEF_FORN.map(f=>({...f})),pecas:[...GR.map(g=>({...g})),{k:'miudos',n:'Miúdos'}],perdaAt:25,perdaCrit:30,zap:{1:'',2:'',3:'',4:'',5:'',dir:''}};
 const PERFIS={conferente:'Conferente',gerente:'Gerente',gestor:'Gestor'};
 const KEY='acougue-conferencia-v5';
 const MES0=todayISO().slice(0,7);
@@ -515,7 +516,7 @@ const S={role:'conferente',loja:1,tab:'nf',openId:null,filtro:'todas',nfiltro:'t
   lg:{modo:'entrar',usuario:'',erro:'',busy:false},boot:true};
 const curUser=()=>S.users.find(u=>u.id===S.user)||null;
 function applyUser(){const u=curUser();if(!u){S.user=null;return}S.role=u.perfil;if(u.perfil!=='gestor')S.loja=u.loja;else if(S.loja==null)S.loja=0}
-const mergeSet=d=>{const s={...structuredClone(DEF_SET),...(d||{})};s.perdaEsp={...DEF_SET.perdaEsp,...(d?.perdaEsp||{})};s.zap={...DEF_SET.zap,...(d?.zap||{})};if(!Array.isArray(s.taras))s.taras=structuredClone(DEF_SET.taras);if(!Array.isArray(s.pecas)||!s.pecas.length)s.pecas=structuredClone(DEF_SET.pecas);return s};
+const mergeSet=d=>{const s={...structuredClone(DEF_SET),...(d||{})};s.perdaEsp={...DEF_SET.perdaEsp,...(d?.perdaEsp||{})};s.zap={...DEF_SET.zap,...(d?.zap||{})};if(!Array.isArray(s.taras))s.taras=structuredClone(DEF_SET.taras);if(!Array.isArray(s.pecas)||!s.pecas.length)s.pecas=structuredClone(DEF_SET.pecas);if(!Array.isArray(s.forns)||!s.forns.length)s.forns=structuredClone(DEF_SET.forns);return s};
 
 /* ---------- sincronização com o servidor ----------
    Cada nota recebida, conferência, contagem etc. é um documento na tabela "registros".
@@ -721,7 +722,7 @@ function resumo(c){const m={};c.pes.forEach(p=>{const k=m[p.c]||(m[p.c]={c:p.c,n
 const totalKg=c=>r3(c.pes.reduce((s,p)=>s+p.b-p.t,0));
 /* compara nomes ignorando acento, hífen e pontuação ("CONTRA FILE" = "Contra-filé") */
 const limpa=s=>' '+norm(s).replace(/[^a-z0-9]+/g,' ').trim()+' ';
-const chaveApel=desc=>limpa(desc).trim().slice(0,120);
+const chaveApel=desc=>limpa(String(desc??'').replace(/\s*-\s*\d+[,.]\d+\s*$/,'')).trim().slice(0,120); /* sem o nº de peças do fim ("- 3,00"), que muda a cada nota */
 function matchProd(desc){const a=S.apel?.[chaveApel(desc)]?.c;if(a&&PM[a])return a;const d=limpa(desc);return prodList().filter(p=>!p.sistema).filter(p=>p.n.length>3&&!p.inteira&&!/^PC/.test(p.c)).sort((a,b)=>b.n.length-a.n.length).find(p=>d.includes(limpa(p.n)))?.c||null}
 function prodsDoGrupo(g){const ps=prodList().filter(p=>!p.feito);
   if(g==='caixaria')return ps.filter(p=>p.cx);
@@ -1205,6 +1206,7 @@ function vNF(){
   else if(est==='lida'){const falta=!f.nf||!f.forn;
     recCorpo=`<div class="nfres"><b>NF ${esc(f.nf||'—')}</b><span>${esc(FM[f.forn]?.nome||f.fornNome||'Fornecedor não reconhecido')} · ${f.fotos.length} folha${f.fotos.length===1?'':'s'}</span></div>
     ${!f.forn&&f.ia.emitente?`<p class="hint">Lido na nota: ${esc(f.ia.emitente)}. Escolha o fornecedor na lista.</p>`:''}
+    ${f.fornNome&&!FM[f.forn]?`<p class="hint">Fornecedor ainda não cadastrado.${S.role==='gestor'?' <button type="button" class="btn sm" data-act="forn-novo">Cadastrar fornecedor</button>':''}</p>`:''}
     ${f.corr||falta?campos():vp?pesos:''}${somaOk()}
     <div class="inrow"><button type="button" class="btn pri" data-act="rsave">Confirmar</button>${f.corr||falta?'':'<button type="button" class="btn" data-act="rcorr">Corrigir dados</button>'}${limpar}</div>`}
   else recCorpo=`${f.falhou?`<p><span class="pill warn">Não consegui ler a foto. Digite os dados.</span></p>`:''}
@@ -1347,6 +1349,13 @@ function vAju(){
     <button type="button" class="btn" data-act="tara-add" style="align-self:flex-start">+ Adicionar tara</button>
     <p class="hint">O conferente toca no botão da tara. O campo livre continua na tela; quando ele digita um valor diferente destes, a pesagem fica marcada como “tara digitada”.</p>
   </section>
+  <section class="card"><div class="card-h"><h2>Fornecedores</h2><span class="tag">${S.set.forns.length}</span></div>
+    <div class="tw"><table class="t mt"><thead><tr><th>Nome</th><th>CNPJ</th><th></th></tr></thead><tbody>
+      ${S.set.forns.map((x,i)=>`<tr><td><input id="forn-nome-${i}" value="${esc(x.nome)}" aria-label="Nome do fornecedor"></td><td><input id="forn-cnpj-${i}" inputmode="numeric" value="${esc(fmtCNPJ(x.cnpj))}" placeholder="00.000.000/0000-00" aria-label="CNPJ"></td><td><button type="button" class="btn sm ghost" data-act="forn-rm" data-i="${i}" aria-label="Remover fornecedor">×</button></td></tr>`).join('')}
+    </tbody></table></div>
+    <button type="button" class="btn" data-act="forn-add" style="align-self:flex-start">+ Adicionar fornecedor</button>
+    <p class="hint">Com o CNPJ, a leitura da foto reconhece o fornecedor sozinha.</p>
+  </section>
   <section class="card"><div class="card-h"><h2>Recebimento</h2></div>
     <label class="okline" style="gap:10px"><input type="checkbox" class="chk" id="cfg-confPesos"${S.set.confPesos?' checked':''}><span><b>Conferente vê e ajusta os pesos da nota</b> lidos pela foto. Desligado, ele só tira a foto e pesa às cegas.</span></label>
   </section>
@@ -1417,7 +1426,7 @@ const msgCodigo=x=>[`Olá, ${x.nome}! Seu acesso ao app de Conferência de Carne
   `${linkApp()?`Abra ${linkApp()} e toque`:'Abra o app e toque'} em "Primeiro acesso". Digite o usuário e o código e crie o seu PIN de 6 números.`,'O código vale 48 horas e só funciona uma vez. Não conte o seu PIN para ninguém.'].join('\n');
 
 /* ---------- render ---------- */
-function render(){
+function render(){refazForn();
   resetIdx();
   const tabsEl=document.getElementById('tabs'), view=document.getElementById('view');
   if(!curUser()){tabsEl.hidden=true;document.getElementById('ctx').innerHTML='';view.innerHTML=vLogin();return}
@@ -1476,7 +1485,7 @@ async function lerDanfe(f,imgs){
   catch(e){if(S.rf===f){f.falhou=true;toast(e.message||'Não consegui ler a foto. Digite os dados.')}}
   finally{if(LENDO===f)LENDO=null;save();render()}
 }
-function aplicarLeitura(n,modelo){
+function aplicarLeitura(n,modelo){refazForn();
   const f=S.rf, fmt=v=>String(r3(v)).replace('.',',');
   if(n.numero)f.nf=n.numero;
   if(n.chave)f.chave=n.chave;
@@ -1631,6 +1640,12 @@ const A={
     const n={id:'na'+Date.now(),loja:+f.loja||1,forn:f.forn,nf:String(+f.nf),chave:'',data:f.data,itens:[{desc:'TOTAL DA NOTA (digitada)',kg:r3(k),v:r2(v)}],kg:r3(k),v:r2(v),origem:'app',fonte:'digitada'};
     const dup=addNota(n);S.nForm=newNForm(f.loja);save();render();toast(dup?'Nota atualizada.':'Nota lançada. Ela já entra no balanço.')},
   rmimp:()=>{delete S.vimp[`${S.loja}|${S.bal.a}|${S.bal.b}`];save();render()},
+  'forn-add':()=>{S.set.forns.push({id:'f'+Date.now().toString(36),nome:'Novo fornecedor',cnpj:'',g:'Bovino'});save();render()},
+  'forn-rm':el=>{const x=S.set.forns[+el.dataset.i];if(!x)return;
+    if(S.recs.some(r=>r.forn===x.id)||allNotas().some(n=>n.forn===x.id)){toast('Este fornecedor já tem notas. Mude o nome em vez de remover.');return}
+    S.set.forns.splice(+el.dataset.i,1);save();render()},
+  'forn-novo':()=>{const f=S.rf;if(!f.fornNome||FM[f.forn])return;
+    S.set.forns.push({id:f.forn,nome:f.fornNome,cnpj:f.forn.replace(/^c/,''),g:'Bovino'});delete f.fornNome;save();render();toast('Fornecedor cadastrado.')},
   'peca-add':()=>{S.set.pecas.push({k:'p'+Date.now().toString(36),n:'Nova peça'});save();render()},
   'peca-rm':el=>{if(S.set.pecas.length<2){toast('Deixe pelo menos uma peça.');return}S.set.pecas.splice(+el.dataset.i,1);save();render()},
   'peca-volta':el=>{const g=GR.find(x=>x.k===el.dataset.k);if(g)S.set.pecas.push({...g});save();render()},
@@ -1731,6 +1746,9 @@ document.addEventListener('change',e=>{const t=e.target,id=t.id||'';
     save();render();return}
   if(id.startsWith('n-')){const k=id.slice(2);S.nForm[k]=k==='nf'?t.value.replace(/\D/g,'').replace(/^0+/,''):t.value;return}
   if(id.startsWith('u-')){const k=id.slice(2);S.uForm[k]=t.value;if(k==='perfil')render();return}
+  if((m=id.match(/^forn-(nome|cnpj)-(\d+)$/))){const x=S.set.forns[+m[2]];if(!x)return;
+    if(m[1]==='nome'){if(t.value.trim())x.nome=t.value.trim()}else{const c=t.value.replace(/\D/g,'');if(c&&c.length!==14){toast('O CNPJ tem 14 dígitos.');return}x.cnpj=c}
+    save();render();return}
   if(id==='cfg-confPesos'){S.set.confPesos=t.checked;save();render();return}
   if(id.startsWith('set-')){const v=num(t.value);if(isFinite(v)){S.set[id.slice(4)]=v;save()}}
   else if(id.startsWith('zap-')){S.set.zap[id.slice(4)]=t.value.trim();save()}
