@@ -161,7 +161,8 @@ input.big{font-family:var(--f-num);font-size:1.5rem;padding:10px 12px;text-align
 .cambig{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;height:150px;border:2px dashed var(--accent);border-radius:14px;background:var(--surface);color:var(--accent);font-weight:700;font-size:1.05rem;cursor:pointer}
 .cambig svg{width:44px;height:44px}
 .nfres{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
-.nfres b{font-family:var(--f-display);font-size:1.3rem}.nfres span{color:var(--muted);font-size:.88rem}
+.nfres b{font-family:var(--f-display);font-size:1.3rem}
+.hint.apel{margin:6px 0 -2px}.nfres span{color:var(--muted);font-size:.88rem}
 .compbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 12px;border-radius:8px;background:var(--warn-soft);color:var(--fg)}
 
 /* tabelas */
@@ -454,7 +455,7 @@ function gerar(){
 const G=gerar();
 
 /* ---------- estado ---------- */
-const DEF_SET={tolAt:3,tolCrit:6,perdaEsp:{traseiro:25,dianteiro:25,costela:0,caixaria:0,outros:0},taras:[{n:'Caixa plástica',kg:.9},{n:'Gancho',kg:1.5}],pecas:[...GR.map(g=>({...g})),{k:'miudos',n:'Miúdos'}],perdaAt:25,perdaCrit:30,zap:{1:'',2:'',3:'',4:'',5:'',dir:''}};
+const DEF_SET={tolAt:3,tolCrit:6,perdaEsp:{traseiro:25,dianteiro:25,costela:0,caixaria:0,outros:0},taras:[{n:'Caixa plástica',kg:.9},{n:'Gancho',kg:1.5}],confPesos:true,pecas:[...GR.map(g=>({...g})),{k:'miudos',n:'Miúdos'}],perdaAt:25,perdaCrit:30,zap:{1:'',2:'',3:'',4:'',5:'',dir:''}};
 const PERFIS={conferente:'Conferente',gerente:'Gerente',gestor:'Gestor'};
 const KEY='acougue-conferencia-v5';
 const MES0=todayISO().slice(0,7);
@@ -463,7 +464,7 @@ function newRf(loja){return{loja:loja||1,via:null,chave:'',nf:'',forn:'',data:to
 function newNForm(loja){return{loja:loja||1,nf:'',forn:'',data:todayISO(),kg:'',v:''}}
 function newCd(loja){return{loja:loja||1,data:todayISO(),modo:'app',pes:[],prod:null,peso:'',linhas:[{c:'',kg:''}]}}
 const S={role:'conferente',loja:1,tab:'nf',openId:null,filtro:'todas',nfiltro:'todas',mesC:MES0,mesN:MES0,bal:{a:CONTS[0],b:CONTS[2]},set:structuredClone(DEF_SET),
-  lojas:structuredClone(DEF_LOJAS),prods:{},vimp:{},apps:[],notasApp:[],conts:[],mods:{},used:[],
+  lojas:structuredClone(DEF_LOJAS),prods:{},vimp:{},apps:[],notasApp:[],conts:[],mods:{},used:[],apel:{},
   recs:[],rf:newRf(1),draft:newDraft(1),nForm:newNForm(1),cd:newCd(1),done:null,doneComp:false,confirm:false,cconfirm:false,resetAsk:false,users:[],user:null,uForm:{nome:'',usuario:'',perfil:'conferente',loja:1},uCode:null,
   lg:{modo:'entrar',usuario:'',erro:'',busy:false},boot:true};
 const curUser=()=>S.users.find(u=>u.id===S.user)||null;
@@ -484,12 +485,13 @@ const T={
   loja:arrT(()=>S.lojas,v=>S.lojas=v,l=>l.id),
   prod:objT(()=>S.prods),
   vimp:objT(()=>S.vimp),
+  apel:objT(()=>S.apel), /* nome do item na nota do fornecedor → produto do cadastro */
   used:{list:()=>S.used.map(ch=>[ch,{ch}]),put:k=>{if(!S.used.includes(k))S.used.push(k)},del:k=>{S.used=S.used.filter(x=>x!==k)}},
   set:{list:()=>[['set',S.set]],put:(k,d)=>{S.set=mergeSet(d)},del:()=>{}},
 };
 const lojaDoc=(t,d,k)=>['rec','conf','nota','cont'].includes(t)?d.loja:t==='vimp'?(+k.split('|')[0]||null):null;
 /* espelho da regra do banco (app_private.pode_escrever): evita mandar o que o servidor recusaria */
-function podeEscrever(t,loja){const u=curUser();if(!u)return false;if(u.perfil==='gestor')return true;if(t==='used')return true;
+function podeEscrever(t,loja){const u=curUser();if(!u)return false;if(u.perfil==='gestor')return true;if(t==='used'||t==='apel')return true;
   if(u.perfil==='gerente'&&t==='prod')return true;
   return (u.perfil==='gerente'?['rec','conf','cont','nota','vimp']:['rec','conf','cont']).includes(t)&&loja===u.loja}
 const SY={on:false,busy:false,cursor:null,base:new Map(),pend:0,off:false,tPush:null,tCache:null,avisou:false};
@@ -542,10 +544,10 @@ async function sincronizar(){if(!SY.on)return;try{const m=await puxar(false);SY.
 function agendarEnvio(){clearTimeout(SY.tPush);SY.tPush=setTimeout(enviar,700)}
 function guardarCache(){if(!S.user)return;clearTimeout(SY.tCache);SY.tCache=setTimeout(guardarCacheJa,300)}
 function guardarCacheJa(){if(!S.user)return;clearTimeout(SY.tCache);
-  const d={v:1,recs:S.recs,apps:S.apps,notasApp:S.notasApp,conts:S.conts,prods:S.prods,vimp:S.vimp,used:S.used,set:S.set,lojas:S.lojas,base:[...SY.base],cursor:SY.cursor};
+  const d={v:1,recs:S.recs,apps:S.apps,notasApp:S.notasApp,conts:S.conts,prods:S.prods,vimp:S.vimp,used:S.used,apel:S.apel,set:S.set,lojas:S.lojas,base:[...SY.base],cursor:SY.cursor};
   try{localStorage.setItem(KEY+':dados:'+S.user,JSON.stringify(d))}catch(e){}}
 function lerCache(){try{const d=JSON.parse(localStorage.getItem(KEY+':dados:'+S.user)||'null');if(!d||d.v!==1)return false;
-  ['recs','apps','notasApp','conts','prods','vimp','used','lojas'].forEach(k=>{if(d[k])S[k]=d[k]});S.set=mergeSet(d.set);
+  ['recs','apps','notasApp','conts','prods','vimp','used','lojas','apel'].forEach(k=>{if(d[k])S[k]=d[k]});S.set=mergeSet(d.set);
   SY.base=new Map(d.base||[]);SY.cursor=d.cursor||null;depoisDeReceber();return true}catch(e){return false}}
 function syncUI(){const el=document.getElementById('sync');if(!el)return;
   el.textContent=SY.off?`Sem internet${SY.pend?' · '+SY.pend+' para enviar':''}`:SY.pend||SY.busy?'· salvando…':'· ✓';el.title=SY.off||SY.pend||SY.busy?'':'Salvo no servidor';
@@ -607,7 +609,7 @@ async function entrouComSessao(){
   render();
 }
 function saiu(){SY.on=false;clearTimeout(SY.tPush);SY.base=new Map();SY.cursor=null;SY.pend=0;
-  Object.assign(S,{user:null,users:[],recs:[],apps:[],notasApp:[],conts:[],prods:{},vimp:{},used:[],mods:{},set:structuredClone(DEF_SET),lojas:structuredClone(DEF_LOJAS),
+  Object.assign(S,{user:null,users:[],recs:[],apps:[],notasApp:[],conts:[],prods:{},vimp:{},used:[],apel:{},mods:{},set:structuredClone(DEF_SET),lojas:structuredClone(DEF_LOJAS),
     rf:newRf(1),draft:newDraft(1),cd:newCd(1),nForm:newNForm(1),openId:null,done:null,confirm:false,cconfirm:false,uCode:null,tab:'nf'});
   Object.keys(PM).forEach(k=>delete PM[k]);PROD.forEach(p=>PM[p.c]={...p});PM.CX={...PCX};PM.MIUDO={...PMI}}
 async function lgEnviar(){
@@ -673,7 +675,8 @@ function resumo(c){const m={};c.pes.forEach(p=>{const k=m[p.c]||(m[p.c]={c:p.c,n
 const totalKg=c=>r3(c.pes.reduce((s,p)=>s+p.b-p.t,0));
 /* compara nomes ignorando acento, hífen e pontuação ("CONTRA FILE" = "Contra-filé") */
 const limpa=s=>' '+norm(s).replace(/[^a-z0-9]+/g,' ').trim()+' ';
-function matchProd(desc){const d=limpa(desc);return prodList().filter(p=>!p.sistema).filter(p=>p.n.length>3&&!p.inteira&&!/^PC/.test(p.c)).sort((a,b)=>b.n.length-a.n.length).find(p=>d.includes(limpa(p.n)))?.c||null}
+const chaveApel=desc=>limpa(desc).trim().slice(0,120);
+function matchProd(desc){const a=S.apel?.[chaveApel(desc)]?.c;if(a&&PM[a])return a;const d=limpa(desc);return prodList().filter(p=>!p.sistema).filter(p=>p.n.length>3&&!p.inteira&&!/^PC/.test(p.c)).sort((a,b)=>b.n.length-a.n.length).find(p=>d.includes(limpa(p.n)))?.c||null}
 function prodsDoGrupo(g){const ps=prodList();
   if(g==='caixaria')return ps.filter(p=>p.cx);
   if(g==='outros'||!GRB[g])return ps.filter(p=>!pecasOf(p).length);
@@ -1123,12 +1126,13 @@ function vNF(){
   const pesos=noSis?`<div class="okline"><span class="pill ok">Esta nota já está no sistema</span></div>`
     :`<div class="field"><span class="lbl">Pesos da nota fiscal</span>
       ${pesoIn('rtr','Traseiro',f.tr)}${pesoIn('rdi','Dianteiro',f.di)}${pesoIn('rco','Costela',f.co)}
-      ${f.out.map((o,i)=>`<div class="pz"><select id="ro-c-${i}" aria-label="Outro item">${optsOutros(o.c)}</select><input id="ro-kg-${i}" inputmode="decimal" placeholder="0,000" value="${esc(o.kg)}" aria-label="Peso em kg"><span>kg</span>${f.out.length>1?`<button type="button" class="x" data-act="ro-rm" data-i="${i}" aria-label="Remover item">×</button>`:''}</div>`).join('')}
+      ${f.out.map((o,i)=>`${o.desc?`<p class="hint apel">Na nota: <b>${esc(o.desc)}</b>${o.c?'':' · escolha o produto'}</p>`:''}<div class="pz"><select id="ro-c-${i}" aria-label="Outro item">${optsOutros(o.c)}</select><input id="ro-kg-${i}" inputmode="decimal" placeholder="0,000" value="${esc(o.kg)}" aria-label="Peso em kg"><span>kg</span>${f.out.length>1?`<button type="button" class="x" data-act="ro-rm" data-i="${i}" aria-label="Remover item">×</button>`:''}</div>`).join('')}
       <button type="button" class="btn sm" data-act="ro-add" style="align-self:flex-start">+ Outro item</button></div>`;
   const recebidas=S.recs.filter(r=>(!S.loja||r.loja===S.loja)&&(g||r.uid===S.user||!confDoRec(r))).sort((a,b)=>(b.data+b.hora).localeCompare(a.data+a.hora)).slice(0,30);
   const aguard=recebidas.filter(r=>!confDoRec(r)).length;
   const doMes=g?allNotas().filter(n=>(!S.loja||n.loja===S.loja)&&noMes(n.data,S.mesN)).length:0;
   const op=nfOpen();
+  const vp=g||S.set.confPesos; /* quem vê e ajusta os pesos da nota no recebimento (Ajustes → Recebimento) */
   const acc=(k,n,titulo,extra,corpo)=>`<section class="acc"><button type="button" class="acc-h" data-act="nfacc" data-v="${k}" aria-expanded="${!!op[k]}"><span class="acc-n">${n}</span><h2>${titulo}</h2>${extra||''}${ICON.chev}</button>${op[k]?`<div class="acc-b">${corpo()}</div>`:''}</section>`;
   const lojaLinha=S.loja===0?`<div class="field"><label for="rloja">Loja</label>${lojaSel}</div>`:'';
   /* receber nota: foto → ler → confirmar; os campos só aparecem para corrigir ou se a leitura falhar */
@@ -1138,10 +1142,10 @@ function vNF(){
   const limpar=`<button type="button" class="btn ghost" data-act="rlimpar">Limpar</button>`;
   const campos=()=>`<div class="grid2">
       <div class="field"><label for="rnf">Nº da nota</label><input id="rnf" inputmode="numeric" value="${esc(f.nf)}"></div>
-      <div class="field"><label for="rforn">Fornecedor</label><select id="rforn" class="in"><option value="">Selecione</option>${FORN.map(x=>`<option value="${x.id}"${f.forn===x.id?' selected':''}>${esc(x.nome)}</option>`).join('')}</select></div>
+      <div class="field"><label for="rforn">Fornecedor</label><select id="rforn" class="in"><option value="">Selecione</option>${f.fornNome&&!FM[f.forn]?`<option value="${esc(f.forn)}" selected>${esc(f.fornNome)} (da nota)</option>`:''}${FORN.map(x=>`<option value="${x.id}"${f.forn===x.id?' selected':''}>${esc(x.nome)}</option>`).join('')}</select></div>
       <div class="field"><label for="rdata">Data de entrega</label><input id="rdata" type="date" value="${f.data}"></div>
-    </div>${g?pesos:''}`;
-  const somaOk=()=>{if(!g||!(f.ia?.pl>0))return '';const d=Math.abs(f.ia.soma-f.ia.pl)/f.ia.pl;
+    </div>${vp?pesos:''}`;
+  const somaOk=()=>{if(!vp||!(f.ia?.pl>0))return '';const d=Math.abs(f.ia.soma-f.ia.pl)/f.ia.pl;
     return `<p><span class="pill ${d<=.01?'ok':'warn'}">${d<=.01?'Soma dos itens bate com o peso líquido da nota':`Itens somam ${kg(f.ia.soma)} kg; a nota diz ${kg(f.ia.pl)} kg. Confira.`}</span></p>`};
   let recCorpo;
   if(est==='vazio')recCorpo=`<label class="cambig">${inFoto}${ICON.cam}<span>Tirar foto da nota</span></label>`;
@@ -1149,9 +1153,9 @@ function vNF(){
     <div class="inrow"><button type="button" class="btn pri" data-act="rler"${SUBINDO?' disabled':''}>Ler nota</button>${limpar}</div>`;
   else if(est==='lendo')recCorpo=`<div class="fotos">${fotos}</div><p><span class="pill warn">Lendo a nota…</span></p><div class="inrow">${limpar}</div>`;
   else if(est==='lida'){const falta=!f.nf||!f.forn;
-    recCorpo=`<div class="nfres"><b>NF ${esc(f.nf||'—')}</b><span>${esc(FM[f.forn]?.nome||'Fornecedor não reconhecido')} · ${f.fotos.length} folha${f.fotos.length===1?'':'s'}</span></div>
+    recCorpo=`<div class="nfres"><b>NF ${esc(f.nf||'—')}</b><span>${esc(FM[f.forn]?.nome||f.fornNome||'Fornecedor não reconhecido')} · ${f.fotos.length} folha${f.fotos.length===1?'':'s'}</span></div>
     ${!f.forn&&f.ia.emitente?`<p class="hint">Lido na nota: ${esc(f.ia.emitente)}. Escolha o fornecedor na lista.</p>`:''}
-    ${f.corr||falta?campos():g?pesos:''}${somaOk()}
+    ${f.corr||falta?campos():vp?pesos:''}${somaOk()}
     <div class="inrow"><button type="button" class="btn pri" data-act="rsave">Confirmar</button>${f.corr||falta?'':'<button type="button" class="btn" data-act="rcorr">Corrigir dados</button>'}${limpar}</div>`}
   else recCorpo=`${f.falhou?`<p><span class="pill warn">Não consegui ler a foto. Digite os dados.</span></p>`:''}
     <div class="fotos">${fotos}${maisFoto('+ Foto')}</div>${f.falhou&&imgsLer().length?'<button type="button" class="btn sm" data-act="rler" style="align-self:flex-start">Tentar ler de novo</button>':''}
@@ -1293,6 +1297,9 @@ function vAju(){
     <button type="button" class="btn" data-act="tara-add" style="align-self:flex-start">+ Adicionar tara</button>
     <p class="hint">O conferente toca no botão da tara. O campo livre continua na tela; quando ele digita um valor diferente destes, a pesagem fica marcada como “tara digitada”.</p>
   </section>
+  <section class="card"><div class="card-h"><h2>Recebimento</h2></div>
+    <label class="okline" style="gap:10px"><input type="checkbox" class="chk" id="cfg-confPesos"${S.set.confPesos?' checked':''}><span><b>Conferente vê e ajusta os pesos da nota</b> lidos pela foto. Desligado, ele só tira a foto e pesa às cegas.</span></label>
+  </section>
   <section class="card"><div class="card-h"><h2>Peças</h2><span class="tag">botões da pesagem</span></div>
     <div class="tw"><table class="t mt"><tbody>
       ${S.set.pecas.map((g,i)=>`<tr><td><input id="peca-n-${i}" value="${esc(g.n)}" aria-label="Nome da peça"></td><td>${GRB[g.k]?'':'<span class="hint">entra em Outros</span>'}</td><td><button type="button" class="btn sm ghost" data-act="peca-rm" data-i="${i}" aria-label="Remover peça">×</button></td></tr>`).join('')}
@@ -1430,12 +1437,14 @@ function aplicarLeitura(n,modelo){
     somaKg+=it.quantidade;
     const item={desc:it.descricao,ncm:it.ncm}, g=classNF(item);
     if(soma[g]!=null){soma[g]+=it.quantidade;return}
-    const c=matchProd(it.descricao)||(g==='outros'?'MIUDO':'');
-    if(!c){semCarne++;return}
-    out[c]=(out[c]||0)+it.quantidade;
+    const miudo=/^0206|^0504/.test(String(it.ncm||''))||/miud|figado|mocoto|bucho|rumen|coracao|rabo|lingua|tripa/.test(norm(it.descricao));
+    const c=matchProd(it.descricao)||(miudo?'MIUDO':'');
+    const k=c||('?'+it.descricao);if(!c)semCarne++; /* sem cadastro: vira linha para escolher o produto, e o app aprende */
+    (out[k]||(out[k]={c,desc:c?'':it.descricao,kg:0})).kg+=it.quantidade;
   });
   f.tr=soma.traseiro?fmt(soma.traseiro):'';f.di=soma.dianteiro?fmt(soma.dianteiro):'';f.co=soma.costela?fmt(soma.costela):'';
-  const linhas=Object.entries(out).map(([c,k])=>({c,kg:fmt(k)}));
+  const linhas=Object.values(out).map(o=>({c:o.c,kg:fmt(o.kg),...(o.desc?{desc:o.desc}:{})}));
+  if(!F&&/^\d{14}$/.test(n.emitente_cnpj||'')){f.forn='c'+n.emitente_cnpj;f.fornNome=n.emitente_nome||('CNPJ '+fmtCNPJ(n.emitente_cnpj))} /* fornecedor sem cadastro: usa o da nota */
   f.out=linhas.length?linhas:[{c:'',kg:''}];
   f.falhou=false;f.corr=false;
   f.ia={modelo,soma:r3(somaKg),pl:+n.peso_liquido||0,emitente:F?'':`${n.emitente_nome} (CNPJ ${fmtCNPJ(n.emitente_cnpj)})`,semCarne,itens:(n.itens||[]).length};
@@ -1494,6 +1503,8 @@ const A={
   rsave:()=>{const f=S.rf;
     if(LENDO===f){toast('Aguarde terminar a leitura da foto.');return}
     if(!f.nf||!f.forn){toast('Informe o número da nota e o fornecedor.');return}
+    const semProd=(S.role!=='conferente'||S.set.confPesos)&&f.out.find(o=>!o.c&&num(o.kg)>0);
+    if(semProd){toast(`Escolha o produto de “${semProd.desc||'Outro item'}”.`);return}
     const via=f.via||(f.edit?'manual':'foto');
     const noSis=notaDe({loja:f.loja,forn:f.forn,nf:f.nf}), dig=noSis?[]:digDoForm(f);
     const dup=S.recs.find(r=>r.id!==f.edit&&nkey(r)===nkey(f));
@@ -1501,7 +1512,7 @@ const A={
     if(f.edit){const r=S.recs.find(x=>x.id===f.edit);if(r?.lock||confDoRec(r||{})){toast('A pesagem já começou; os pesos da nota estão travados.');return}
       Object.assign(r,{chave:f.chave,nf:f.nf,forn:f.forn,data:f.data,fotos:f.fotos,dig:dig.length?dig:null});toast('Nota corrigida.')}
     else{if(f.link)S.used.push(f.link);
-      S.recs.push({id:'r'+Date.now(),loja:f.loja,chave:f.chave,nf:String(+f.nf),forn:f.forn,data:f.data,hora:nowHM(),fotos:f.fotos,dig:dig.length?dig:null,via:f.ia?'foto-ia':f.fotos.length?'foto':'manual',...(f.ia?{lida:{soma:f.ia.soma,pl:f.ia.pl,modelo:f.ia.modelo}}:{}),por:quemSou(),uid:S.user});
+      S.recs.push({id:'r'+Date.now(),loja:f.loja,chave:f.chave,nf:String(+f.nf),forn:f.forn,...(f.fornNome&&!FM[f.forn]?{fornNome:f.fornNome}:{}),data:f.data,hora:nowHM(),fotos:f.fotos,dig:dig.length?dig:null,via:f.ia?'foto-ia':f.fotos.length?'foto':'manual',...(f.ia?{lida:{soma:f.ia.soma,pl:f.ia.pl,modelo:f.ia.modelo}}:{}),por:quemSou(),uid:S.user});
       toast(dig.length?`Nota recebida com ${dig.length} peso(s) digitado(s). Toque em Conferir quando for pesar.`:'Nota recebida. Toque em Conferir quando for pesar.')}
     S.rf=newRf(f.loja);save();render()},
   'rec-edit':el=>{const r=S.recs.find(x=>x.id===el.dataset.id);if(!r)return;
@@ -1667,9 +1678,12 @@ document.addEventListener('change',e=>{const t=e.target,id=t.id||'';
     else{p.peca=t.value;p.pecaSet=true}
     S.prods[p.c]=p;save();return}
   if((m=id.match(/^cl-(c|kg)-(\d+)$/))){const l=S.cd.linhas[+m[2]];if(!l)return;l[m[1]]=t.value;save();document.getElementById('cres').innerHTML=cresHTML();return}
-  if((m=id.match(/^ro-(c|kg)-(\d+)$/))){const o=S.rf.out[+m[2]];if(!o)return;o[m[1]]=t.value;save();return}
+  if((m=id.match(/^ro-(c|kg)-(\d+)$/))){const o=S.rf.out[+m[2]];if(!o)return;o[m[1]]=t.value;
+    if(m[1]==='c'&&o.desc&&t.value){S.apel[chaveApel(o.desc)]={c:t.value,desc:o.desc,forn:S.rf.forn,por:quemSou(),em:nowBR()};toast(`Aprendido: “${o.desc}” = ${PM[t.value]?.n||t.value}.`)}
+    save();render();return}
   if(id.startsWith('n-')){const k=id.slice(2);S.nForm[k]=k==='nf'?t.value.replace(/\D/g,'').replace(/^0+/,''):t.value;return}
   if(id.startsWith('u-')){const k=id.slice(2);S.uForm[k]=t.value;if(k==='perfil')render();return}
+  if(id==='cfg-confPesos'){S.set.confPesos=t.checked;save();render();return}
   if(id.startsWith('set-')){const v=num(t.value);if(isFinite(v)){S.set[id.slice(4)]=v;save()}}
   else if(id.startsWith('zap-')){S.set.zap[id.slice(4)]=t.value.trim();save()}
 });
