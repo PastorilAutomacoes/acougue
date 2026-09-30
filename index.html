@@ -649,7 +649,9 @@ const podeComplementar=c=>(c.fim||c.data)===todayISO()&&(S.role!=='conferente'||
 
 function resumo(c){const m={};c.pes.forEach(p=>{const k=m[p.c]||(m[p.c]={c:p.c,n:0,kg:0});k.n++;k.kg+=p.b-p.t});return Object.values(m).map(x=>({...x,kg:r3(x.kg)})).sort((a,b)=>a.c.localeCompare(b.c,undefined,{numeric:true}))}
 const totalKg=c=>r3(c.pes.reduce((s,p)=>s+p.b-p.t,0));
-function matchProd(desc){const d=norm(desc);return prodList().filter(p=>!p.sistema).filter(p=>p.n.length>3&&!p.inteira&&!/^PC/.test(p.c)).sort((a,b)=>b.n.length-a.n.length).find(p=>d.includes(norm(p.n)))?.c||null}
+/* compara nomes ignorando acento, hífen e pontuação ("CONTRA FILE" = "Contra-filé") */
+const limpa=s=>' '+norm(s).replace(/[^a-z0-9]+/g,' ').trim()+' ';
+function matchProd(desc){const d=limpa(desc);return prodList().filter(p=>!p.sistema).filter(p=>p.n.length>3&&!p.inteira&&!/^PC/.test(p.c)).sort((a,b)=>b.n.length-a.n.length).find(p=>d.includes(limpa(p.n)))?.c||null}
 function prodsDoGrupo(g){const ps=prodList();
   if(g==='caixaria')return ps.filter(p=>p.cx);
   if(g==='outros')return ps.filter(p=>!pecasOf(p).length);
@@ -1117,15 +1119,17 @@ function vNF(){
   const formXML=`<div class="field"><label class="btn pri" style="align-self:flex-start">Escolher arquivo XML<input id="rxml" type="file" accept=".xml,text/xml,application/xml" class="vh"></label>
     <p class="hint">Número, fornecedor, data e os pesos de cada item vêm do próprio XML${S.loja===0?'; a loja é reconhecida pelo CNPJ do destinatário':''}. Depois é só tocar em Conferir.</p></div>`;
   const recebHTML=()=>`${lojaLinha}${escolha}${!via?'':via==='xml'?formXML:formNota()}`;
-  const formNota=()=>`
+  const fotoCampo=`<div class="field"><span class="lbl">Foto da DANFE</span>
+      <div class="fotos">${fotos}<label class="foto-add"><input id="rfotos" type="file" accept="image/*" capture="environment" multiple class="vh">+ Foto</label></div>
+      ${f.lendo?'<p><span class="pill warn">Lendo a nota…</span></p>':f.ia?`<p><span class="pill ok">Nota lida pela foto · confira os dados</span></p>${f.ia.emitente?`<p class="hint">Fornecedor lido: ${esc(f.ia.emitente)}. Não está cadastrado; escolha na lista.</p>`:''}${f.ia.semCarne?`<p class="hint">${f.ia.semCarne} item(ns) da nota não foram reconhecidos; confira os pesos.</p>`:''}`:''}</div>`;
+  const formNota=()=>`${via==='foto'?fotoCampo:''}
     <div class="grid2">
       <div class="field"><label for="rnf">Nº da nota</label><input id="rnf" inputmode="numeric" value="${esc(f.nf)}"></div>
       <div class="field"><label for="rforn">Fornecedor</label><select id="rforn" class="in"><option value="">Selecione</option>${FORN.map(x=>`<option value="${x.id}"${f.forn===x.id?' selected':''}>${esc(x.nome)}</option>`).join('')}</select></div>
       <div class="field"><label for="rdata">Data de entrega</label><input id="rdata" type="date" value="${f.data}"></div>
     </div>
-    <div class="field"><span class="lbl">Foto da DANFE</span>
-      <div class="fotos">${fotos}<label class="foto-add"><input id="rfotos" type="file" accept="image/*" capture="environment" multiple class="vh">+ Foto</label></div></div>
-    ${via==='manual'?pesos:''}
+    ${via==='foto'?'':fotoCampo}
+    ${via==='manual'||f.ia?pesos:''}
     <div class="inrow"><button type="button" class="btn pri" data-act="rsave">${ed?'Salvar correção':'Salvar nota recebida'}</button>${ed?'<button type="button" class="btn" data-act="rcancel">Cancelar</button>':''}</div>`;
   const listaHTML=()=>`<div class="rows">${recebidas.length?recebidas.map(r=>{const c=confDoRec(r),trav=r.lock||!!c;
       return `<div class="row static"><div class="row-main"><b>NF ${esc(r.nf)} · ${esc(fnome(r))}</b><span>${S.loja?'':esc(lojaNome(r.loja))+' · '}${dBR(r.data)} ${r.hora} · ${esc(r.por)}${g?` · ${r.dig?'pesos digitados':'às cegas'} · ${notaDe(r)?'XML ✓':'aguardando XML'}`:''}</span></div>
@@ -1368,7 +1372,36 @@ function addPeca(){
   if(!(b>0)){toast('Digite o peso da peça.');focusId('cpeso');return}
   d.pes.push({c:d.prod,kg:r3(b)});d.peso='';save();render();focusId('cpeso');
 }
-function readImg(file){return new Promise(res=>{const fr=new FileReader();fr.onload=()=>{const img=new Image();img.onload=()=>{const sc=Math.min(1,900/Math.max(img.width,img.height)),cv=document.createElement('canvas');cv.width=Math.round(img.width*sc);cv.height=Math.round(img.height*sc);cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);res(cv.toDataURL('image/jpeg',.7))};img.onerror=()=>res(null);img.src=fr.result};fr.onerror=()=>res(null);fr.readAsDataURL(file)})}
+function readImg(file,max=900,q=.7){return new Promise(res=>{const fr=new FileReader();fr.onload=()=>{const img=new Image();img.onload=()=>{const sc=Math.min(1,max/Math.max(img.width,img.height)),cv=document.createElement('canvas');cv.width=Math.round(img.width*sc);cv.height=Math.round(img.height*sc);cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);res(cv.toDataURL('image/jpeg',q))};img.onerror=()=>res(null);img.src=fr.result};fr.onerror=()=>res(null);fr.readAsDataURL(file)})}
+/* leitura da DANFE pela foto (função ler-danfe no servidor, com o Gemini) */
+async function lerDanfe(dataUrl){
+  const f=S.rf;
+  try{if(!dataUrl)throw new Error('Não consegui abrir a foto.');
+    const r=await fn('ler-danfe',{imagem:dataUrl});aplicarLeitura(r.nota,r.modelo);
+    toast('Nota lida. Confira os dados e salve.')}
+  catch(e){toast(e.message||'Não consegui ler a foto. Digite os dados.')}
+  finally{f.lendo=false;save();render()}
+}
+function aplicarLeitura(n,modelo){
+  const f=S.rf, fmt=v=>String(r3(v)).replace('.',',');
+  if(n.numero)f.nf=n.numero;
+  if(n.chave)f.chave=n.chave;
+  const F=FCNPJ[n.emitente_cnpj];
+  if(F)f.forn=F.id;
+  const soma={traseiro:0,dianteiro:0,costela:0}, out={}; let semCarne=0;
+  (n.itens||[]).forEach(it=>{
+    if(it.unidade&&!/KG/.test(it.unidade))return;
+    const item={desc:it.descricao,ncm:it.ncm}, g=classNF(item);
+    if(soma[g]!=null){soma[g]+=it.quantidade;return}
+    const c=matchProd(it.descricao)||(g==='outros'?'MIUDO':'');
+    if(!c){semCarne++;return}
+    out[c]=(out[c]||0)+it.quantidade;
+  });
+  f.tr=soma.traseiro?fmt(soma.traseiro):'';f.di=soma.dianteiro?fmt(soma.dianteiro):'';f.co=soma.costela?fmt(soma.costela):'';
+  const linhas=Object.entries(out).map(([c,k])=>({c,kg:fmt(k)}));
+  f.out=linhas.length?linhas:[{c:'',kg:''}];
+  f.ia={modelo,emitente:F?'':`${n.emitente_nome} (CNPJ ${fmtCNPJ(n.emitente_cnpj)})`,semCarne,itens:(n.itens||[]).length};
+}
 function parseXML(txt){
   const d=new DOMParser().parseFromString(txt,'text/xml');
   if(d.getElementsByTagName('parsererror').length)throw new Error('xml');
@@ -1419,13 +1452,13 @@ const A={
   rsave:()=>{const f=S.rf;
     if(!f.nf||!f.forn){toast('Informe o número da nota e o fornecedor.');return}
     const via=f.via||(f.edit?'manual':'foto');
-    const noSis=notaDe({loja:f.loja,forn:f.forn,nf:f.nf}), dig=noSis||via!=='manual'?[]:digDoForm(f);
+    const noSis=notaDe({loja:f.loja,forn:f.forn,nf:f.nf}), dig=noSis||(via!=='manual'&&!f.ia)?[]:digDoForm(f);
     const dup=S.recs.find(r=>r.id!==f.edit&&nkey(r)===nkey(f));
     if(dup){toast(`A NF ${f.nf} deste fornecedor já foi recebida.`);return}
     if(f.edit){const r=S.recs.find(x=>x.id===f.edit);if(r?.lock||confDoRec(r||{})){toast('A pesagem já começou; os pesos da nota estão travados.');return}
       Object.assign(r,{chave:f.chave,nf:f.nf,forn:f.forn,data:f.data,fotos:f.fotos,dig:dig.length?dig:null});toast('Nota corrigida.')}
     else{if(f.link)S.used.push(f.link);
-      S.recs.push({id:'r'+Date.now(),loja:f.loja,chave:f.chave,nf:String(+f.nf),forn:f.forn,data:f.data,hora:nowHM(),fotos:f.fotos,dig:dig.length?dig:null,via,por:quemSou(),uid:S.user});
+      S.recs.push({id:'r'+Date.now(),loja:f.loja,chave:f.chave,nf:String(+f.nf),forn:f.forn,data:f.data,hora:nowHM(),fotos:f.fotos,dig:dig.length?dig:null,via:f.ia?'foto-ia':via,por:quemSou(),uid:S.user});
       toast(dig.length?`Nota recebida com ${dig.length} peso(s) digitado(s). Toque em Conferir quando for pesar.`:'Nota recebida. Toque em Conferir quando for pesar.')}
     S.rf=newRf(f.loja);save();render()},
   'rec-edit':el=>{const r=S.recs.find(x=>x.id===el.dataset.id);if(!r)return;
@@ -1529,8 +1562,10 @@ const C={
   rdata:t=>{S.rf.data=t.value;save()},
   rnf:t=>{S.rf.nf=t.value.replace(/\D/g,'').replace(/^0+/,'');save();render()},
   rchave:t=>{const v=t.value.replace(/\D/g,'');if(v!==S.rf.chave){applyChave(v);render()}},
-  rfotos:async t=>{const fs=[...t.files];if(!fs.length)return;toast('Enviando foto…');
-    for(const f of fs){const u=await readImg(f);if(u)S.rf.fotos.push(await subirFoto(u,S.rf.loja))}save();render();toast(fs.length>1?'Fotos salvas.':'Foto salva.')},
+  rfotos:async t=>{const fs=[...t.files];if(!fs.length)return;
+    const ler=S.rf.via==='foto'&&!S.rf.edit&&!S.rf.ia;
+    if(ler){S.rf.lendo=true;render();lerDanfe(await readImg(fs[0],2000,.82))}else toast('Enviando foto…');
+    for(const f of fs){const u=await readImg(f);if(u)S.rf.fotos.push(await subirFoto(u,S.rf.loja))}save();render();if(!ler)toast(fs.length>1?'Fotos salvas.':'Foto salva.')},
   xml:async t=>{const f=t.files[0];if(!f)return;
     try{const x=parseXML(await f.text()),c=getConf(S.openId);
       addNota({id:'na'+Date.now(),loja:c.loja,forn:c.forn,nf:String(+c.nf),chave:x.chave||c.chave,data:c.data,itens:x.itens,kg:x.kg,v:x.v,origem:'app',fonte:'XML'});
