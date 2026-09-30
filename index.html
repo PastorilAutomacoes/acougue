@@ -144,6 +144,17 @@ input.big{font-family:var(--f-num);font-size:1.5rem;padding:10px 12px;text-align
 .pickbox{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:9px 11px;cursor:pointer;font:inherit;font-size:.92rem;color:var(--fg)}
 .pickbox span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pickbox.on{border-color:var(--accent)}
+.optlist{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:6px}
+.optsep{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--bg);padding:6px 10px;font-weight:600}
+.opt{display:flex;align-items:center;gap:10px;border:0;border-top:1px solid var(--line);background:var(--surface);padding:9px 10px;text-align:left;font:inherit;font-size:.92rem;color:var(--fg);cursor:pointer}
+.opt .ck{width:18px;height:18px;border:1.5px solid var(--line);border-radius:4px;flex:none;display:grid;place-items:center}
+.opt.on .ck{background:var(--accent);border-color:var(--accent)}.opt.on .ck::after{content:'✓';color:#fff;font-size:12px;line-height:1}
+.gbtn .mais{grid-column:1/-1;font-family:inherit;font-weight:600;font-size:.8rem;text-transform:none;letter-spacing:0;padding:6px;color:var(--accent);background:none;border-style:dashed}
+.prevpes{margin:0;font-size:.85rem;color:var(--muted);background:var(--bg);border-radius:8px;padding:7px 10px}
+.nfpl{display:flex;flex-direction:column;align-items:flex-end;flex:none;white-space:nowrap}.nfpl small{font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}.nfpl b{font-family:var(--f-num);font-size:1.05rem}
+.nfver{flex-basis:100%;align-self:flex-start}
+.nfitens{flex-basis:100%;display:flex;flex-direction:column}.nfitens div{display:flex;justify-content:space-between;font-size:.85rem;padding:4px 0;border-top:1px solid var(--line)}.nfitens b{font-family:var(--f-num);font-weight:600}
+.lbl small{text-transform:none;letter-spacing:0;font-weight:400}
 .sug button{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 11px;cursor:pointer;display:flex;gap:6px;align-items:baseline;font-size:.92rem}
 .sug button:hover{border-color:var(--accent)}
 .sug button.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
@@ -268,8 +279,8 @@ details summary{cursor:pointer;font-weight:600;font-size:.9rem;padding:4px 0}
 .pz select{padding:9px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);min-width:0;width:100%;font-weight:600}
 .pz span{color:var(--muted);font-size:.85rem}
 .pz .x{border:0;background:none;color:var(--muted);font-size:1.2rem;cursor:pointer}
-.nfmini{flex-direction:row;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px}
-.nfl{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+.nfmini{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 10px;padding:10px 14px}
+.nfl{display:flex;flex-direction:column;min-width:0;flex:1;line-height:1.25}
 .nfl b{font-family:var(--f-display);font-size:1.2rem;text-transform:uppercase;letter-spacing:.03em}
 .nfl span{font-size:.82rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .seg .tara-in{width:auto;flex:1 1 50px;min-width:50px;max-width:90px;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);text-align:right;font-family:var(--f-num)}
@@ -500,7 +511,7 @@ function gerar(){
 const G=gerar();
 
 /* ---------- estado ---------- */
-const DEF_SET={tolAt:3,tolCrit:6,perdaEsp:{traseiro:25,dianteiro:25,costela:0,caixaria:0,outros:0},taras:[{n:'Caixa plástica',kg:.9},{n:'Gancho',kg:1.5}],confPesos:true,forns:DEF_FORN.map(f=>({...f})),pecas:[...GR.map(g=>({...g})),{k:'miudos',n:'Miúdos'}],perdaAt:25,perdaCrit:30,zap:{1:'',2:'',3:'',4:'',5:'',dir:''}};
+const DEF_SET={tolAt:3,tolCrit:6,perdaEsp:{traseiro:25,dianteiro:25,costela:0,caixaria:0,outros:0},taras:[{n:'Caixa',kg:1}],confPesos:true,forns:DEF_FORN.map(f=>({...f})),pecas:[...GR.map(g=>({...g})),{k:'miudos',n:'Miúdos'}],perdaAt:25,perdaCrit:30,zap:{1:'',2:'',3:'',4:'',5:'',dir:''}};
 const PERFIS={conferente:'Conferente',gerente:'Gerente',gestor:'Gestor'};
 const KEY='acougue-conferencia-v5';
 const MES0=todayISO().slice(0,7);
@@ -938,6 +949,16 @@ function vLogin(){
 }
 
 /* ---------- CONFERIR (pesagem da nota) ---------- */
+/* o que a nota trouxe: peças inteiras (g) e códigos de produto, para mostrar só as peças da nota */
+function notaDaPesagem(d){const r=S.recs.find(x=>x.id===(d.rec||getConf(d.comp)?.rec)), dig=r?.dig||[], grupos=new Set(), cods=new Set(), tem=k=>pecasBtn().some(g=>g.k===k);
+  dig.forEach(x=>{if(!x.c){grupos.add(x.g);return}cods.add(x.c);const p=PM[x.c];
+    grupos.add((p?.miudo||x.c==='MIUDO')&&tem('miudos')?'miudos':p?.cx?'caixaria':(pecasOf(p)[0]||'outros'))});
+  return{grupos,cods,tem:dig.length>0}}
+function pecasVisiveis(d,nota){const todas=pecasBtn();if(!nota.tem||S.maisPecas)return todas;
+  const v=todas.filter(g=>nota.grupos.has(g.k)||g.k===d.grupo);return v.length?v:todas}
+function prevPes(){const d=S.draft,l=Math.max(0,(num(d.peso)||0)-(num(d.tara)||0)),s=d.sel||[];if(!d.grupo)return 'Escolha a peça.';
+  const tipo=s.length===1?esc(PM[s[0]]?.n||s[0]):`caixa ${proxCaixa(d)} ${s.length?'com '+esc(s.map(c=>PM[c]?.n||c).join(', ')):'sem carne marcada'}`;
+  return `Vai lançar: <b>${esc(GRN[d.grupo])} · ${tipo}</b> · líquido ${kg(l)} kg`}
 function lcdHTML(){
   const d=S.draft,b=num(d.peso)||0,t=num(d.tara)||0,l=Math.max(0,b-t);
   const tit=!d.grupo?'Escolha a peça':modoEf(d)==='caixa'?`${GRN[d.grupo]} · caixa ${proxCaixa(d)}`:d.prod?`${GRN[d.grupo]} · ${PM[d.prod].n}`:`${GRN[d.grupo]} · escolha a carne`;
@@ -984,22 +1005,25 @@ function vConferir(){
     nfCard=`<section class="card"><div class="compbar"><div><b>Complemento</b> · NF ${esc(compC.nf)} · ${esc(fnome(compC))}<br><span class="hint">A conferência original não muda. Estas pesagens entram à parte, com hora e nome.</span></div><button type="button" class="btn sm" data-act="comp-cancel">Cancelar complemento</button></div></section>`;
   }else{
     const extra=S.role==='conferente'?'':rec.dig?' · pesos digitados':notaDe(rec)?' · XML ✓':' · às cegas';
-    nfCard=`<section class="card nfmini"><div class="nfl"><b>NF ${esc(rec.nf)}</b><span>${esc(fnome(rec)||'')} · ${esc(lojaNome(rec.loja))}${rec.fotos?.length?` · ${rec.fotos.length} foto${rec.fotos.length>1?'s':''}`:''}${extra}</span></div>
-      ${d.pes.length?'':`<button type="button" class="btn sm ghost" data-act="trocarnota">Trocar</button>`}</section>`;
+    const vp=S.role!=='conferente'||S.set.confPesos, pl=rec.lida?.pl||r3((rec.dig||[]).reduce((t,x)=>t+x.kg,0));
+    nfCard=`<section class="card nfmini"><div class="nfl"><b>NF ${esc(rec.nf)}</b><span>${esc(fnome(rec)||'')} · ${esc(lojaNome(rec.loja))}${extra}</span></div>
+      ${vp&&pl?`<div class="nfpl"><small>Peso líquido</small><b>${kg(pl)} kg</b></div>`:''}
+      ${d.pes.length?'':`<button type="button" class="btn sm ghost" data-act="trocarnota">Trocar</button>`}
+      ${vp&&rec.dig?.length?`<button type="button" class="btn sm ghost nfver" data-act="veritens">${S.verItens?'Esconder itens ▴':'Ver itens da nota ▾'}</button>${S.verItens?`<div class="nfitens">${rec.dig.map(x=>`<div><span>${esc(x.c?(PM[x.c]?.n||x.c):GRB[x.g]+' (peça)')}</span><b>${kg(x.kg)} kg</b></div>`).join('')}</div>`:''}`:''}</section>`;
   }
-  const n=prodsDoGrupo(d.grupo||'traseiro').length, me=d.grupo?modoEf(d):null;
-  const podeEscolher=['traseiro','dianteiro','costela'].includes(d.grupo)&&lojaModo(d.loja)==='ambos';
-  const segModo=podeEscolher?`<div class="segbig"><button type="button" class="${me==='caixa'?'on':''}" data-act="pmodo" data-v="caixa">Caixa fechada</button><button type="button" class="${me==='ind'?'on':''}" data-act="pmodo" data-v="ind">Carne individual</button></div>`:'';
-  let carnes;
-  if(!d.grupo)carnes=`<p class="hint">Escolha a peça para ver as carnes.</p>`;
-  else if(me==='caixa')carnes=`<div class="field"><span class="lbl">2. Como pesar</span>${segModo}</div>
-    <div class="field"><span class="lbl">Caixa nº ${proxCaixa(d)} · conteúdo</span>
-      <button type="button" class="pickbox${S.contAberto?' on':''}" data-act="contabre" aria-expanded="${!!S.contAberto}"><span>${d.cont?.length?esc(d.cont.map(c=>PM[c]?.n||c).join(', ')):'Toque para escolher as carnes'}</span><b>${S.contAberto?'▴':'▾'}</b></button>
-      ${S.contAberto?`<div class="sug">${prodsDoGrupo(d.grupo).filter(p=>!p.inteira).map(p=>`<button type="button" class="${d.cont?.includes(p.c)?'on':''}" data-act="ccont" data-c="${p.c}">${esc(p.n)}</button>`).join('')}</div>`:''}
-</div>`;
-  else carnes=`${segModo?`<div class="field"><span class="lbl">2. Como pesar</span>${segModo}</div>`:''}<div class="field"><span class="lbl">${segModo?'Carne':'2. Carne'}</span>${n>12?`<input id="q" autocomplete="off" placeholder="Filtrar em ${GRN[d.grupo]}">`:''}<div id="sug" class="sug">${chipsGrupo(d.grupo,'',d.prod)}</div></div>`;
+  /* peças e carnes que vieram na nota (pesos lidos da foto ou digitados) */
+  const nota=notaDaPesagem(d), vis=pecasVisiveis(d,nota);
+  if(!d.grupo&&nota.grupos.size===1&&vis.some(g=>g.k===[...nota.grupos][0]))d.grupo=[...nota.grupos][0];
+  if(d.prod&&!d.sel){d.sel=[d.prod];d.prod=null}
+  const sel=d.sel||[], ocultas=pecasBtn().filter(g=>!vis.some(v=>v.k===g.k));
+  const naNota=d.grupo?prodsDoGrupo(d.grupo).filter(p=>nota.cods.has(p.c)||(p.inteira&&nota.grupos.has(d.grupo))):[];
+  const outras=d.grupo?prodsDoGrupo(d.grupo).filter(p=>!naNota.includes(p)):[];
+  const opt=p=>`<button type="button" class="opt${sel.includes(p.c)?' on':''}" data-act="csel" data-c="${p.c}" aria-pressed="${sel.includes(p.c)}"><span class="ck"></span>${esc(p.n)}</button>`;
+  const carnes=!d.grupo?'':`<div class="field"><span class="lbl">2. Carne <small>(opcional, pode marcar várias)</small></span>
+      <button type="button" class="pickbox${S.contAberto?' on':''}" data-act="contabre" aria-expanded="${!!S.contAberto}"><span>${sel.length?esc(sel.map(c=>PM[c]?.n||c).join(', ')):'Toque para escolher'}</span><b>${S.contAberto?'▴':'▾'}</b></button>
+      ${S.contAberto?`<div class="optlist">${naNota.length?`<div class="optsep">Na nota</div>${naNota.map(opt).join('')}`:''}${outras.length?`<div class="optsep">${naNota.length?'Outras':'Carnes'}</div>${outras.map(opt).join('')}`:''}${naNota.length+outras.length?'':'<p class="hint">Nenhuma carne cadastrada nesta peça.</p>'}</div>`:''}</div>`;
   const tn=num(d.tara)||0;
-  const taras=[['0','Sem tara'],...S.set.taras.map(t=>[String(t.kg).replace('.',','),`${t.n.split(' ')[0]} ${String(+t.kg).replace('.',',')}`])];
+  const taras=[['0','Sem tara'],...S.set.taras.map(t=>[String(t.kg).replace('.',','),`${t.n} ${String(+t.kg).replace('.',',')} kg`])];
   const pesList=d.pes.map((x,i)=>({x,i})).reverse().map(({x,i})=>`<li><span class="i">${i+1}</span><span class="nm">${esc(GRN[x.g]||'')} · ${esc(nomePes(x))}</span><span class="num">${kg(x.b-x.t)} kg</span>${x.t?`<span class="hint num">tara ${kg(x.t)}</span>`:''}${x.td?'<span class="mini">tara digitada</span>':''}<button type="button" class="x" data-act="rmpes" data-i="${i}" aria-label="Remover pesagem ${i+1}">×</button></li>`).join('');
   const porGrupo={};d.pes.forEach(p=>{(porGrupo[p.g]||(porGrupo[p.g]=[])).push(p)});
   return `<div class="cols">
@@ -1007,12 +1031,12 @@ function vConferir(){
     ${nfCard}
     <section class="card">
       <div class="card-h"><h2>Pesagem</h2><span class="tag">${d.pes.length} lançada${d.pes.length===1?'':'s'}</span></div>
-      <div class="lcd" id="lcd">${lcdHTML()}</div>
-      <div class="field"><span class="lbl">1. Peça</span><div class="gbtn">${pecasBtn().map(g=>`<button type="button" class="${d.grupo===g.k?'on':''}" data-act="grupo" data-v="${g.k}">${g.n}</button>`).join('')}</div></div>
+      <div class="field"><span class="lbl">1. Peça</span><div class="gbtn">${vis.map(g=>`<button type="button" class="${d.grupo===g.k?'on':''}" data-act="grupo" data-v="${g.k}">${esc(g.n)}</button>`).join('')}${ocultas.length?`<button type="button" class="mais" data-act="maispecas">+ outra peça</button>`:''}</div></div>
       ${carnes}
       <div class="field"><span class="lbl">3. Tara (kg)</span>
         <div class="seg">${taras.map(([v,t])=>`<button type="button" class="${Math.abs(tn-num(v))<.0005?'on':''}" data-act="tara" data-v="${v}">${t}</button>`).join('')}<input id="tara" class="tara-in" inputmode="decimal" value="${esc(d.tara)}" aria-label="Outra tara em kg"></div></div>
       <div class="field"><label for="peso">4. Peso da balança (kg)</label><input id="peso" class="big" inputmode="decimal" autocomplete="off" placeholder="0,000" value="${esc(d.peso)}"></div>
+      <p class="prevpes" id="prevpes">${prevPes()}</p>
       <button type="button" class="btn pri wide" data-act="add">Confirmar pesagem</button>
     </section>
   </div>
@@ -1462,14 +1486,14 @@ function digDoForm(f){
 function addPes(){
   const d=S.draft,b=num(d.peso),t=num(d.tara)||0;
   if(!d.grupo){toast('Escolha a peça primeiro.');return}
-  const caixa=modoEf(d)==='caixa';
-  if(!caixa&&!d.prod){toast('Escolha a carne.');return}
+  const sel=d.sel||[], caixa=sel.length!==1;
   if(!(b>0)){toast('Digite o peso da balança.');focusId('peso');return}
   if(t>=b){toast('A tara está maior que o peso da balança.');return}
   const td=t>0&&!S.set.taras.some(x=>Math.abs(x.kg-t)<.0005);
   const base={b:r3(b),t:r3(t),g:d.grupo,h:nowHM(),...(td?{td:true}:{})};
-  if(caixa){d.pes.push({c:'CX',nc:proxCaixa(d),cont:[...(d.cont||[])],...base});d.cont=[]}
-  else d.pes.push({c:d.prod,...base});
+  if(caixa){d.pes.push({c:'CX',nc:proxCaixa(d),cont:[...sel],...base});d.sel=[]} /* uma carne só continua marcada para pesar a próxima igual */
+  else d.pes.push({c:sel[0],...base});
+  S.contAberto=false;
   if(d.pes.length===1&&!d.comp){d.hora=nowHM();const r=S.recs.find(x=>x.id===d.rec);if(r)r.lock=true}
   d.peso='';save();render();focusId('peso');
 }
@@ -1542,7 +1566,10 @@ const A={
   'lg-modo':()=>{S.lg.usuario=document.getElementById('lg-usuario')?.value.trim()||S.lg.usuario;S.lg.modo=S.lg.modo==='ativar'?'entrar':'ativar';S.lg.erro='';render();focusId(S.lg.usuario?(S.lg.modo==='ativar'?'lg-codigo':'lg-pin'):'lg-usuario')},
   sair:async()=>{guardarCacheJa();saveDrafts();saiu();render();scrollTo(0,0);await sb.auth.signOut()},
   tab:el=>{S.tab=el.dataset.v;S.openId=null;S.confirm=false;S.cconfirm=false;if(el.dataset.v==='conferir')S.done=null;guardaAba();render();scrollTo(0,0);sincronizar()},
-  grupo:el=>{const d=S.draft;if(d.grupo!==el.dataset.v){d.grupo=el.dataset.v;d.cont=[];if(d.prod&&!prodsDoGrupo(d.grupo).some(p=>p.c===d.prod))d.prod=null}save();render()},
+  grupo:el=>{const d=S.draft;if(d.grupo!==el.dataset.v){d.grupo=el.dataset.v;d.sel=[];d.prod=null}save();render()},
+  csel:el=>{const d=S.draft,c=el.dataset.c,s=d.sel||[];d.sel=s.includes(c)?s.filter(x=>x!==c):[...s,c];save();render()},
+  maispecas:()=>{S.maisPecas=true;render()},
+  veritens:()=>{S.verItens=!S.verItens;render()},
   pmodo:el=>{S.draft.modo=el.dataset.v;S.draft.cont=[];save();render()},
   contabre:()=>{S.contAberto=!S.contAberto;render()},
   ccont:el=>{const d=S.draft,c=el.dataset.c;d.cont=d.cont||[];d.cont=d.cont.includes(c)?d.cont.filter(x=>x!==c):[...d.cont,c];save();render()},
@@ -1766,7 +1793,7 @@ document.addEventListener('input',e=>{const t=e.target;let m;
   if((m=t.id.match(/^cl-kg-(\d+)$/))){const l=S.cd.linhas[+m[1]];if(l){l.kg=t.value;document.getElementById('cres').innerHTML=cresHTML();save()}return}
   if(t.id==='q'){document.getElementById('sug').innerHTML=chipsGrupo(S.draft.grupo,t.value,S.draft.prod)}
   else if(t.id==='cq'){document.getElementById('csug').innerHTML=sugHTML(t.value,'cpick',p=>p.bov)}
-  else if(t.id==='peso'||t.id==='tara'){S.draft[t.id]=t.value;document.getElementById('lcd').innerHTML=lcdHTML();save()}
+  else if(t.id==='peso'||t.id==='tara'){S.draft[t.id]=t.value;const pv=document.getElementById('prevpes');if(pv)pv.innerHTML=prevPes();save()}
   else if(t.id==='cpeso'){S.cd.peso=t.value;document.getElementById('clcd').innerHTML=clcdHTML();save()}
   else if(t.id==='rchave'){const v=t.value.replace(/\D/g,'');if(v.length===44&&v!==S.rf.chave){applyChave(v);render()}}
   else if(/^ro-kg-\d+$/.test(t.id)){const o=S.rf.out[+t.id.split('-')[2]];if(o){o.kg=t.value;save()}}
