@@ -67,11 +67,14 @@ button,input,select{font:inherit;color:inherit}
   .brand small{display:none}
   .brand b{font-size:1.15rem}
   .mark{width:36px;height:36px;font-size:11px}
-  .ctx{width:100%;align-items:center;flex-wrap:nowrap}
+  .top-in{flex-wrap:nowrap}
+  .brand{margin-right:0;flex:none}
+  .top-in:has(.who) .brand>div:last-child{display:none}
+  .ctx{flex:1;min-width:0;align-items:center;flex-wrap:nowrap;gap:8px}
   .who{text-align:left;margin-right:auto;min-width:0}
   .who b,.who span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ctl span{display:none}
-  .ctl select{min-width:0;max-width:150px}
+  .ctl select{min-width:0;max-width:118px;padding:5px 6px}
 }
 .top :focus-visible{outline-color:var(--gold)}
 
@@ -133,11 +136,14 @@ input.big{font-family:var(--f-num);font-size:1.5rem;padding:10px 12px;text-align
 .lcd-val small{font-size:1rem;margin-left:6px;color:var(--lcd-dim)}
 
 /* botões de peça e carne */
-.gbtn{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:6px}
-.gbtn button{padding:12px 6px;border:1px solid var(--line);border-radius:8px;background:var(--bg);cursor:pointer;font-family:var(--f-display);font-weight:700;font-size:1.05rem;text-transform:uppercase;letter-spacing:.04em}
+.gbtn{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.gbtn button{padding:7px 4px;border:1px solid var(--line);border-radius:8px;background:var(--bg);cursor:pointer;font-family:var(--f-display);font-weight:700;font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
 .gbtn button:hover{border-color:var(--accent)}
 .gbtn button.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 .sug{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.pickbox{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:9px 11px;cursor:pointer;font:inherit;font-size:.92rem;color:var(--fg)}
+.pickbox span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pickbox.on{border-color:var(--accent)}
 .sug button{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 11px;cursor:pointer;display:flex;gap:6px;align-items:baseline;font-size:.92rem}
 .sug button:hover{border-color:var(--accent)}
 .sug button.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
@@ -333,7 +339,11 @@ function parseChave(ch){if(!/^\d{44}$/.test(ch))return null;return{cnpj:ch.slice
 
 /* ---------- grupos de pesagem ---------- */
 const GR=[{k:'traseiro',n:'Traseiro'},{k:'dianteiro',n:'Dianteiro'},{k:'costela',n:'Costela'},{k:'caixaria',n:'Caixaria'},{k:'outros',n:'Outros'}];
-const GRN=Object.fromEntries(GR.map(g=>[g.k,g.n]));
+const GRB=Object.fromEntries(GR.map(g=>[g.k,g.n]));
+/* botões de peça da pesagem: configuráveis em Ajustes; peça criada pelo gestor entra em "Outros" no resultado */
+const GRN=new Proxy({},{get:(_,k)=>S.set?.pecas?.find(p=>p.k===k)?.n||GRB[k]||'Outros'});
+const pecasBtn=()=>S.set.pecas?.length?S.set.pecas:GR;
+const grResumo=()=>[...pecasBtn(),...GR.filter(g=>!pecasBtn().some(p=>p.k===g.k))];
 
 /* ---------- cadastros ---------- */
 const DEF_LOJAS=[
@@ -440,7 +450,7 @@ function gerar(){
 const G=gerar();
 
 /* ---------- estado ---------- */
-const DEF_SET={tolAt:3,tolCrit:6,perdaEsp:{traseiro:25,dianteiro:25,costela:0,caixaria:0,outros:0},taras:[{n:'Caixa plástica',kg:.9},{n:'Gancho',kg:1.5}],perdaAt:25,perdaCrit:30,zap:{1:'',2:'',3:'',4:'',5:'',dir:''}};
+const DEF_SET={tolAt:3,tolCrit:6,perdaEsp:{traseiro:25,dianteiro:25,costela:0,caixaria:0,outros:0},taras:[{n:'Caixa plástica',kg:.9},{n:'Gancho',kg:1.5}],pecas:[...GR.map(g=>({...g})),{k:'miudos',n:'Miúdos'}],perdaAt:25,perdaCrit:30,zap:{1:'',2:'',3:'',4:'',5:'',dir:''}};
 const PERFIS={conferente:'Conferente',gerente:'Gerente',gestor:'Gestor'};
 const KEY='acougue-conferencia-v5';
 const MES0=todayISO().slice(0,7);
@@ -454,7 +464,7 @@ const S={role:'conferente',loja:1,tab:'nf',openId:null,filtro:'todas',nfiltro:'t
   lg:{modo:'entrar',usuario:'',erro:'',busy:false},boot:true};
 const curUser=()=>S.users.find(u=>u.id===S.user)||null;
 function applyUser(){const u=curUser();if(!u){S.user=null;return}S.role=u.perfil;if(u.perfil!=='gestor')S.loja=u.loja;else if(S.loja==null)S.loja=0}
-const mergeSet=d=>{const s={...structuredClone(DEF_SET),...(d||{})};s.perdaEsp={...DEF_SET.perdaEsp,...(d?.perdaEsp||{})};s.zap={...DEF_SET.zap,...(d?.zap||{})};if(!Array.isArray(s.taras))s.taras=structuredClone(DEF_SET.taras);return s};
+const mergeSet=d=>{const s={...structuredClone(DEF_SET),...(d||{})};s.perdaEsp={...DEF_SET.perdaEsp,...(d?.perdaEsp||{})};s.zap={...DEF_SET.zap,...(d?.zap||{})};if(!Array.isArray(s.taras))s.taras=structuredClone(DEF_SET.taras);if(!Array.isArray(s.pecas)||!s.pecas.length)s.pecas=structuredClone(DEF_SET.pecas);return s};
 
 /* ---------- sincronização com o servidor ----------
    Cada nota recebida, conferência, contagem etc. é um documento na tabela "registros".
@@ -534,7 +544,7 @@ function lerCache(){try{const d=JSON.parse(localStorage.getItem(KEY+':dados:'+S.
   ['recs','apps','notasApp','conts','prods','vimp','used','lojas'].forEach(k=>{if(d[k])S[k]=d[k]});S.set=mergeSet(d.set);
   SY.base=new Map(d.base||[]);SY.cursor=d.cursor||null;depoisDeReceber();return true}catch(e){return false}}
 function syncUI(){const el=document.getElementById('sync');if(!el)return;
-  el.textContent=SY.off?`Sem internet${SY.pend?' · '+SY.pend+' para enviar':''}`:SY.pend||SY.busy?'Salvando…':'Salvo no servidor';
+  el.textContent=SY.off?`Sem internet${SY.pend?' · '+SY.pend+' para enviar':''}`:SY.pend||SY.busy?'· salvando…':'· ✓';el.title=SY.off||SY.pend||SY.busy?'':'Salvo no servidor';
   el.style.color=SY.off?'var(--warn)':''}
 let PEND_R=false;
 const digitando=()=>/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName||'');
@@ -659,7 +669,7 @@ const limpa=s=>' '+norm(s).replace(/[^a-z0-9]+/g,' ').trim()+' ';
 function matchProd(desc){const d=limpa(desc);return prodList().filter(p=>!p.sistema).filter(p=>p.n.length>3&&!p.inteira&&!/^PC/.test(p.c)).sort((a,b)=>b.n.length-a.n.length).find(p=>d.includes(limpa(p.n)))?.c||null}
 function prodsDoGrupo(g){const ps=prodList();
   if(g==='caixaria')return ps.filter(p=>p.cx);
-  if(g==='outros')return ps.filter(p=>!pecasOf(p).length);
+  if(g==='outros'||!GRB[g])return ps.filter(p=>!pecasOf(p).length);
   return ps.filter(p=>pecasOf(p).includes(g))}
 const grupoPadrao=c=>{const p=PM[c];if(!p)return 'outros';const ps=pecasOf(p);if(ps.length)return ps[0];return p.cx?'caixaria':'outros'};
 /* caixa fechada só existe nas peças; caixaria e outros são sempre carne a carne */
@@ -722,7 +732,7 @@ function tabResultado(c,a){
     const gs={};c.pes.forEach(p=>{const k=p.g||grupoPadrao(p.c);(gs[k]||(gs[k]=[])).push(p)});
     return `<div class="empty">A nota ainda não está no sistema, então ainda não dá para comparar. Avise o gerente para lançar a nota; o resultado aparece aqui assim que ela entrar.</div>
     <div class="tw"><table class="t"><thead><tr><th>Peça / carne</th><th class="n">Conferido kg</th></tr></thead><tbody>
-    ${GR.filter(g=>gs[g.k]).map(g=>`<tr class="sub"><td>${g.n}</td><td class="n">${kg(gs[g.k].reduce((s,p)=>s+p.b-p.t,0))}</td></tr>`+resumo({pes:gs[g.k]}).map(r=>`<tr><td class="ind">${esc(PM[r.c]?.n||r.c)} · ${r.n}×</td><td class="n">${kg(r.kg)}</td></tr>`).join('')).join('')}
+    ${grResumo().filter(g=>gs[g.k]).map(g=>`<tr class="sub"><td>${esc(g.n)}</td><td class="n">${kg(gs[g.k].reduce((s,p)=>s+p.b-p.t,0))}</td></tr>`+resumo({pes:gs[g.k]}).map(r=>`<tr><td class="ind">${esc(PM[r.c]?.n||r.c)} · ${r.n}×</td><td class="n">${kg(r.kg)}</td></tr>`).join('')).join('')}
     <tr class="tot"><td>Total conferido</td><td class="n">${kg(a.conf)}</td></tr></tbody></table></div>`;
   }
   const rows=a.grupos.map(g=>{
@@ -843,7 +853,7 @@ function tabsFor(){
 }
 function vCtx(){
   const u=curUser(); if(!u)return '';
-  return `<div class="who"><b>${esc(u.nome)}</b><span>${PERFIS[u.perfil]} · ${u.perfil==='gestor'?'Todas as lojas':esc(lojaNome(u.loja))}</span><span id="sync" aria-live="polite"></span></div>
+  return `<div class="who"><b>${esc(u.nome)}</b><span>${PERFIS[u.perfil]} · ${u.perfil==='gestor'?'Todas as lojas':esc(lojaNome(u.loja))} <span id="sync" aria-live="polite"></span></span></div>
   ${u.perfil==='gestor'?`<label class="ctl"><span>Loja</span><select id="loja"><option value="0"${S.loja===0?' selected':''}>Todas as lojas</option>${lojaOpts(S.loja)}</select></label>`:''}
   <button type="button" class="btn sm" data-act="sair">Sair</button>`;
 }
@@ -925,7 +935,8 @@ function vConferir(){
   if(!d.grupo)carnes=`<p class="hint">Escolha a peça para ver as carnes.</p>`;
   else if(me==='caixa')carnes=`<div class="field"><span class="lbl">2. Como pesar</span>${segModo}</div>
     <div class="field"><span class="lbl">Caixa nº ${proxCaixa(d)} · conteúdo</span>
-      <div class="sug">${prodsDoGrupo(d.grupo).filter(p=>!p.inteira).map(p=>`<button type="button" class="${d.cont?.includes(p.c)?'on':''}" data-act="ccont" data-c="${p.c}">${esc(p.n)}</button>`).join('')}</div>
+      <button type="button" class="pickbox${S.contAberto?' on':''}" data-act="contabre" aria-expanded="${!!S.contAberto}"><span>${d.cont?.length?esc(d.cont.map(c=>PM[c]?.n||c).join(', ')):'Toque para escolher as carnes'}</span><b>${S.contAberto?'▴':'▾'}</b></button>
+      ${S.contAberto?`<div class="sug">${prodsDoGrupo(d.grupo).filter(p=>!p.inteira).map(p=>`<button type="button" class="${d.cont?.includes(p.c)?'on':''}" data-act="ccont" data-c="${p.c}">${esc(p.n)}</button>`).join('')}</div>`:''}
 </div>`;
   else carnes=`${segModo?`<div class="field"><span class="lbl">2. Como pesar</span>${segModo}</div>`:''}<div class="field"><span class="lbl">${segModo?'Carne':'2. Carne'}</span>${n>12?`<input id="q" autocomplete="off" placeholder="Filtrar em ${GRN[d.grupo]}">`:''}<div id="sug" class="sug">${chipsGrupo(d.grupo,'',d.prod)}</div></div>`;
   const tn=num(d.tara)||0;
@@ -938,7 +949,7 @@ function vConferir(){
     <section class="card">
       <div class="card-h"><h2>Pesagem</h2><span class="tag">${d.pes.length} lançada${d.pes.length===1?'':'s'}</span></div>
       <div class="lcd" id="lcd">${lcdHTML()}</div>
-      <div class="field"><span class="lbl">1. Peça</span><div class="gbtn">${GR.map(g=>`<button type="button" class="${d.grupo===g.k?'on':''}" data-act="grupo" data-v="${g.k}">${g.n}</button>`).join('')}</div></div>
+      <div class="field"><span class="lbl">1. Peça</span><div class="gbtn">${pecasBtn().map(g=>`<button type="button" class="${d.grupo===g.k?'on':''}" data-act="grupo" data-v="${g.k}">${g.n}</button>`).join('')}</div></div>
       ${carnes}
       <div class="field"><span class="lbl">3. Tara (kg)</span>
         <div class="seg">${taras.map(([v,t])=>`<button type="button" class="${Math.abs(tn-num(v))<.0005?'on':''}" data-act="tara" data-v="${v}">${t}</button>`).join('')}<input id="tara" class="tara-in" inputmode="decimal" value="${esc(d.tara)}" aria-label="Outra tara em kg"></div></div>
@@ -949,7 +960,7 @@ function vConferir(){
   <section class="card">
     <div class="card-h"><h2>${compC?'Pesagens do complemento':'Resumo por peça'}</h2><span class="tag num">${kg(tot)} kg</span></div>
     ${res.length?`<div class="tw"><table class="t"><thead><tr><th>Peça / carne</th><th class="n">Pesagens</th><th class="n">Total kg</th></tr></thead><tbody>
-      ${GR.filter(g=>porGrupo[g.k]).map(g=>`<tr class="sub"><td>${g.n}</td><td class="n">${porGrupo[g.k].length}</td><td class="n">${kg(porGrupo[g.k].reduce((s,p)=>s+p.b-p.t,0))}</td></tr>`+resumo({pes:porGrupo[g.k]}).map(r=>`<tr><td class="ind">${esc(PM[r.c]?.n||r.c)}</td><td class="n">${r.n}</td><td class="n">${kg(r.kg)}</td></tr>`).join('')).join('')}
+      ${grResumo().filter(g=>porGrupo[g.k]).map(g=>`<tr class="sub"><td>${esc(g.n)}</td><td class="n">${porGrupo[g.k].length}</td><td class="n">${kg(porGrupo[g.k].reduce((s,p)=>s+p.b-p.t,0))}</td></tr>`+resumo({pes:porGrupo[g.k]}).map(r=>`<tr><td class="ind">${esc(PM[r.c]?.n||r.c)}</td><td class="n">${r.n}</td><td class="n">${kg(r.kg)}</td></tr>`).join('')).join('')}
       <tr class="tot"><td>Total</td><td class="n">${d.pes.length}</td><td class="n">${kg(tot)}</td></tr></tbody></table></div>
       <span class="lbl">Pesagens (a mais recente primeiro)</span><ul class="pes">${pesList}</ul>`
     :`<div class="empty">Nenhuma pesagem ainda.</div>`}
@@ -1264,6 +1275,12 @@ function vAju(){
     <button type="button" class="btn" data-act="tara-add" style="align-self:flex-start">+ Adicionar tara</button>
     <p class="hint">O conferente toca no botão da tara. O campo livre continua na tela; quando ele digita um valor diferente destes, a pesagem fica marcada como “tara digitada”.</p>
   </section>
+  <section class="card"><div class="card-h"><h2>Peças</h2><span class="tag">botões da pesagem</span></div>
+    <div class="tw"><table class="t mt"><tbody>
+      ${S.set.pecas.map((g,i)=>`<tr><td><input id="peca-n-${i}" value="${esc(g.n)}" aria-label="Nome da peça"></td><td>${GRB[g.k]?'':'<span class="hint">entra em Outros</span>'}</td><td><button type="button" class="btn sm ghost" data-act="peca-rm" data-i="${i}" aria-label="Remover peça">×</button></td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="inrow"><button type="button" class="btn" data-act="peca-add">+ Adicionar peça</button>${GR.filter(g=>!S.set.pecas.some(p=>p.k===g.k)).map(g=>`<button type="button" class="btn sm ghost" data-act="peca-volta" data-k="${g.k}">+ ${g.n}</button>`).join('')}</div>
+  </section>
   <section class="card"><h2>Perda esperada por peça</h2>
     <div class="set-grid">${GR.map(g=>f('pe-'+g.k,g.n+' (%)',S.set.perdaEsp[g.k]??0)).join('')}</div>
     <div class="set-grid">${f('set-tolAt','Atenção a partir de (pontos)',S.set.tolAt)}${f('set-tolCrit','Crítico a partir de (pontos)',S.set.tolCrit)}</div>
@@ -1432,6 +1449,7 @@ const A={
   tab:el=>{S.tab=el.dataset.v;S.openId=null;S.confirm=false;S.cconfirm=false;if(el.dataset.v==='conferir')S.done=null;render();scrollTo(0,0);sincronizar()},
   grupo:el=>{const d=S.draft;if(d.grupo!==el.dataset.v){d.grupo=el.dataset.v;d.cont=[];if(d.prod&&!prodsDoGrupo(d.grupo).some(p=>p.c===d.prod))d.prod=null}save();render()},
   pmodo:el=>{S.draft.modo=el.dataset.v;S.draft.cont=[];save();render()},
+  contabre:()=>{S.contAberto=!S.contAberto;render()},
   ccont:el=>{const d=S.draft,c=el.dataset.c;d.cont=d.cont||[];d.cont=d.cont.includes(c)?d.cont.filter(x=>x!==c):[...d.cont,c];save();render()},
   pick:el=>{S.draft.prod=el.dataset.c;save();render();focusId('peso')},
   tara:el=>{S.draft.tara=el.dataset.v;save();render();focusId('peso')},
@@ -1529,6 +1547,9 @@ const A={
     const n={id:'na'+Date.now(),loja:+f.loja||1,forn:f.forn,nf:String(+f.nf),chave:'',data:f.data,itens:[{desc:'TOTAL DA NOTA (digitada)',kg:r3(k),v:r2(v)}],kg:r3(k),v:r2(v),origem:'app',fonte:'digitada'};
     const dup=addNota(n);S.nForm=newNForm(f.loja);save();render();toast(dup?'Nota atualizada.':'Nota lançada. Ela já entra no balanço.')},
   rmimp:()=>{delete S.vimp[`${S.loja}|${S.bal.a}|${S.bal.b}`];save();render()},
+  'peca-add':()=>{S.set.pecas.push({k:'p'+Date.now().toString(36),n:'Nova peça'});save();render()},
+  'peca-rm':el=>{if(S.set.pecas.length<2){toast('Deixe pelo menos uma peça.');return}S.set.pecas.splice(+el.dataset.i,1);save();render()},
+  'peca-volta':el=>{const g=GR.find(x=>x.k===el.dataset.k);if(g)S.set.pecas.push({...g});save();render()},
   'tara-add':()=>{S.set.taras.push({n:'Nova tara',kg:0});save();render()},
   'tara-rm':el=>{S.set.taras.splice(+el.dataset.i,1);save();render()},
   'lj-add':()=>{const id=Math.max(0,...S.lojas.map(l=>l.id))+1;S.lojas.push({id,nome:'Nova loja',cidade:'',cnpj:'',cert:false});save();render()},
@@ -1612,6 +1633,7 @@ document.addEventListener('change',e=>{const t=e.target,id=t.id||'';
   if((m=id.match(/^pg-(traseiro|dianteiro|costela)-(.+)$/))){const p=PM[m[2]];if(!p)return;
     const ps=pecasOf(p).filter(k=>k!==m[1]);if(t.checked)ps.push(m[1]);p.pecas=['traseiro','dianteiro','costela'].filter(k=>ps.includes(k));
     p.peca=p.pecas[0]||'outros';p.pecaSet=true;S.prods[p.c]=p;save();return}
+  if((m=id.match(/^peca-n-(\d+)$/))){const x=S.set.pecas[+m[1]];if(x&&t.value.trim())x.n=t.value.trim();save();return}
   if((m=id.match(/^tara-(n|kg)-(\d+)$/))){const x=S.set.taras[+m[2]];if(!x)return;if(m[1]==='n')x.n=t.value.trim();else{const v=num(t.value);if(isFinite(v))x.kg=r3(v)}save();return}
   if((m=id.match(/^pe-(\w+)$/))){const v=num(t.value);if(isFinite(v)){S.set.perdaEsp[m[1]]=v;save()}return}
   if((m=id.match(/^(pb|pcx|pp)-(.+)$/))){const p=PM[m[2]];if(!p)return;
