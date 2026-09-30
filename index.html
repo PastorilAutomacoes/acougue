@@ -562,7 +562,10 @@ setInterval(()=>{if(document.visibilityState==='visible')sincronizar()},30000);
 function saveDrafts(){if(!S.user)return;try{localStorage.setItem(KEY+':rasc:'+S.user,JSON.stringify({rf:S.rf,draft:S.draft,cd:S.cd,loja:S.loja}))}catch(e){}}
 function loadDrafts(){try{const d=JSON.parse(localStorage.getItem(KEY+':rasc:'+S.user)||'null');if(!d)return;
   if(d.rf)S.rf={...newRf(),...d.rf};if(d.draft)S.draft={...newDraft(),...d.draft};if(d.cd)S.cd={...newCd(),...d.cd};if(d.loja!=null)S.loja=d.loja}catch(e){}}
-function save(){saveDrafts();if(SY.on){guardarCache();agendarEnvio()}}
+/* aba aberta: sobrevive ao "puxar para atualizar", mas o app aberto de novo começa em Nota Fiscal */
+const guardaAba=()=>{try{sessionStorage.setItem(KEY+':aba',JSON.stringify({tab:S.tab,openId:S.openId}))}catch(e){}};
+function lerAba(){try{const a=JSON.parse(sessionStorage.getItem(KEY+':aba')||'null');if(a?.tab){S.tab=a.tab;S.openId=a.openId||null}}catch(e){}}
+function save(){saveDrafts();guardaAba();if(SY.on){guardarCache();agendarEnvio()}}
 
 /* ---------- fotos da nota: vão para o Storage; no documento fica só a referência "sb:caminho" ---------- */
 const FURL=new Map();
@@ -596,7 +599,7 @@ async function entrouComSessao(){
   if(!p||!p.ativo){if(!semRede)await sb.auth.signOut();S.lg={...S.lg,busy:false,erro:semRede?'Sem internet. Conecte e tente de novo.':p?'Usuário desativado. Fale com a Diretoria.':''};S.boot=false;render();return}
   try{localStorage.setItem(pk,JSON.stringify(p))}catch(_){}
   S.user=p.id;S.users=[mapPerfil(p)];S.loja=p.perfil==='gestor'?0:p.loja;
-  loadDrafts();applyUser();
+  loadDrafts();lerAba();applyUser();
   const temCache=lerCache();SY.on=true;
   S.boot=false;S.lg={modo:'entrar',usuario:'',erro:'',busy:false};render();
   try{await puxar(!temCache);SY.off=false;await enviar()}catch(e){SY.off=true}
@@ -1465,7 +1468,7 @@ const erroPlanilha=e=>toast(e?.message==='leitor'?'Não foi possível carregar o
 const A={
   'lg-modo':()=>{S.lg.usuario=document.getElementById('lg-usuario')?.value.trim()||S.lg.usuario;S.lg.modo=S.lg.modo==='ativar'?'entrar':'ativar';S.lg.erro='';render();focusId(S.lg.usuario?(S.lg.modo==='ativar'?'lg-codigo':'lg-pin'):'lg-usuario')},
   sair:async()=>{guardarCacheJa();saveDrafts();saiu();render();scrollTo(0,0);await sb.auth.signOut()},
-  tab:el=>{S.tab=el.dataset.v;S.openId=null;S.confirm=false;S.cconfirm=false;if(el.dataset.v==='conferir')S.done=null;render();scrollTo(0,0);sincronizar()},
+  tab:el=>{S.tab=el.dataset.v;S.openId=null;S.confirm=false;S.cconfirm=false;if(el.dataset.v==='conferir')S.done=null;guardaAba();render();scrollTo(0,0);sincronizar()},
   grupo:el=>{const d=S.draft;if(d.grupo!==el.dataset.v){d.grupo=el.dataset.v;d.cont=[];if(d.prod&&!prodsDoGrupo(d.grupo).some(p=>p.c===d.prod))d.prod=null}save();render()},
   pmodo:el=>{S.draft.modo=el.dataset.v;S.draft.cont=[];save();render()},
   contabre:()=>{S.contAberto=!S.contAberto;render()},
@@ -1560,8 +1563,8 @@ const A={
     const fb=()=>{const r=document.createRange();r.selectNodeContents(document.getElementById(el.dataset.src));const s=getSelection();s.removeAllRanges();s.addRange(r);toast('Texto selecionado. Copie com Ctrl+C ou segure para copiar.')};
     try{navigator.clipboard.writeText(t).then(()=>toast('Texto copiado.'),fb)}catch(e){fb()}},
   open:el=>{S.openId=el.dataset.id;render();scrollTo(0,0)},
-  'open-conf':el=>{S.tab='lista';S.openId=el.dataset.id;render();scrollTo(0,0)},
-  back:()=>{S.openId=null;render()},
+  'open-conf':el=>{S.tab='lista';S.openId=el.dataset.id;guardaAba();render();scrollTo(0,0)},
+  back:()=>{S.openId=null;guardaAba();render()},
   filtro:el=>{S.filtro=el.dataset.v;render()},
   nfiltro:el=>{S.nfiltro=el.dataset.v;render()},
   'nota-save':()=>{const f=S.nForm,k=num(f.kg),v=num(f.v);
