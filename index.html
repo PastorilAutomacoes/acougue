@@ -255,6 +255,11 @@ details summary{cursor:pointer;font-weight:600;font-size:.9rem;padding:4px 0}
 .pz select{padding:9px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);min-width:0;width:100%;font-weight:600}
 .pz span{color:var(--muted);font-size:.85rem}
 .pz .x{border:0;background:none;color:var(--muted);font-size:1.2rem;cursor:pointer}
+.nfmini{flex-direction:row;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px}
+.nfl{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+.nfl b{font-family:var(--f-display);font-size:1.2rem;text-transform:uppercase;letter-spacing:.03em}
+.nfl span{font-size:.82rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seg .tara-in{width:auto;flex:1 1 50px;min-width:50px;max-width:90px;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);text-align:right;font-family:var(--f-num)}
 .inst{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:var(--r);background:var(--accent-soft);border:1px solid var(--accent)}
 .inst .ic{width:42px;height:42px;border-radius:10px;flex:none}
 .inst p{flex:1;min-width:0;font-size:.88rem}
@@ -809,7 +814,6 @@ function msgRes(c,gestor,comp){
     if(c.rec)L.push(recDe(c)?.dig?'Nota digitada antes da pesagem.':'Conferência às cegas.');
     divergencias(c).forEach(x=>L.push(`⚠️ ${x.nome}: digitado ${kg(x.dig)} · XML ${kg(x.xml)}`));const td=c.pes.filter(p=>p.td).length;if(td)L.push(`Tara digitada à mão em ${td} pesagem(ns).`)}
   if(c.fotos?.length)L.push(`📷 ${c.fotos.length} foto(s) da nota no app`);
-  L.push('','🔒 Conferência travada.');
   return L.join('\n');
 }
 const waLink=(n,t)=>`https://wa.me/${String(n||'').replace(/\D/g,'')}?text=${encodeURIComponent(t)}`;
@@ -910,11 +914,9 @@ function vConferir(){
   if(compC){
     nfCard=`<section class="card"><div class="compbar"><div><b>Complemento</b> · NF ${esc(compC.nf)} · ${esc(fnome(compC))}<br><span class="hint">A conferência original não muda. Estas pesagens entram à parte, com hora e nome.</span></div><button type="button" class="btn sm" data-act="comp-cancel">Cancelar complemento</button></div></section>`;
   }else{
-    nfCard=`<section class="card">
-      <div class="card-h"><h2>NF ${esc(rec.nf)} · ${esc(fnome(rec)||'')}</h2><span class="tag">${esc(lojaNome(rec.loja))}</span></div>
-      <div class="okline">${S.role==='conferente'?'':rec.dig?`<span class="pill ok">Pesos da nota digitados · ${rec.dig.length} itens</span>`:notaDe(rec)?'<span class="pill ok">XML no sistema</span>':'<span class="pill sem">Às cegas</span>'}${rec.fotos?.length?`<span class="hint">${rec.fotos.length} foto(s) da nota</span>`:''}${d.hora?`<span class="hint">Início ${d.hora}</span>`:''}</div>
-      ${d.pes.length?'':`<button type="button" class="btn sm" data-act="trocarnota" style="align-self:flex-start">Trocar nota</button>`}
-    </section>`;
+    const extra=S.role==='conferente'?'':rec.dig?' · pesos digitados':notaDe(rec)?' · XML ✓':' · às cegas';
+    nfCard=`<section class="card nfmini"><div class="nfl"><b>NF ${esc(rec.nf)}</b><span>${esc(fnome(rec)||'')} · ${esc(lojaNome(rec.loja))}${rec.fotos?.length?` · ${rec.fotos.length} foto${rec.fotos.length>1?'s':''}`:''}${extra}</span></div>
+      ${d.pes.length?'':`<button type="button" class="btn sm ghost" data-act="trocarnota">Trocar</button>`}</section>`;
   }
   const n=prodsDoGrupo(d.grupo||'traseiro').length, me=d.grupo?modoEf(d):null;
   const podeEscolher=['traseiro','dianteiro','costela'].includes(d.grupo)&&lojaModo(d.loja)==='ambos';
@@ -922,12 +924,12 @@ function vConferir(){
   let carnes;
   if(!d.grupo)carnes=`<p class="hint">Escolha a peça para ver as carnes.</p>`;
   else if(me==='caixa')carnes=`<div class="field"><span class="lbl">2. Como pesar</span>${segModo}</div>
-    <div class="field"><span class="lbl">Caixa nº ${proxCaixa(d)} · o que tem dentro (opcional)</span>
+    <div class="field"><span class="lbl">Caixa nº ${proxCaixa(d)} · conteúdo</span>
       <div class="sug">${prodsDoGrupo(d.grupo).filter(p=>!p.inteira).map(p=>`<button type="button" class="${d.cont?.includes(p.c)?'on':''}" data-act="ccont" data-c="${p.c}">${esc(p.n)}</button>`).join('')}</div>
-      <span class="hint">Escreva o nº ${proxCaixa(d)} na caixa. O peso entra no ${GRN[d.grupo].toLowerCase()} inteiro; o conteúdo fica só como registro.</span></div>`;
+</div>`;
   else carnes=`${segModo?`<div class="field"><span class="lbl">2. Como pesar</span>${segModo}</div>`:''}<div class="field"><span class="lbl">${segModo?'Carne':'2. Carne'}</span>${n>12?`<input id="q" autocomplete="off" placeholder="Filtrar em ${GRN[d.grupo]}">`:''}<div id="sug" class="sug">${chipsGrupo(d.grupo,'',d.prod)}</div></div>`;
   const tn=num(d.tara)||0;
-  const taras=[['0','Sem tara'],...S.set.taras.map(t=>[String(t.kg).replace('.',','),`${t.n} ${kg(t.kg)}`])];
+  const taras=[['0','Sem tara'],...S.set.taras.map(t=>[String(t.kg).replace('.',','),`${t.n.split(' ')[0]} ${String(+t.kg).replace('.',',')}`])];
   const pesList=d.pes.map((x,i)=>({x,i})).reverse().map(({x,i})=>`<li><span class="i">${i+1}</span><span class="nm">${esc(GRN[x.g]||'')} · ${esc(nomePes(x))}</span><span class="num">${kg(x.b-x.t)} kg</span>${x.t?`<span class="hint num">tara ${kg(x.t)}</span>`:''}${x.td?'<span class="mini">tara digitada</span>':''}<button type="button" class="x" data-act="rmpes" data-i="${i}" aria-label="Remover pesagem ${i+1}">×</button></li>`).join('');
   const porGrupo={};d.pes.forEach(p=>{(porGrupo[p.g]||(porGrupo[p.g]=[])).push(p)});
   return `<div class="cols">
@@ -938,12 +940,10 @@ function vConferir(){
       <div class="lcd" id="lcd">${lcdHTML()}</div>
       <div class="field"><span class="lbl">1. Peça</span><div class="gbtn">${GR.map(g=>`<button type="button" class="${d.grupo===g.k?'on':''}" data-act="grupo" data-v="${g.k}">${g.n}</button>`).join('')}</div></div>
       ${carnes}
-      <div class="field"><label for="tara">3. Tara (kg)</label>
-        <div class="seg">${taras.map(([v,t])=>`<button type="button" class="${Math.abs(tn-num(v))<.0005?'on':''}" data-act="tara" data-v="${v}">${t}</button>`).join('')}</div>
-        <input id="tara" inputmode="decimal" value="${esc(d.tara)}" aria-label="Tara em kg"></div>
+      <div class="field"><span class="lbl">3. Tara (kg)</span>
+        <div class="seg">${taras.map(([v,t])=>`<button type="button" class="${Math.abs(tn-num(v))<.0005?'on':''}" data-act="tara" data-v="${v}">${t}</button>`).join('')}<input id="tara" class="tara-in" inputmode="decimal" value="${esc(d.tara)}" aria-label="Outra tara em kg"></div></div>
       <div class="field"><label for="peso">4. Peso da balança (kg)</label><input id="peso" class="big" inputmode="decimal" autocomplete="off" placeholder="0,000" value="${esc(d.peso)}"></div>
       <button type="button" class="btn pri wide" data-act="add">Confirmar pesagem</button>
-      <p class="hint">Peça, carne e tara continuam escolhidas: para a próxima caixa da mesma carne, é só digitar o peso e confirmar.</p>
     </section>
   </div>
   <section class="card">
@@ -952,7 +952,7 @@ function vConferir(){
       ${GR.filter(g=>porGrupo[g.k]).map(g=>`<tr class="sub"><td>${g.n}</td><td class="n">${porGrupo[g.k].length}</td><td class="n">${kg(porGrupo[g.k].reduce((s,p)=>s+p.b-p.t,0))}</td></tr>`+resumo({pes:porGrupo[g.k]}).map(r=>`<tr><td class="ind">${esc(PM[r.c]?.n||r.c)}</td><td class="n">${r.n}</td><td class="n">${kg(r.kg)}</td></tr>`).join('')).join('')}
       <tr class="tot"><td>Total</td><td class="n">${d.pes.length}</td><td class="n">${kg(tot)}</td></tr></tbody></table></div>
       <span class="lbl">Pesagens (a mais recente primeiro)</span><ul class="pes">${pesList}</ul>`
-    :`<div class="empty">Nenhuma pesagem ainda. Escolha a peça, a carne e a tara, digite o peso e toque em Confirmar pesagem.</div>`}
+    :`<div class="empty">Nenhuma pesagem ainda.</div>`}
     ${S.confirm?`<div class="confirm"><p><b>${compC?'Lançar o complemento?':'Finalizar e travar?'}</b> Depois disso não dá mais para alterar. ${compC?'':'O resultado com o peso da nota aparece em seguida.'}</p>
         ${er.length?`<ul>${er.map(x=>`<li>${x}</li>`).join('')}</ul>`:''}
         <div class="inrow"><button type="button" class="btn" data-act="fin-cancel">Voltar</button><button type="button" class="btn pri" data-act="fin-ok"${er.length?' disabled':''}>${compC?'Lançar complemento':'Finalizar e travar'}</button></div></div>`
@@ -964,7 +964,7 @@ function vDone(){
   const a=analise(c), comp=S.doneComp?c.pes.filter(p=>p.comp).map(p=>p.comp).pop():null;
   const m=msgRes(c,false,comp), z=S.set.zap[c.loja]||S.set.zap.dir;
   return `<section class="card">
-    <div class="done-h"><div class="lock">${ICON.lock}</div><div><h2>${comp?'Complemento lançado':'Conferência finalizada'}</h2><p class="muted">NF ${esc(c.nf)} · ${esc(fnome(c))} · ${kg(a.conf)} kg conferidos · travada · enviada para gerente e gestores</p></div></div>
+    <div class="done-h"><div class="lock">${ICON.lock}</div><div><h2>${comp?'Complemento lançado':'Conferência finalizada'}</h2><p class="muted">NF ${esc(c.nf)} · ${esc(fnome(c))} · ${kg(a.conf)} kg conferidos</p></div></div>
     <h3>Resultado</h3>
     ${tabResultado(c,a)}
     ${podeComplementar(c)?`<div class="inrow"><button type="button" class="btn" data-act="comp" data-id="${c.id}">+ Lançar complemento</button><span class="hint" style="align-self:center">Achou mercadoria no caminhão? Lance aqui (só hoje).</span></div>`:''}
@@ -972,8 +972,7 @@ function vDone(){
   <div class="cols">
     <section class="card"><h3>Mensagem para o WhatsApp</h3>
       <pre class="msg" id="msg">${esc(m)}</pre>
-      <div class="inrow"><a class="btn pri" href="${waLink(z,m)}" target="_blank" rel="noopener">Abrir no WhatsApp</a><button type="button" class="btn" data-act="copy" data-src="msg">Copiar texto</button></div>
-      <p class="hint">Modo manual: o app monta a mensagem e você envia. Com a Z-API, ela vai sozinha para os gestores da loja.</p></section>
+      <div class="inrow"><button type="button" class="btn pri" data-act="zap" data-src="msg" data-n="${esc(z||'')}">Enviar no WhatsApp</button><button type="button" class="btn" data-act="copy" data-src="msg">Copiar texto</button></div></section>
     <section class="card"><button type="button" class="btn wide pri" data-act="nova">Nova conferência</button></section>
   </div>`;
 }
@@ -1077,7 +1076,7 @@ function vDet(){
   </section>
   <div class="cols">
     <section class="card"><h3>Mensagem${g?' para os gestores':''}</h3><pre class="msg" id="amsg">${esc(m)}</pre>
-      <div class="inrow"><a class="btn pri" href="${waLink(z,m)}" target="_blank" rel="noopener">Abrir no WhatsApp</a><button type="button" class="btn" data-act="copy" data-src="amsg">Copiar texto</button></div></section>
+      <div class="inrow"><button type="button" class="btn pri" data-act="zap" data-src="amsg" data-n="${esc(z||'')}">Enviar no WhatsApp</button><button type="button" class="btn" data-act="copy" data-src="amsg">Copiar texto</button></div></section>
     <section class="card"><h3>Nota fiscal e registro</h3>
       <div class="fotos">${c.fotos?.length?c.fotos.map((f,i)=>`<div class="foto">${imgFoto(f,`Foto ${i+1} da nota`)}</div>`).join(''):'<span class="hint">Sem foto da nota.</span>'}</div>
       ${n&&g?`<p class="hint">Nota lançada (${esc(n.fonte||'XML')}): ${kg(n.kg)} kg · ${rs(n.v)}</p>`:''}
@@ -1085,7 +1084,7 @@ function vDet(){
       ${!notaDe(c)&&g?`<label class="btn">Importar XML da NF-e<input id="xml" type="file" accept=".xml,text/xml,application/xml" class="vh"></label>`:''}
       <details><summary>Ver as ${c.pes.length} pesagens</summary><ul class="pes">${pesList}</ul></details>
       <ul class="pes">${c.log.map(l=>`<li><span class="nm" style="white-space:normal">${esc(l)}</span></li>`).join('')}</ul>
-      <p class="hint">Conferência travada. Complemento só no mesmo dia; depois disso, só o gestor mexe e tudo fica registrado.</p>
+      <p class="hint">Complemento só no mesmo dia; depois disso, só o gestor altera e tudo fica registrado.</p>
     </section>
   </div>`;
 }
@@ -1495,6 +1494,9 @@ const A={
       S.apps.push(c);S.done=c.id;S.doneComp=false;
     }
     S.confirm=false;S.draft={...newDraft(d.loja),grupo:d.grupo,modo:d.modo,tara:d.tara};save();render();scrollTo(0,0)},
+  zap:async el=>{const txt=document.getElementById(el.dataset.src)?.textContent||'';
+    if(navigator.share){try{await navigator.share({text:txt});return}catch(e){if(e?.name==='AbortError')return}}
+    window.open(waLink(el.dataset.n,txt),'_blank','noopener')},
   nova:()=>{S.done=null;render()},
   comp:el=>{const d=S.draft;
     if(d.pes.length&&!d.comp){toast('Há uma conferência em andamento. Finalize ou remova as pesagens dela antes do complemento.');return}
