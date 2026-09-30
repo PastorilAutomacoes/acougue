@@ -375,7 +375,7 @@ const PROD=[
  {c:'1006',n:'Patinho',g:'Bovino',peca:'traseiro',cx:true,custo:32.8,preco:45.9,d:6},
  {c:'1007',n:'Maminha',g:'Bovino',peca:'traseiro',cx:true,custo:39.9,preco:56.9,d:2.5},
  {c:'1008',n:'Fraldinha',g:'Bovino',peca:'costela',pecas:['costela','traseiro'],cx:true,custo:34.5,preco:49.9,d:3},
- {c:'1009',n:'Músculo',g:'Bovino',peca:'traseiro',cx:true,custo:24.9,preco:34.9,d:4},
+ {c:'1009',n:'Músculo',g:'Bovino',peca:'traseiro',pecas:['traseiro','dianteiro'],cx:true,custo:24.9,preco:34.9,d:4},
  {c:'1010',n:'Costela bovina',g:'Bovino',peca:'costela',cx:false,custo:19.9,preco:27.9,d:9},
  {c:'1011',n:'Acém',g:'Bovino',peca:'dianteiro',cx:true,custo:25.5,preco:35.9,d:5.5,sistema:true},
  {c:'2001',n:'Pernil suíno',g:'Suíno',peca:'outros',cx:false,custo:14.9,preco:21.9,d:5},
@@ -394,20 +394,24 @@ const PROD=[
  {c:'31394',n:'Chã de fora',g:'Bovino',peca:'traseiro',cx:true,custo:36.88,preco:42.99,d:0},
  {c:'33730',n:'Contra-filé',g:'Bovino',peca:'traseiro',cx:true,custo:36.88,preco:53.99,d:0},
  {c:'39665',n:'Ponta do contra-filé',g:'Bovino',peca:'traseiro',cx:true,custo:36.88,preco:48.99,d:0},
- {c:'60356',n:'Ancho',g:'Bovino',peca:'traseiro',cx:true,custo:35.7,preco:65.99,d:0},
+ {c:'60356',n:'Ancho',g:'Bovino',peca:'traseiro',feito:true,cx:false,custo:35.7,preco:65.99,d:0},
  {c:'40950',n:'Lombo bovino',g:'Bovino',peca:'traseiro',cx:true,custo:0,preco:0,d:0},
  {c:'31398',n:'Bisteca',g:'Bovino',peca:'traseiro',cx:false,custo:36.88,preco:44.99,d:0},
  {c:'33722',n:'Bananinha',g:'Bovino',peca:'traseiro',cx:true,custo:36.88,preco:44.99,d:0},
  {c:'33721',n:'Acém',g:'Bovino',peca:'dianteiro',cx:true,custo:25.26,preco:36.99,d:0},
- {c:'68541',n:'Denver steak',g:'Bovino',peca:'dianteiro',cx:true,custo:26.66,preco:45.99,d:0},
+ {c:'68541',n:'Denver steak',g:'Bovino',peca:'dianteiro',feito:true,cx:false,custo:26.66,preco:45.99,d:0},
  {c:'33724',n:'Cupim',g:'Bovino',peca:'dianteiro',cx:true,custo:30.74,preco:45.99,d:0},
  {c:'31407',n:'Ponta de peito',g:'Bovino',peca:'dianteiro',cx:true,custo:25.26,preco:38.99,d:0},
- {c:'60358',n:'Shoulder',g:'Bovino',peca:'dianteiro',cx:true,custo:24.27,preco:65.99,d:0},
+ {c:'60358',n:'Shoulder',g:'Bovino',peca:'dianteiro',feito:true,cx:false,custo:24.27,preco:65.99,d:0},
  {c:'67866',n:'Peixinho e capa da paleta',g:'Bovino',peca:'dianteiro',cx:true,custo:24,preco:38.99,d:0},
- {c:'52743',n:'Chambari',g:'Bovino',peca:'dianteiro',pecas:['dianteiro','traseiro'],cx:false,custo:36.88,preco:34.69,d:0},
- {c:'37608',n:'Corte americano',g:'Bovino',peca:'costela',cx:false,custo:12.89,preco:29.99,d:0},
+ {c:'52743',n:'Chambari',g:'Bovino',peca:'dianteiro',pecas:['dianteiro','traseiro'],feito:true,cx:false,custo:36.88,preco:34.69,d:0},
+ {c:'37608',n:'Corte americano',g:'Bovino',peca:'dianteiro',feito:true,cx:false,custo:12.89,preco:29.99,d:0},
+ {c:'1012',n:'Filé mignon',g:'Bovino',peca:'traseiro',cx:true,custo:0,preco:0,d:0},
+ {c:'1013',n:'Cordão filé mignon',g:'Bovino',peca:'traseiro',cx:true,custo:0,preco:0,d:0},
+ {c:'1014',n:'Paleta',g:'Bovino',peca:'dianteiro',cx:true,custo:0,preco:0,d:0},
+ {c:'1015',n:'Peito',g:'Bovino',peca:'dianteiro',cx:true,custo:0,preco:0,d:0},
  {c:'52744',n:'Charque',g:'Bovino',peca:'outros',cx:false,custo:37.3,preco:58.99,d:0},
- /* feitos na loja: entram no balanço (vendas), mas não vêm na nota nem na pesagem */
+ /* só balanço (feitos ou cortados na loja): entram nas vendas, mas não vêm na nota nem na pesagem */
  {c:'31400',n:'Carne moída',g:'Bovino',peca:'outros',feito:true,cx:false,custo:24,preco:29.99,d:0},
  {c:'33717',n:'Carne de segunda',g:'Bovino',peca:'outros',feito:true,cx:false,custo:25.26,preco:34.99,d:0},
  {c:'60355',n:'Hambúrguer artesanal',g:'Bovino',peca:'outros',feito:true,cx:false,custo:26.42,preco:36.99,d:0},
@@ -426,7 +430,7 @@ PROD.forEach(p=>{p.bov=p.g==='Bovino';p.sub=p.g==='Bovino'?'Carnes bovinas':p.g}
 const PCX={c:'CX',n:'Caixas fechadas',g:'Bovino',bov:true,peca:null,pecas:[],cx:false,custo:0,preco:0,d:0,sistema:true}; /* pesagem de caixa sem abrir */
 const PMI={c:'MIUDO',n:'Miúdos (fígado, mocotó...)',g:'Outros',bov:false,peca:null,pecas:[],cx:false,custo:0,preco:0,d:0,sistema:true}; /* item de nota digitada */
 const PM=Object.fromEntries(PROD.map(p=>[p.c,{...p}]));PM.CX={...PCX};PM.MIUDO={...PMI};
-const prodList=()=>Object.values(PM).filter(p=>!p.sistema).sort((a,b)=>(b.inteira?1:0)-(a.inteira?1:0)||a.c.localeCompare(b.c,undefined,{numeric:true}));
+const prodList=()=>Object.values(PM).filter(p=>!p.sistema).sort((a,b)=>(b.inteira?1:0)-(a.inteira?1:0)||a.n.localeCompare(b.n,'pt-BR',{sensitivity:'base'}));
 const pecasOf=p=>p?.pecas||(p?.peca&&p.peca!=='outros'?[p.peca]:[]);
 const nomePes=x=>x.c==='CX'?`Caixa ${x.nc||''}${x.cont?.length?' · '+x.cont.map(c=>PM[c]?.n||c).join(' / '):''}`:(PM[x.c]?.n||x.c);
 const lojaModo=id=>S.lojas.find(l=>l.id===id)?.modo||'ambos';
@@ -1484,7 +1488,8 @@ function aplicarLeitura(n,modelo){
     somaKg+=it.quantidade;
     const ap=S.apel?.[chaveApel(it.descricao)]?.c, g=classNF({desc:it.descricao,ncm:it.ncm});
     const miudo=/^0206|^0504/.test(String(it.ncm||''))||/miud|figado|mocoto|bucho|rumen|coracao|rabo|lingua|tripa/.test(norm(it.descricao));
-    const c=ap&&(ap.startsWith('G:')||PM[ap])?ap:['traseiro','dianteiro','costela'].includes(g)?'G:'+g:(matchProd(it.descricao)||(miudo?'MIUDO':''));
+    const mp=matchProd(it.descricao); /* corte de caixa vence a palavra da peça: "MUSCULO DIANTEIRO" é músculo, não dianteiro inteiro */
+    const c=ap&&(ap.startsWith('G:')||PM[ap])?ap:mp&&PM[mp]?.cx?mp:['traseiro','dianteiro','costela'].includes(g)?'G:'+g:(mp||(miudo?'MIUDO':''));
     if(!c)semCarne++; /* sem cadastro: a linha pede o produto, e o app aprende */
     linhas.push({c,kg:fmt(it.quantidade),desc:it.descricao});
   });
