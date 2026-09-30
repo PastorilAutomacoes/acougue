@@ -722,7 +722,8 @@ function resumo(c){const m={};c.pes.forEach(p=>{const k=m[p.c]||(m[p.c]={c:p.c,n
 const totalKg=c=>r3(c.pes.reduce((s,p)=>s+p.b-p.t,0));
 /* compara nomes ignorando acento, hífen e pontuação ("CONTRA FILE" = "Contra-filé") */
 const limpa=s=>' '+norm(s).replace(/[^a-z0-9]+/g,' ').trim()+' ';
-const chaveApel=desc=>limpa(String(desc??'').replace(/\s*-\s*\d+[,.]\d+\s*$/,'')).trim().slice(0,120); /* sem o nº de peças do fim ("- 3,00"), que muda a cada nota */
+const descLimpa=d=>String(d??'').split(/\n|TRIB\.? APROX|\sST: ?MVA/i)[0].trim(); /* só o nome: sem as linhas de tributos que o frigorífico põe na descrição */
+const chaveApel=desc=>limpa(descLimpa(desc).replace(/\s*-\s*\d+[,.]\d+\s*$/,'')).trim().slice(0,120); /* sem o nº de peças do fim ("- 3,00"), que muda a cada nota */
 function matchProd(desc){const a=S.apel?.[chaveApel(desc)]?.c;if(a&&PM[a])return a;const d=limpa(desc);return prodList().filter(p=>!p.sistema).filter(p=>p.n.length>3&&!p.inteira&&!/^PC/.test(p.c)).sort((a,b)=>b.n.length-a.n.length).find(p=>d.includes(limpa(p.n)))?.c||null}
 function prodsDoGrupo(g){const ps=prodList().filter(p=>!p.feito);
   if(g==='caixaria')return ps.filter(p=>p.cx);
@@ -1356,6 +1357,11 @@ function vAju(){
     <button type="button" class="btn" data-act="forn-add" style="align-self:flex-start">+ Adicionar fornecedor</button>
     <p class="hint">Com o CNPJ, a leitura da foto reconhece o fornecedor sozinha.</p>
   </section>
+  <section class="card"><div class="card-h"><h2>Nomes aprendidos</h2><span class="tag">${Object.keys(S.apel).length}</span></div>
+    ${Object.keys(S.apel).length?`<div class="tw"><table class="t mt"><thead><tr><th>Na nota</th><th>Produto</th><th></th></tr></thead><tbody>
+      ${Object.entries(S.apel).sort((a,b)=>a[1].desc.localeCompare(b[1].desc)).map(([k,a])=>`<tr><td>${esc(descLimpa(a.desc))}<br><span class="hint">${esc(a.por||'')} · ${esc(a.em||'')}</span></td><td>${esc(a.c.startsWith('G:')?GRB[a.c.slice(2)]:PM[a.c]?.n||a.c)}</td><td><button type="button" class="btn sm ghost" data-act="apel-rm" data-k="${esc(k)}" aria-label="Apagar">×</button></td></tr>`).join('')}
+    </tbody></table></div>`:'<p class="hint">Quando alguém escolhe o produto de um item que o app não conhecia, o nome da nota aparece aqui.</p>'}
+  </section>
   <section class="card"><div class="card-h"><h2>Recebimento</h2></div>
     <label class="okline" style="gap:10px"><input type="checkbox" class="chk" id="cfg-confPesos"${S.set.confPesos?' checked':''}><span><b>Conferente vê e ajusta os pesos da nota</b> lidos pela foto. Desligado, ele só tira a foto e pesa às cegas.</span></label>
   </section>
@@ -1500,7 +1506,7 @@ function aplicarLeitura(n,modelo){refazForn();
     const mp=matchProd(it.descricao); /* corte de caixa vence a palavra da peça: "MUSCULO DIANTEIRO" é músculo, não dianteiro inteiro */
     const c=ap&&(ap.startsWith('G:')||PM[ap])?ap:mp&&PM[mp]?.cx?mp:['traseiro','dianteiro','costela'].includes(g)?'G:'+g:(mp||(miudo?'MIUDO':''));
     if(!c)semCarne++; /* sem cadastro: a linha pede o produto, e o app aprende */
-    linhas.push({c,kg:fmt(it.quantidade),desc:it.descricao});
+    linhas.push({c,kg:fmt(it.quantidade),desc:descLimpa(it.descricao),...(c?{}:{novo:true})}); /* novo: só estes ensinam o app */
   });
   if(!F&&/^\d{14}$/.test(n.emitente_cnpj||'')){f.forn='c'+n.emitente_cnpj;f.fornNome=n.emitente_nome||('CNPJ '+fmtCNPJ(n.emitente_cnpj))} /* fornecedor sem cadastro: usa o da nota */
   f.out=linhas.length?linhas:linhasPadrao();
@@ -1640,6 +1646,7 @@ const A={
     const n={id:'na'+Date.now(),loja:+f.loja||1,forn:f.forn,nf:String(+f.nf),chave:'',data:f.data,itens:[{desc:'TOTAL DA NOTA (digitada)',kg:r3(k),v:r2(v)}],kg:r3(k),v:r2(v),origem:'app',fonte:'digitada'};
     const dup=addNota(n);S.nForm=newNForm(f.loja);save();render();toast(dup?'Nota atualizada.':'Nota lançada. Ela já entra no balanço.')},
   rmimp:()=>{delete S.vimp[`${S.loja}|${S.bal.a}|${S.bal.b}`];save();render()},
+  'apel-rm':el=>{delete S.apel[el.dataset.k];save();render();toast('Nome apagado.')},
   'forn-add':()=>{S.set.forns.push({id:'f'+Date.now().toString(36),nome:'Novo fornecedor',cnpj:'',g:'Bovino'});save();render()},
   'forn-rm':el=>{const x=S.set.forns[+el.dataset.i];if(!x)return;
     if(S.recs.some(r=>r.forn===x.id)||allNotas().some(n=>n.forn===x.id)){toast('Este fornecedor já tem notas. Mude o nome em vez de remover.');return}
@@ -1742,7 +1749,7 @@ document.addEventListener('change',e=>{const t=e.target,id=t.id||'';
     S.prods[p.c]=p;save();return}
   if((m=id.match(/^cl-(c|kg)-(\d+)$/))){const l=S.cd.linhas[+m[2]];if(!l)return;l[m[1]]=t.value;save();document.getElementById('cres').innerHTML=cresHTML();return}
   if((m=id.match(/^ro-(c|kg)-(\d+)$/))){const o=S.rf.out[+m[2]];if(!o)return;o[m[1]]=t.value;
-    if(m[1]==='c'&&o.desc&&t.value){S.apel[chaveApel(o.desc)]={c:t.value,desc:o.desc,forn:S.rf.forn,por:quemSou(),em:nowBR()};toast(`Aprendido: “${o.desc}” = ${t.value.startsWith('G:')?GRB[t.value.slice(2)]:PM[t.value]?.n||t.value}.`)}
+    if(m[1]==='c'&&o.novo&&o.desc&&t.value){S.apel[chaveApel(o.desc)]={c:t.value,desc:o.desc,forn:S.rf.forn,por:quemSou(),em:nowBR()};toast(`Aprendido: “${o.desc}” = ${t.value.startsWith('G:')?GRB[t.value.slice(2)]:PM[t.value]?.n||t.value}.`)}
     save();render();return}
   if(id.startsWith('n-')){const k=id.slice(2);S.nForm[k]=k==='nf'?t.value.replace(/\D/g,'').replace(/^0+/,''):t.value;return}
   if(id.startsWith('u-')){const k=id.slice(2);S.uForm[k]=t.value;if(k==='perfil')render();return}
