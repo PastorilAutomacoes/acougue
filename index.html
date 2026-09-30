@@ -1309,7 +1309,7 @@ function vAju(){
     <p class="hint">Conferente: pesa, conta e vê o resultado depois de finalizar (sem R$). Gerente: vê as conferências da loja e lança as notas. Gestor: vê tudo, inclusive balanço e ajustes.</p>
     ${S.uCode?`<div class="confirm"><p><b>Código de ativação de ${esc(S.uCode.nome)}</b></p>
         <pre class="msg" id="ucmsg">${esc(msgCodigo(S.uCode))}</pre>
-        <div class="inrow"><a class="btn pri" href="${waLink('',msgCodigo(S.uCode))}" target="_blank" rel="noopener">Enviar pelo WhatsApp</a><button type="button" class="btn" data-act="copy" data-src="ucmsg">Copiar texto</button><button type="button" class="btn ghost" data-act="u-code-ok">Fechar</button></div>
+        <div class="inrow"><button type="button" class="btn pri" data-act="zap" data-src="ucmsg" data-n="">Enviar no WhatsApp</button><button type="button" class="btn" data-act="copy" data-src="ucmsg">Copiar texto</button><button type="button" class="btn ghost" data-act="u-code-ok">Fechar</button></div>
         <p class="hint">O código vale 48 horas e só funciona uma vez. Com ele a própria pessoa cria o PIN; você não fica sabendo qual é. Este código não aparece de novo depois que você fechar.</p></div>`:''}
     <div class="grid2">
       <div class="field"><label for="u-nome">Nome</label><input id="u-nome" value="${esc(uf.nome)}" placeholder="Nome da pessoa"></div>
