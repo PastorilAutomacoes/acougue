@@ -363,13 +363,13 @@ const DEF_LOJAS=[
 const MODOS={ambos:'Caixa e individual',caixa:'Só caixa',ind:'Só individual'};
 const SIM=[1,2,3,4,5].map(i=>({id:i,f:[1,.7,.85,.55,.6][i-1]})); /* tamanho de cada loja na simulação de exemplo */
 const PROD=[
- {c:'PT',n:'Traseiro inteiro (com osso)',g:'Bovino',peca:'traseiro',inteira:true,cx:false,custo:28,preco:0,d:0},
- {c:'PD',n:'Dianteiro inteiro (com osso)',g:'Bovino',peca:'dianteiro',inteira:true,cx:false,custo:19,preco:0,d:0},
+ {c:'PT',n:'Traseiro inteiro (com osso)',g:'Bovino',peca:'traseiro',inteira:true,cx:false,custo:28,preco:0,d:0,sistema:true},
+ {c:'PD',n:'Dianteiro inteiro (com osso)',g:'Bovino',peca:'dianteiro',inteira:true,cx:false,custo:19,preco:0,d:0,sistema:true},
  {c:'PC1',n:'Costela c/ fraldinha (peça)',g:'Bovino',peca:'costela',cx:false,custo:18.5,preco:0,d:0},
  {c:'PC2',n:'Costela s/ fraldinha',g:'Bovino',peca:'costela',cx:false,custo:18.5,preco:0,d:0},
  {c:'1001',n:'Picanha',g:'Bovino',peca:'traseiro',cx:true,custo:62.9,preco:89.9,d:3.2},
- {c:'1002',n:'Alcatra',g:'Bovino',peca:'traseiro',cx:true,custo:38.5,preco:54.9,d:6.5},
- {c:'1003',n:'Contra-filé',g:'Bovino',peca:'traseiro',cx:true,custo:41.2,preco:59.9,d:7},
+ {c:'1002',n:'Alcatra',g:'Bovino',peca:'traseiro',cx:true,custo:38.5,preco:54.9,d:6.5,sistema:true},
+ {c:'1003',n:'Contra-filé',g:'Bovino',peca:'traseiro',cx:true,custo:41.2,preco:59.9,d:7,sistema:true},
  {c:'1004',n:'Coxão mole',g:'Bovino',peca:'traseiro',cx:true,custo:33.9,preco:47.9,d:8},
  {c:'1005',n:'Coxão duro',g:'Bovino',peca:'traseiro',cx:true,custo:30.5,preco:42.9,d:4.5},
  {c:'1006',n:'Patinho',g:'Bovino',peca:'traseiro',cx:true,custo:32.8,preco:45.9,d:6},
@@ -377,18 +377,50 @@ const PROD=[
  {c:'1008',n:'Fraldinha',g:'Bovino',peca:'costela',pecas:['costela','traseiro'],cx:true,custo:34.5,preco:49.9,d:3},
  {c:'1009',n:'Músculo',g:'Bovino',peca:'traseiro',cx:true,custo:24.9,preco:34.9,d:4},
  {c:'1010',n:'Costela bovina',g:'Bovino',peca:'costela',cx:false,custo:19.9,preco:27.9,d:9},
- {c:'1011',n:'Acém',g:'Bovino',peca:'dianteiro',cx:true,custo:25.5,preco:35.9,d:5.5},
+ {c:'1011',n:'Acém',g:'Bovino',peca:'dianteiro',cx:true,custo:25.5,preco:35.9,d:5.5,sistema:true},
  {c:'2001',n:'Pernil suíno',g:'Suíno',peca:'outros',cx:false,custo:14.9,preco:21.9,d:5},
  {c:'2002',n:'Costela suína',g:'Suíno',peca:'outros',cx:false,custo:17.5,preco:26.9,d:4},
  {c:'2003',n:'Linguiça toscana',g:'Suíno',peca:'outros',cx:false,custo:15.9,preco:23.9,d:6},
  {c:'3001',n:'Coxa e sobrecoxa',g:'Frango',peca:'outros',cx:false,custo:9.9,preco:14.9,d:8},
  {c:'3002',n:'Peito de frango',g:'Frango',peca:'outros',cx:false,custo:13.5,preco:19.9,d:6},
+ /* carnes bovinas do PDV (CB ... KG): código, custo e preço da planilha de vendas */
+ {c:'34832',n:'Traseiro capote (vaca)',g:'Bovino',peca:'traseiro',inteira:true,cx:false,custo:0,preco:0,d:0},
+ {c:'36026',n:'Traseiro serrote (vaca)',g:'Bovino',peca:'traseiro',inteira:true,cx:false,custo:0,preco:0,d:0},
+ {c:'34092',n:'Dianteiro (vaca)',g:'Bovino',peca:'dianteiro',inteira:true,cx:false,custo:0,preco:0,d:0},
+ {c:'35382',n:'Ponta de agulha',g:'Bovino',peca:'costela',cx:false,custo:0,preco:0,d:0},
+ {c:'31393',n:'Alcatra',g:'Bovino',peca:'traseiro',cx:true,custo:36.88,preco:52.99,d:0},
+ {c:'59884',n:'Alcatra com maminha',g:'Bovino',peca:'traseiro',cx:true,custo:0,preco:0,d:0},
+ {c:'55043',n:'Cabeça de picanha',g:'Bovino',peca:'traseiro',cx:true,custo:36.88,preco:59.99,d:0},
+ {c:'31394',n:'Chã de fora',g:'Bovino',peca:'traseiro',cx:true,custo:36.88,preco:42.99,d:0},
+ {c:'33730',n:'Contra-filé',g:'Bovino',peca:'traseiro',cx:true,custo:36.88,preco:53.99,d:0},
+ {c:'39665',n:'Ponta do contra-filé',g:'Bovino',peca:'traseiro',cx:true,custo:36.88,preco:48.99,d:0},
+ {c:'60356',n:'Ancho',g:'Bovino',peca:'traseiro',cx:true,custo:35.7,preco:65.99,d:0},
+ {c:'40950',n:'Lombo bovino',g:'Bovino',peca:'traseiro',cx:true,custo:0,preco:0,d:0},
+ {c:'31398',n:'Bisteca',g:'Bovino',peca:'traseiro',cx:false,custo:36.88,preco:44.99,d:0},
+ {c:'33722',n:'Bananinha',g:'Bovino',peca:'traseiro',cx:true,custo:36.88,preco:44.99,d:0},
+ {c:'33721',n:'Acém',g:'Bovino',peca:'dianteiro',cx:true,custo:25.26,preco:36.99,d:0},
+ {c:'68541',n:'Denver steak',g:'Bovino',peca:'dianteiro',cx:true,custo:26.66,preco:45.99,d:0},
+ {c:'33724',n:'Cupim',g:'Bovino',peca:'dianteiro',cx:true,custo:30.74,preco:45.99,d:0},
+ {c:'31407',n:'Ponta de peito',g:'Bovino',peca:'dianteiro',cx:true,custo:25.26,preco:38.99,d:0},
+ {c:'60358',n:'Shoulder',g:'Bovino',peca:'dianteiro',cx:true,custo:24.27,preco:65.99,d:0},
+ {c:'67866',n:'Peixinho e capa da paleta',g:'Bovino',peca:'dianteiro',cx:true,custo:24,preco:38.99,d:0},
+ {c:'52743',n:'Chambari',g:'Bovino',peca:'dianteiro',pecas:['dianteiro','traseiro'],cx:false,custo:36.88,preco:34.69,d:0},
+ {c:'37608',n:'Corte americano',g:'Bovino',peca:'costela',cx:false,custo:12.89,preco:29.99,d:0},
+ {c:'52744',n:'Charque',g:'Bovino',peca:'outros',cx:false,custo:37.3,preco:58.99,d:0},
+ /* feitos na loja: entram no balanço (vendas), mas não vêm na nota nem na pesagem */
+ {c:'31400',n:'Carne moída',g:'Bovino',peca:'outros',feito:true,cx:false,custo:24,preco:29.99,d:0},
+ {c:'33717',n:'Carne de segunda',g:'Bovino',peca:'outros',feito:true,cx:false,custo:25.26,preco:34.99,d:0},
+ {c:'60355',n:'Hambúrguer artesanal',g:'Bovino',peca:'outros',feito:true,cx:false,custo:26.42,preco:36.99,d:0},
+ {c:'60360',n:'Almôndegas artesanais',g:'Bovino',peca:'outros',feito:true,cx:false,custo:22.85,preco:39.99,d:0},
+ {c:'61311',n:'Espetinho',g:'Bovino',peca:'outros',feito:true,cx:false,custo:26.7,preco:59.99,d:0},
+ {c:'61802',n:'Espetinho almôndega c/ bacon',g:'Bovino',peca:'outros',feito:true,cx:false,custo:36.01,preco:69.99,d:0},
+ {c:'61312',n:'Cupim temperado',g:'Bovino',peca:'outros',feito:true,cx:false,custo:29.99,preco:44.99,d:0},
  /* miúdos: códigos do PDV (CB ... KG) */
- {c:'33714',n:'Fígado',g:'Bovino',peca:'outros',miudo:true,cx:false,custo:12.45,preco:18.99,d:0},
- {c:'33715',n:'Coração',g:'Bovino',peca:'outros',miudo:true,cx:false,custo:0,preco:0,d:0},
- {c:'33718',n:'Mocotó',g:'Bovino',peca:'outros',miudo:true,cx:false,custo:10.18,preco:15.98,d:0},
- {c:'33719',n:'Bucho',g:'Bovino',peca:'outros',miudo:true,cx:false,custo:0,preco:0,d:0},
- {c:'34120',n:'Rabo',g:'Bovino',peca:'outros',miudo:true,cx:false,custo:21.91,preco:39.99,d:0},
+ {c:'33714',n:'Fígado',g:'Bovino',peca:'outros',miudo:true,cx:false,custo:10,preco:18.99,d:0},
+ {c:'33715',n:'Coração',g:'Bovino',peca:'outros',miudo:true,cx:false,custo:10,preco:16.98,d:0},
+ {c:'33718',n:'Mocotó',g:'Bovino',peca:'outros',miudo:true,cx:false,custo:10.25,preco:15.98,d:0},
+ {c:'33719',n:'Bucho',g:'Bovino',peca:'outros',miudo:true,cx:false,custo:19.98,preco:21.99,d:0},
+ {c:'34120',n:'Rabo',g:'Bovino',peca:'outros',miudo:true,cx:false,custo:20.49,preco:39.99,d:0},
 ];
 PROD.forEach(p=>{p.bov=p.g==='Bovino';p.sub=p.g==='Bovino'?'Carnes bovinas':p.g});
 const PCX={c:'CX',n:'Caixas fechadas',g:'Bovino',bov:true,peca:null,pecas:[],cx:false,custo:0,preco:0,d:0,sistema:true}; /* pesagem de caixa sem abrir */
@@ -687,7 +719,7 @@ const totalKg=c=>r3(c.pes.reduce((s,p)=>s+p.b-p.t,0));
 const limpa=s=>' '+norm(s).replace(/[^a-z0-9]+/g,' ').trim()+' ';
 const chaveApel=desc=>limpa(desc).trim().slice(0,120);
 function matchProd(desc){const a=S.apel?.[chaveApel(desc)]?.c;if(a&&PM[a])return a;const d=limpa(desc);return prodList().filter(p=>!p.sistema).filter(p=>p.n.length>3&&!p.inteira&&!/^PC/.test(p.c)).sort((a,b)=>b.n.length-a.n.length).find(p=>d.includes(limpa(p.n)))?.c||null}
-function prodsDoGrupo(g){const ps=prodList();
+function prodsDoGrupo(g){const ps=prodList().filter(p=>!p.feito);
   if(g==='caixaria')return ps.filter(p=>p.cx);
   if(g==='miudos'&&ps.some(p=>p.miudo))return ps.filter(p=>p.miudo);
   if(g==='outros'||!GRB[g])return ps.filter(p=>!pecasOf(p).length);
@@ -1122,7 +1154,7 @@ function vDet(){
 }
 
 /* ---------- NOTA FISCAL: receber a nota na doca (todos) ---------- */
-const optsLinha=sel=>{const ps=prodList().filter(p=>!p.sistema), o=(p,t)=>`<option value="${p}"${sel===p?' selected':''}>${esc(t)}</option>`;
+const optsLinha=sel=>{const ps=prodList().filter(p=>!p.sistema&&!p.feito), o=(p,t)=>`<option value="${p}"${sel===p?' selected':''}>${esc(t)}</option>`;
   return `<option value="">Escolha o produto</option>`+['traseiro','dianteiro','costela'].map(g=>o('G:'+g,GRB[g])).join('')
     +`<optgroup label="Miúdos">${ps.filter(p=>p.miudo).map(p=>o(p.c,p.n)).join('')}${o('MIUDO','Outros miúdos')}</optgroup>`
     +`<optgroup label="Cortes e outros">${ps.filter(p=>!p.miudo&&(p.cx||!pecasOf(p).length)).map(p=>o(p.c,p.n)).join('')}</optgroup>`};
