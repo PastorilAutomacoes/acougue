@@ -2,6 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Açougue Pa$toril</title>
 <meta name="theme-color" content="#1846C4">
+<meta name="color-scheme" content="only light">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Açougue">
@@ -26,26 +27,7 @@
   --f-body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
   --f-num:'IBM Plex Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;
   --r:10px;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#0A1230; --surface:#111C44; --surface-2:#1A2757; --fg:#E8EEFF; --muted:#9AA8D0; --line:#26356B;
-    --accent:#7FA2FF; --accent-soft:#1D2D66; --on-accent:#0A1230;
-    --cta:#FF7A2E; --cta-hover:#FF8E4D; --on-cta:#1A0B00; --gold:#FFC61A;
-    --top-bg:#0B1F5C; --top-fg:#FFFFFF; --top-muted:#9FB3EE; --top-line:rgba(255,255,255,.2);
-    --lcd-bg:#050C24; --lcd-fg:#FFC61A; --lcd-dim:#6F86C9;
-    --ok:#5FD39A; --ok-soft:#10352A; --warn:#FFC61A; --warn-soft:#3A3010; --crit:#FF8A80; --crit-soft:#3E1717;
-    color-scheme:dark;
-  }
-}
-:root[data-theme="dark"]{
-  --bg:#0A1230; --surface:#111C44; --surface-2:#1A2757; --fg:#E8EEFF; --muted:#9AA8D0; --line:#26356B;
-  --accent:#7FA2FF; --accent-soft:#1D2D66; --on-accent:#0A1230;
-  --cta:#FF7A2E; --cta-hover:#FF8E4D; --on-cta:#1A0B00; --gold:#FFC61A;
-  --top-bg:#0B1F5C; --top-fg:#FFFFFF; --top-muted:#9FB3EE; --top-line:rgba(255,255,255,.2);
-  --lcd-bg:#050C24; --lcd-fg:#FFC61A; --lcd-dim:#6F86C9;
-  --ok:#5FD39A; --ok-soft:#10352A; --warn:#FFC61A; --warn-soft:#3A3010; --crit:#FF8A80; --crit-soft:#3E1717;
-  color-scheme:dark;
+  color-scheme:light; /* visual sempre claro, mesmo com o celular no modo escuro (escolha do cliente) */
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -80,6 +62,17 @@ button,input,select{font:inherit;color:inherit}
 .who span{font-size:.76rem;color:var(--top-muted)}
 .top .btn{background:transparent;border-color:var(--top-line);color:var(--top-fg)}
 .top .btn:hover{background:rgba(255,255,255,.12);border-color:var(--top-fg)}
+@media (max-width:600px){
+  .top-in{padding:8px 12px;gap:6px 10px}
+  .brand small{display:none}
+  .brand b{font-size:1.15rem}
+  .mark{width:36px;height:36px;font-size:11px}
+  .ctx{width:100%;align-items:center;flex-wrap:nowrap}
+  .who{text-align:left;margin-right:auto;min-width:0}
+  .who b,.who span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ctl span{display:none}
+  .ctl select{min-width:0;max-width:150px}
+}
 .top :focus-visible{outline-color:var(--gold)}
 
 /* abas */
