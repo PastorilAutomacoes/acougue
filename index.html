@@ -171,6 +171,7 @@ input.big{font-family:var(--f-num);font-size:1.5rem;padding:10px 12px;text-align
 .foto-add:hover{border-color:var(--accent);color:var(--accent)}
 .cambig{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;height:150px;border:2px dashed var(--accent);border-radius:14px;background:var(--surface);color:var(--accent);font-weight:700;font-size:1.05rem;cursor:pointer}
 .cambig svg{width:44px;height:44px}
+.galeria{align-self:center;font-size:.88rem;color:var(--accent);text-decoration:underline;cursor:pointer;padding:4px}
 .nfres{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
 .nfres b{font-family:var(--f-display);font-size:1.3rem}
 .hint.apel{margin:-4px 0 4px;font-size:.78rem}
@@ -1224,7 +1225,8 @@ function vNF(){
   const somaOk=()=>{if(!vp||!(f.ia?.pl>0))return '';const d=Math.abs(f.ia.soma-f.ia.pl)/f.ia.pl;
     return `<p><span class="pill ${d<=.01?'ok':'warn'}">${d<=.01?'Soma dos itens bate com o peso líquido da nota':`Itens somam ${kg(f.ia.soma)} kg; a nota diz ${kg(f.ia.pl)} kg. Confira.`}</span></p>`};
   let recCorpo;
-  if(est==='vazio')recCorpo=`<label class="cambig">${inFoto}${ICON.cam}<span>Tirar foto da nota</span></label>`;
+  if(est==='vazio')recCorpo=`<label class="cambig">${inFoto}${ICON.cam}<span>Tirar foto da nota</span></label>
+    <label class="galeria"><input id="rgaleria" type="file" accept="image/*" multiple class="vh">ou escolher foto da galeria</label>`;
   else if(est==='fotos')recCorpo=`<div class="fotos">${fotos}${SUBINDO?'<span class="pill warn">Enviando foto…</span>':maisFoto('+ Outra folha')}</div>
     <div class="inrow"><button type="button" class="btn pri" data-act="rler"${SUBINDO?' disabled':''}>Ler nota</button>${limpar}</div>`;
   else if(est==='lendo')recCorpo=`<div class="fotos">${fotos}</div><p><span class="pill warn">Lendo a nota…</span></p><div class="inrow">${limpar}</div>`;
@@ -1503,7 +1505,17 @@ function addPeca(){
   if(!(b>0)){toast('Digite o peso da peça.');focusId('cpeso');return}
   d.pes.push({c:d.prod,kg:r3(b)});d.peso='';save();render();focusId('cpeso');
 }
-function readImg(file,max=900,q=.7){return new Promise(res=>{const fr=new FileReader();fr.onload=()=>{const img=new Image();img.onload=()=>{const sc=Math.min(1,max/Math.max(img.width,img.height)),cv=document.createElement('canvas');cv.width=Math.round(img.width*sc);cv.height=Math.round(img.height*sc);cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);res(cv.toDataURL('image/jpeg',q))};img.onerror=()=>res(null);img.src=fr.result};fr.onerror=()=>res(null);fr.readAsDataURL(file)})}
+/* diminui a foto sem abrir ela inteira na memória: celular simples fecha o app com foto de 50 megapixels */
+async function readImg(file,max=900,q=.7){
+  let src=null,w=0,h=0,fim=()=>{};
+  try{
+    if(window.createImageBitmap){try{const b=await createImageBitmap(file,{resizeWidth:Math.round(max*1.2),resizeQuality:'medium',imageOrientation:'from-image'});src=b;w=b.width;h=b.height;fim=()=>b.close()}catch(e){}}
+    if(!src){const url=URL.createObjectURL(file);fim=()=>URL.revokeObjectURL(url);
+      src=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url});w=src.naturalWidth;h=src.naturalHeight}
+    const sc=Math.min(1,max/Math.max(w,h)),cv=document.createElement('canvas');cv.width=Math.round(w*sc);cv.height=Math.round(h*sc);
+    cv.getContext('2d').drawImage(src,0,0,cv.width,cv.height);const u=cv.toDataURL('image/jpeg',q);cv.width=cv.height=0;return u;
+  }catch(e){return null}finally{fim()}
+}
 /* leitura da DANFE pela foto (função ler-danfe no servidor, com o Gemini) */
 let LENDO=null; /* formulário cuja foto está sendo lida; resultado que chega depois de salvar/limpar é descartado */
 let LER={f:null,imgs:[]}, SUBINDO=0; /* fotos em boa resolução para a leitura (só na memória) e envios em andamento */
@@ -1709,6 +1721,7 @@ const A={
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(el&&A[el.dataset.act])A[el.dataset.act](el)});
 
 const C={
+  rgaleria:t=>C.rfotos(t),
   loja:t=>{S.loja=+t.value;S.openId=null;save();render()},
   rloja:t=>{S.rf.loja=+t.value;save();render()},
   cloja:t=>{S.cd.loja=+t.value;save();render()},
@@ -1720,7 +1733,7 @@ const C={
   rnf:t=>{S.rf.nf=t.value.replace(/\D/g,'').replace(/^0+/,'');save();render()},
   rchave:t=>{const v=t.value.replace(/\D/g,'');if(v!==S.rf.chave){applyChave(v);render()}},
   rfotos:async t=>{const fs=[...t.files];if(!fs.length)return;const f=S.rf;SUBINDO++;render();
-    try{for(const x of fs){const [hi,u]=await Promise.all([f.edit?null:readImg(x,2000,.8),readImg(x)]);
+    try{for(const x of fs){const hi=f.edit?null:await readImg(x,2000,.8), u=await readImg(x,900,.7); /* uma de cada vez: menos memória */
       if(hi){if(LER.f!==f)LER={f,imgs:[]};LER.imgs.push(hi)}if(u)f.fotos.push(await subirFoto(u,f.loja))}}
     finally{SUBINDO--;save();render()}},
   xml:async t=>{const f=t.files[0];if(!f)return;
