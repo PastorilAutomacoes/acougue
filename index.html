@@ -145,6 +145,8 @@ input.big{font-family:var(--f-num);font-size:1.5rem;padding:10px 12px;text-align
 .pickbox{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:9px 11px;cursor:pointer;font:inherit;font-size:.92rem;color:var(--fg)}
 .pickbox span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pickbox.on{border-color:var(--accent)}
+.pchips{display:flex;flex-wrap:wrap;gap:6px}.pchip{font-size:.8rem;font-weight:600;background:var(--bg);color:var(--accent);border-radius:999px;padding:3px 10px;font-family:var(--f-num)}
+.pesnova .nm{display:flex;flex-direction:column;line-height:1.25}.pesnova .nm small{font-size:.75rem;color:var(--muted)}
 .pes li.pesed{flex-wrap:wrap;gap:6px}.pesed label{display:flex;align-items:center;gap:6px;font-size:.85rem}.pesed input{width:90px;text-align:right}
 .optlist{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:6px}
 .optsep{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--bg);padding:6px 10px;font-weight:600}
@@ -1027,7 +1029,7 @@ function vConferir(){
       ${S.contAberto?`<div class="optlist">${naNota.length?`<div class="optsep">Na nota</div>${naNota.map(opt).join('')}`:''}${outras.length?`<div class="optsep">${naNota.length?'Outras':'Carnes'}</div>${outras.map(opt).join('')}`:''}${naNota.length+outras.length?'':'<p class="hint">Nenhuma carne cadastrada nesta peça.</p>'}</div>`:''}</div>`;
   const tn=num(d.tara)||0;
   const taras=[['0','Sem tara'],...S.set.taras.map(t=>[String(t.kg).replace('.',','),`${t.n} ${String(+t.kg).replace('.',',')} kg`])];
-  const pesList=d.pes.map((x,i)=>({x,i})).reverse().map(({x,i})=>`<li><span class="i">${i+1}</span><span class="nm">${esc(GRN[x.g]||'')} · ${esc(nomePes(x))}</span><span class="num">${kg(x.b-x.t)} kg</span>${x.t?`<span class="hint num">tara ${kg(x.t)}</span>`:''}${x.td?'<span class="mini">tara digitada</span>':''}<button type="button" class="x" data-act="rmpes" data-i="${i}" aria-label="Remover pesagem ${i+1}">×</button></li>`).join('');
+  const pesList=d.pes.map((x,i)=>({x,i})).reverse().map(({x,i})=>`<li><span class="i">${i+1}</span><span class="nm">${esc(nomePes(x))}<small>${esc(GRN[x.g]||'')}${x.t?` · tara ${kg(x.t)}${x.td?' (digitada)':''}`:''}${x.h?' · '+x.h:''}</small></span><span class="num">${kg(x.b-x.t)}</span><button type="button" class="x" data-act="rmpes" data-i="${i}" aria-label="Remover pesagem ${i+1}">×</button></li>`).join('');
   const porGrupo={};d.pes.forEach(p=>{(porGrupo[p.g]||(porGrupo[p.g]=[])).push(p)});
   return `<div class="cols">
   <div class="stackcol">
@@ -1044,11 +1046,9 @@ function vConferir(){
     </section>
   </div>
   <section class="card">
-    <div class="card-h"><h2>${compC?'Pesagens do complemento':'Resumo por peça'}</h2><span class="tag num">${kg(tot)} kg</span></div>
-    ${res.length?`<div class="tw"><table class="t"><thead><tr><th>Peça / carne</th><th class="n">Pesagens</th><th class="n">Total kg</th></tr></thead><tbody>
-      ${grResumo().filter(g=>porGrupo[g.k]).map(g=>`<tr class="sub"><td>${esc(g.n)}</td><td class="n">${porGrupo[g.k].length}</td><td class="n">${kg(porGrupo[g.k].reduce((s,p)=>s+p.b-p.t,0))}</td></tr>`+resumo({pes:porGrupo[g.k]}).map(r=>`<tr><td class="ind">${esc(PM[r.c]?.n||r.c)}</td><td class="n">${r.n}</td><td class="n">${kg(r.kg)}</td></tr>`).join('')).join('')}
-      <tr class="tot"><td>Total</td><td class="n">${d.pes.length}</td><td class="n">${kg(tot)}</td></tr></tbody></table></div>
-      <span class="lbl">Pesagens (a mais recente primeiro)</span><ul class="pes">${pesList}</ul>`
+    <div class="card-h"><h2>${compC?'Pesagens do complemento':'Pesagens'}</h2><span class="tag num">${d.pes.length} · ${kg(tot)} kg</span></div>
+    ${res.length?`<div class="pchips">${grResumo().filter(g=>porGrupo[g.k]).map(g=>`<span class="pchip">${esc(g.n)} ${kg(porGrupo[g.k].reduce((s,p)=>s+p.b-p.t,0))}</span>`).join('')}</div>
+      <ul class="pes pesnova">${pesList}</ul>`
     :`<div class="empty">Nenhuma pesagem ainda.</div>`}
     ${S.confirm?`<div class="confirm"><p><b>${compC?'Lançar o complemento?':'Finalizar e travar?'}</b> Depois disso não dá mais para alterar. ${compC?'':'O resultado com o peso da nota aparece em seguida.'}</p>
         ${er.length?`<ul>${er.map(x=>`<li>${x}</li>`).join('')}</ul>`:''}
