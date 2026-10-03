@@ -118,6 +118,7 @@ input.big{font-family:var(--f-num);font-size:1.5rem;padding:10px 12px;text-align
 .btn.pri[disabled]{opacity:.45;cursor:not-allowed}
 .btn.sm{padding:5px 10px;font-size:.84rem}
 .btn.wide{width:100%;padding:13px}
+.btn.lernota{padding:16px;font-size:1.15rem}
 .btn.ghost{background:none}
 .pill{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:99px;font-size:.8rem;font-weight:600;white-space:nowrap;font-family:var(--f-body)}
 .pill.ok{background:var(--ok-soft);color:var(--ok)}
@@ -144,6 +145,7 @@ input.big{font-family:var(--f-num);font-size:1.5rem;padding:10px 12px;text-align
 .pickbox{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:9px 11px;cursor:pointer;font:inherit;font-size:.92rem;color:var(--fg)}
 .pickbox span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pickbox.on{border-color:var(--accent)}
+.pes li.pesed{flex-wrap:wrap;gap:6px}.pesed label{display:flex;align-items:center;gap:6px;font-size:.85rem}.pesed input{width:90px;text-align:right}
 .optlist{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:6px}
 .optsep{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--bg);padding:6px 10px;font-weight:600}
 .opt{display:flex;align-items:center;gap:10px;border:0;border-top:1px solid var(--line);background:var(--surface);padding:9px 10px;text-align:left;font:inherit;font-size:.92rem;color:var(--fg);cursor:pointer}
@@ -1158,7 +1160,14 @@ function vDet(){
   const c=getConf(S.openId); if(!c){S.openId=null;return vLista()}
   const a=analise(c), g=S.role!=='conferente', n=a.n;
   const m=msgRes(c,g), z=S.set.zap.dir||S.set.zap[c.loja];
-  const pesList=c.pes.map((x,i)=>`<li><span class="i">${i+1}</span><span class="nm">${esc(GRN[x.g||grupoPadrao(x.c)])} · ${esc(nomePes(x))}${x.h?` <span class="hint">${x.h}</span>`:''}</span><span class="num">${kg(x.b-x.t)} kg</span>${x.t?`<span class="hint num">tara ${kg(x.t)}</span>`:''}${x.td?'<span class="mini">tara digitada</span>':''}${x.comp?`<span class="mini">complemento ${x.comp}</span>`:''}</li>`).join('');
+  const kv=v=>String(r3(v)).replace('.',',');
+  const pesList=c.pes.map((x,i)=>{const nome=`${esc(GRN[x.g||grupoPadrao(x.c)])} · ${esc(nomePes(x))}`;
+    if(g&&S.pesEd===i)return `<li class="pesed"><span class="i">${i+1}</span><span class="nm">${nome}</span>
+      <label>Bruto<input id="pz-b" inputmode="decimal" value="${kv(x.b)}"></label><label>Tara<input id="pz-t" inputmode="decimal" value="${kv(x.t)}"></label>
+      <div class="inrow"><button type="button" class="btn sm pri" data-act="pes-salvar" data-i="${i}">Salvar</button><button type="button" class="btn sm" data-act="pes-cancel">Cancelar</button></div></li>`;
+    return `<li><span class="i">${i+1}</span><span class="nm">${nome}${x.h?` <span class="hint">${x.h}</span>`:''}</span><span class="num">${kg(x.b-x.t)} kg</span>${x.t?`<span class="hint num">tara ${kg(x.t)}</span>`:''}${x.td?'<span class="mini">tara digitada</span>':''}${x.comp?`<span class="mini">complemento ${x.comp}</span>`:''}${x.alt?'<span class="mini">alterada</span>':''}
+      ${g?(S.pesDel===i?`<span class="hint">Excluir?</span><button type="button" class="btn sm pri" data-act="pes-del-ok" data-i="${i}">Sim</button><button type="button" class="btn sm" data-act="pes-cancel">Não</button>`
+        :`<button type="button" class="x" data-act="pes-ed" data-i="${i}" aria-label="Alterar pesagem ${i+1}">✎</button><button type="button" class="x" data-act="pes-del" data-i="${i}" aria-label="Excluir pesagem ${i+1}">×</button>`):''}</li>`}).join('');
   return `<div><button type="button" class="btn ghost sm" data-act="back">← Voltar</button></div>
   <section class="card">
     <div class="card-h"><div><h2>NF ${esc(c.nf)} · ${esc(fnome(c))}</h2><p class="muted">${esc(lojaNome(c.loja))} · ${dBR(c.data)} às ${c.hora} · ${esc(c.conferente)}</p></div>
@@ -1177,9 +1186,11 @@ function vDet(){
       ${n&&g?`<p class="hint">Nota lançada (${esc(n.fonte||'XML')}): ${kg(n.kg)} kg · ${rs(n.v)}</p>`:''}
       ${c.chave?`<p class="hint num" style="overflow-wrap:anywhere">Chave ${esc(c.chave)}</p>`:''}
       ${!notaDe(c)&&g?`<label class="btn">Importar XML da NF-e<input id="xml" type="file" accept=".xml,text/xml,application/xml" class="vh"></label>`:''}
-      <details><summary>Ver as ${c.pes.length} pesagens</summary><ul class="pes">${pesList}</ul></details>
+      <details${g?' open':''}><summary>${g?'Pesagens (alterar ✎ ou excluir ×)':`Ver as ${c.pes.length} pesagens`}</summary><ul class="pes">${pesList}</ul></details>
       <ul class="pes">${c.log.map(l=>`<li><span class="nm" style="white-space:normal">${esc(l)}</span></li>`).join('')}</ul>
-      <p class="hint">Complemento só no mesmo dia; depois disso, só o gestor altera e tudo fica registrado.</p>
+      ${g?(S.confDel?`<div class="confirm"><p><b>Excluir esta conferência inteira?</b> A nota volta para "aguardando conferência".</p><div class="inrow"><button type="button" class="btn" data-act="conf-del-no">Não</button><button type="button" class="btn pri" data-act="conf-del-ok">Excluir</button></div></div>`
+        :`<button type="button" class="btn ghost sm" data-act="conf-del" style="align-self:flex-start">Excluir conferência</button>`):''}
+      <p class="hint">${g?'Toda alteração ou exclusão fica registrada acima, com nome e hora.':'Complemento só no mesmo dia; depois disso, só o gerente ou o gestor altera e tudo fica registrado.'}</p>
     </section>
   </div>`;
 }
@@ -1228,7 +1239,7 @@ function vNF(){
   if(est==='vazio')recCorpo=`<label class="cambig">${inFoto}${ICON.cam}<span>Tirar foto da nota</span></label>
     <label class="galeria"><input id="rgaleria" type="file" accept="image/*" multiple class="vh">ou escolher foto da galeria</label>`;
   else if(est==='fotos')recCorpo=`<div class="fotos">${fotos}${SUBINDO?'<span class="pill warn">Enviando foto…</span>':maisFoto('+ Outra folha')}</div>
-    <div class="inrow"><button type="button" class="btn pri" data-act="rler"${SUBINDO?' disabled':''}>Ler nota</button>${limpar}</div>`;
+    <button type="button" class="btn pri wide lernota" data-act="rler"${SUBINDO?' disabled':''}>Ler nota</button><div class="inrow">${limpar}</div>`;
   else if(est==='lendo')recCorpo=`<div class="fotos">${fotos}</div><p><span class="pill warn">Lendo a nota…</span></p><div class="inrow">${limpar}</div>`;
   else if(est==='lida'){const falta=!f.nf||!f.forn;
     recCorpo=`<div class="nfres"><b>NF ${esc(f.nf||'—')}</b><span>${esc(FM[f.forn]?.nome||f.fornNome||'Fornecedor não reconhecido')} · ${f.fotos.length} folha${f.fotos.length===1?'':'s'}</span></div>
@@ -1242,7 +1253,7 @@ function vNF(){
     <div class="inrow"><button type="button" class="btn pri" data-act="rsave"${LENDO===f?' disabled':''}>${ed?'Salvar correção':'Confirmar'}</button>${ed?'<button type="button" class="btn" data-act="rcancel">Cancelar</button>':limpar}</div>`;
   const recebHTML=()=>`${lojaLinha}${recCorpo}`;
   const xmlBtn=()=>`<label class="btn sm" style="align-self:flex-start">Importar XML<input id="rxml" type="file" accept=".xml,text/xml,application/xml" class="vh"></label>${vNotas()}`;
-  const listaHTML=()=>`<div class="rows">${recebidas.length?recebidas.map(r=>{const c=confDoRec(r),trav=r.lock||!!c;
+  const listaHTML=()=>`<div class="rows">${recebidas.length?recebidas.map(r=>{const c=confDoRec(r),trav=!g&&(r.lock||!!c);
       return `<div class="row static"><div class="row-main"><b>NF ${esc(r.nf)} · ${esc(fnome(r))}</b><span>${S.loja?'':esc(lojaNome(r.loja))+' · '}${dBR(r.data)} ${r.hora} · ${esc(r.por)}${g?` · ${r.dig?'pesos digitados':'às cegas'} · ${notaDe(r)?'XML ✓':'aguardando XML'}`:''}</span></div>
       <div class="row-side">${S.recDel===r.id?`<span class="hint">Excluir esta nota?</span><div class="inrow"><button type="button" class="btn sm" data-act="rec-del-no">Não</button><button type="button" class="btn sm pri" data-act="rec-del-ok" data-id="${r.id}">Excluir</button></div>`
         :`${c?statusPill(analise(c)):`<button type="button" class="btn sm pri" data-act="startrec" data-id="${r.id}">Conferir</button>`}<div class="inrow">${!trav?`<button type="button" class="btn sm ghost" data-act="rec-edit" data-id="${r.id}">Corrigir</button>`:''}${podeExcluirRec(r)?`<button type="button" class="btn sm ghost" data-act="rec-del" data-id="${r.id}">Excluir</button>`:''}</div>`}</div></div>`}).join('')
@@ -1612,8 +1623,9 @@ const A={
     const noSis=notaDe({loja:f.loja,forn:f.forn,nf:f.nf}), dig=noSis?[]:digDoForm(f);
     const dup=S.recs.find(r=>r.id!==f.edit&&nkey(r)===nkey(f));
     if(dup){toast(`A NF ${f.nf} deste fornecedor já foi recebida.`);return}
-    if(f.edit){const r=S.recs.find(x=>x.id===f.edit);if(r?.lock||confDoRec(r||{})){toast('A pesagem já começou; os pesos da nota estão travados.');return}
-      Object.assign(r,{chave:f.chave,nf:f.nf,forn:f.forn,data:f.data,fotos:f.fotos,dig:dig.length?dig:null});toast('Nota corrigida.')}
+    if(f.edit){const r=S.recs.find(x=>x.id===f.edit),cc=confDoRec(r||{});if(S.role==='conferente'&&(r?.lock||cc)){toast('A pesagem já começou; os pesos da nota estão travados.');return}
+      Object.assign(r,{chave:f.chave,nf:f.nf,forn:f.forn,data:f.data,fotos:f.fotos,dig:dig.length?dig:null});
+      if(cc)setConf(cc.id,{log:[...cc.log,`Nota corrigida por ${quemSou()} em ${nowBR()}`]});toast('Nota corrigida.')}
     else{if(f.link)S.used.push(f.link);
       S.recs.push({id:'r'+Date.now(),loja:f.loja,chave:f.chave,nf:String(+f.nf),forn:f.forn,...(f.fornNome&&!FM[f.forn]?{fornNome:f.fornNome}:{}),data:f.data,hora:nowHM(),fotos:f.fotos,dig:dig.length?dig:null,via:f.ia?'foto-ia':f.fotos.length?'foto':'manual',...(f.ia?{lida:{soma:f.ia.soma,pl:f.ia.pl,modelo:f.ia.modelo}}:{}),por:quemSou(),uid:S.user});
       toast(dig.length?`Nota recebida com ${dig.length} peso(s) digitado(s). Toque em Conferir quando for pesar.`:'Nota recebida. Toque em Conferir quando for pesar.')}
@@ -1677,7 +1689,26 @@ const A={
     try{navigator.clipboard.writeText(t).then(()=>toast('Texto copiado.'),fb)}catch(e){fb()}},
   open:el=>{S.openId=el.dataset.id;render();scrollTo(0,0)},
   'open-conf':el=>{S.tab='lista';S.openId=el.dataset.id;guardaAba();render();scrollTo(0,0)},
-  back:()=>{S.openId=null;guardaAba();render()},
+  'pes-ed':el=>{S.pesEd=+el.dataset.i;S.pesDel=null;render()},
+  'pes-del':el=>{S.pesDel=+el.dataset.i;S.pesEd=null;render()},
+  'pes-cancel':()=>{S.pesEd=null;S.pesDel=null;render()},
+  'pes-salvar':el=>{const c=getConf(S.openId),i=+el.dataset.i,p=c?.pes[i];if(!p)return;
+    const b=num(document.getElementById('pz-b')?.value),t=num(document.getElementById('pz-t')?.value)||0;
+    if(!(b>0)){toast('Digite o peso bruto.');return}if(t>=b){toast('A tara está maior que o peso.');return}
+    if(Math.abs(b-p.b)>=.0005||Math.abs(t-p.t)>=.0005){
+      setConf(c.id,{pes:c.pes.map((x,j)=>j===i?{...x,b:r3(b),t:r3(t),alt:true}:x),
+        log:[...c.log,`Pesagem ${i+1} (${GRN[p.g||grupoPadrao(p.c)]} · ${nomePes(p)}) alterada por ${quemSou()} em ${nowBR()}: ${kg(p.b-p.t)} → ${kg(b-t)} kg`]});toast('Pesagem alterada.')}
+    S.pesEd=null;render()},
+  'pes-del-ok':el=>{const c=getConf(S.openId),i=+el.dataset.i,p=c?.pes[i];if(!p)return;
+    if(c.pes.length<2){toast('É a única pesagem. Para apagar tudo, use Excluir conferência.');return}
+    setConf(c.id,{pes:c.pes.filter((_,j)=>j!==i),log:[...c.log,`Pesagem ${i+1} (${GRN[p.g||grupoPadrao(p.c)]} · ${nomePes(p)} · ${kg(p.b-p.t)} kg) excluída por ${quemSou()} em ${nowBR()}`]});
+    S.pesDel=null;render();toast('Pesagem excluída.')},
+  'conf-del':()=>{S.confDel=true;render()},
+  'conf-del-no':()=>{S.confDel=false;render()},
+  'conf-del-ok':()=>{const c=getConf(S.openId);if(!c)return;S.apps=S.apps.filter(x=>x.id!==c.id);
+    const r=S.recs.find(x=>x.id===c.rec);if(r)r.lock=false;
+    S.openId=null;S.confDel=false;resetIdx();save();guardaAba();render();toast('Conferência excluída. A nota voltou para "aguardando conferência".')},
+  back:()=>{S.confDel=false;S.pesEd=null;S.pesDel=null;S.openId=null;guardaAba();render()},
   filtro:el=>{S.filtro=el.dataset.v;render()},
   nfiltro:el=>{S.nfiltro=el.dataset.v;render()},
   'nota-save':()=>{const f=S.nForm,k=num(f.kg),v=num(f.v);
