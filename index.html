@@ -145,6 +145,11 @@ input.big{font-family:var(--f-num);font-size:1.5rem;padding:10px 12px;text-align
 .pickbox{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:9px 11px;cursor:pointer;font:inherit;font-size:.92rem;color:var(--fg)}
 .pickbox span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pickbox.on{border-color:var(--accent)}
+.treinobar{background:var(--cta);color:#fff;font-size:.82rem;padding:6px 16px;text-align:center}.treinobar b{letter-spacing:.06em}
+.treinobtn{width:100%;border:2px dashed var(--cta);color:#C2500E;background:#FFF4EC}
+.exlist{border:1px solid var(--line);border-radius:10px;overflow:hidden}.exh{background:#FFF4EC;color:#C2500E;font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:6px 10px}
+.exi{display:flex;justify-content:space-between;align-items:center;width:100%;border:0;border-top:1px solid var(--line);background:var(--surface);padding:10px;font:inherit;text-align:left;color:var(--fg);cursor:pointer}.exi small{display:block;color:var(--muted);font-size:.78rem}
+.treinodel{align-self:center;color:var(--crit)}
 .segcx{display:grid;grid-template-columns:1fr 2fr;gap:6px}.segcx button{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:12px 8px;font:inherit;font-weight:600;font-size:.95rem;color:var(--fg);cursor:pointer}
 .segcx button.on{background:var(--accent);color:#fff;border-color:var(--accent)}.segcx small{font-weight:400;opacity:.85}
 .lnk{align-self:flex-end;border:0;background:none;color:var(--accent);text-decoration:underline;font:inherit;font-size:.82rem;padding:2px;cursor:pointer}
@@ -314,6 +319,7 @@ details summary{cursor:pointer;font-weight:600;font-size:.9rem;padding:4px 0}
     <div class="brand"><div class="mark">PA<span>$</span></div><div><b>Açougue Pa<span>$</span>toril</b><small>Conferência de carnes · Mercado Pastoril</small></div></div>
     <div class="ctx" id="ctx"></div>
   </div>
+  <div id="treinobar" class="treinobar" hidden><b>MODO TREINO</b> · nada é salvo de verdade</div>
 </header>
 <nav class="tabs" id="tabs" aria-label="Seções"></nav>
 <main id="view"></main>
@@ -597,7 +603,7 @@ async function puxar(inicial){
   return mudou;
 }
 async function enviar(){
-  if(!SY.on||SY.busy)return;SY.busy=true;
+  if(!SY.on||SY.busy||TREINO)return;SY.busy=true;
   try{
     const cur=docsAtuais(),rows=[];
     for(const [key,x] of cur){const j=JSON.stringify(x.d),b=SY.base.get(key);if(b&&b.j===j)continue;
@@ -614,16 +620,16 @@ async function enviar(){
   }catch(e){SY.off=true}
   finally{SY.busy=false;syncUI()}
 }
-async function sincronizar(){if(!SY.on)return;try{const m=await puxar(false);SY.off=false;await enviar();if(m)renderRemoto()}catch(e){SY.off=true;syncUI()}}
+async function sincronizar(){if(!SY.on||TREINO)return;try{const m=await puxar(false);SY.off=false;await enviar();if(m)renderRemoto()}catch(e){SY.off=true;syncUI()}}
 function agendarEnvio(){clearTimeout(SY.tPush);SY.tPush=setTimeout(enviar,700)}
 function guardarCache(){if(!S.user)return;clearTimeout(SY.tCache);SY.tCache=setTimeout(guardarCacheJa,300)}
-function guardarCacheJa(){if(!S.user)return;clearTimeout(SY.tCache);
+function guardarCacheJa(){if(!S.user||TREINO)return;clearTimeout(SY.tCache);
   const d={v:1,recs:S.recs,apps:S.apps,notasApp:S.notasApp,conts:S.conts,prods:S.prods,vimp:S.vimp,used:S.used,apel:S.apel,set:S.set,lojas:S.lojas,base:[...SY.base],cursor:SY.cursor};
   try{localStorage.setItem(KEY+':dados:'+S.user,JSON.stringify(d))}catch(e){}}
 function lerCache(){try{const d=JSON.parse(localStorage.getItem(KEY+':dados:'+S.user)||'null');if(!d||d.v!==1)return false;
   ['recs','apps','notasApp','conts','prods','vimp','used','lojas','apel'].forEach(k=>{if(d[k])S[k]=d[k]});S.set=mergeSet(d.set);
   SY.base=new Map(d.base||[]);SY.cursor=d.cursor||null;depoisDeReceber();return true}catch(e){return false}}
-function syncUI(){const el=document.getElementById('sync');if(!el)return;
+function syncUI(){const el=document.getElementById('sync');if(!el)return;if(TREINO){el.textContent='';return}
   el.textContent=SY.off?`Sem internet${SY.pend?' · '+SY.pend+' para enviar':''}`:SY.pend||SY.busy?'· salvando…':'· ✓';el.title=SY.off||SY.pend||SY.busy?'':'Salvo no servidor';
   el.style.color=SY.off?'var(--warn)':''}
 let PEND_R=false;
@@ -641,11 +647,12 @@ function loadDrafts(){try{const d=JSON.parse(localStorage.getItem(KEY+':rasc:'+S
 /* aba aberta: sobrevive ao "puxar para atualizar", mas o app aberto de novo começa em Nota Fiscal */
 const guardaAba=()=>{try{sessionStorage.setItem(KEY+':aba',JSON.stringify({tab:S.tab,openId:S.openId}))}catch(e){}};
 function lerAba(){try{const a=JSON.parse(sessionStorage.getItem(KEY+':aba')||'null');if(a?.tab){S.tab=a.tab;S.openId=a.openId||null}}catch(e){}}
-function save(){saveDrafts();guardaAba();if(SY.on){guardarCache();agendarEnvio()}}
+function save(){saveDrafts();guardaAba();if(TREINO){guardarTreino();return}if(SY.on){guardarCache();agendarEnvio()}}
 
 /* ---------- fotos da nota: vão para o Storage; no documento fica só a referência "sb:caminho" ---------- */
 const FURL=new Map();
 async function subirFoto(dataUrl,loja){
+  if(TREINO)return dataUrl; /* treino: a foto fica só no celular */
   try{const blob=await (await fetch(dataUrl)).blob(),path=`${loja}/${crypto.randomUUID()}.jpg`;
     const {error}=await sb.storage.from('fotos').upload(path,blob,{contentType:'image/jpeg'});
     if(error)throw error;FURL.set(path,{u:dataUrl,t:Date.now()+36e5});return 'sb:'+path}
@@ -658,6 +665,29 @@ async function carregarFotos(){
   if(falta.length){const {data}=await sb.storage.from('fotos').createSignedUrls(falta,3600);(data||[]).forEach(x=>{if(x.signedUrl)FURL.set(x.path,{u:x.signedUrl,t:Date.now()+3e6})})}
   els.forEach(e=>{const x=FURL.get(e.dataset.foto);if(x&&e.src!==x.u)e.src=x.u});
 }
+
+/* ---------- modo treino: só conferente, sem PIN, tudo fica no celular e nada vai para o servidor ---------- */
+let TREINO=false;
+const TKEY='acougue-treino-dados', LOJA_TREINO={id:99,nome:'Loja de treino',cidade:'',cnpj:'',cert:false,modo:'ambos'};
+const EXEMPLOS=[
+ {nome:'Frigocal · NF 297573',det:'Traseiro, dianteiro, ponta de agulha, fígado',nota:{numero:'297573',emitente_cnpj:'05012512000191',emitente_nome:'FRIGORIFICO CACOAL LTDA',peso_liquido:837.207,itens:[
+   {descricao:'CARNE RESFRIADA DE BOVINO COM OSSO - QUARTO TRASEIRO SERROTE (VACA)',ncm:'02012020',unidade:'KG',quantidade:497.2},
+   {descricao:'CARNE RESFRIADA DE BOVINO COM OSSO - QUARTO DIANTEIRO (VACA)',ncm:'02012010',unidade:'KG',quantidade:192},
+   {descricao:'CARNE RESFRIADA DE BOVINO COM OSSO - PONTA DE AGULHA (P A DE VACA)',ncm:'02012090',unidade:'KG',quantidade:110},
+   {descricao:'MIUDOS CONG DE BOV - FIGADO',ncm:'02062200',unidade:'KG',quantidade:38.007}]}},
+ {nome:'Krause · NF 172436',det:'Picanha, contra-filé, alcatra, coxão mole em caixa',nota:{numero:'172436',emitente_cnpj:'10348616000101',emitente_nome:'FRIGORIFICO KRAUSE',peso_liquido:156.1,itens:[
+   {descricao:'CARNE RESFRIADA DE BOVINO SEM OSSO - PICANHA - 4,00',ncm:'02013000',unidade:'KG',quantidade:22.5},
+   {descricao:'CARNE RESFRIADA DE BOVINO SEM OSSO - CONTRA FILE - 3,00',ncm:'02013000',unidade:'KG',quantidade:48.3},
+   {descricao:'CARNE RESFRIADA DE BOVINO SEM OSSO - ALCATRA - 2,00',ncm:'02013000',unidade:'KG',quantidade:30.2},
+   {descricao:'CARNE RESFRIADA DE BOVINO SEM OSSO - COXAO MOLE - 3,00',ncm:'02013000',unidade:'KG',quantidade:55.1}]}},
+];
+function guardarTreino(){if(!TREINO)return;try{localStorage.setItem(TKEY,JSON.stringify({recs:S.recs,apps:S.apps,conts:S.conts}))}catch(e){}}
+function entrarTreino(){
+  saiu();TREINO=true;SY.on=false;try{sessionStorage.setItem('acougue-treino','1')}catch(e){}
+  S.user='treino';S.users=[{id:'treino',nome:'Treino',usuario:'treino',perfil:'conferente',loja:99,ativo:true}];S.lojas=[...structuredClone(DEF_LOJAS),{...LOJA_TREINO}];
+  try{const d=JSON.parse(localStorage.getItem(TKEY)||'null');if(d){S.recs=d.recs||[];S.apps=d.apps||[];S.conts=d.conts||[]}}catch(e){}
+  loadDrafts();lerAba();applyUser();S.boot=false;render();scrollTo(0,0)}
+function sairTreino(){TREINO=false;try{sessionStorage.removeItem('acougue-treino')}catch(e){}saiu();render();scrollTo(0,0)}
 
 /* ---------- login ---------- */
 async function fn(nome,body){
@@ -941,7 +971,7 @@ function vCtx(){
   const u=curUser(); if(!u)return '';
   return `<div class="who"><b>${esc(u.nome)}</b><span>${PERFIS[u.perfil]} · ${u.perfil==='gestor'?'Todas as lojas':esc(lojaNome(u.loja))} <span id="sync" aria-live="polite"></span></span></div>
   ${u.perfil==='gestor'?`<label class="ctl"><span>Loja</span><select id="loja"><option value="0"${S.loja===0?' selected':''}>Todas as lojas</option>${lojaOpts(S.loja)}</select></label>`:''}
-  <button type="button" class="btn sm" data-act="sair">Sair</button>`;
+  <button type="button" class="btn sm" data-act="sair">${TREINO?'Sair do treino':'Sair'}</button>`;
 }
 function vTabs(){return tabsFor().map(([k,t])=>`<button class="${S.tab===k?'on':''}" data-act="tab" data-v="${k}">${ICON[k]}<span>${t}</span></button>`).join('')}
 function vLogin(){
@@ -961,7 +991,9 @@ function vLogin(){
     </form>
     <button type="button" class="btn ghost" data-act="lg-modo">${ativ?'← Já tenho PIN':'Primeiro acesso ou esqueci o PIN'}</button>
     ${ativ?'':'<p class="hint">Esqueceu o PIN? Peça um código novo à Diretoria e toque em “Primeiro acesso”.</p>'}
-  </section>`;
+  </section>
+  ${ativ?'':`<section class="card" style="max-width:420px;width:100%;margin:12px auto 0"><button type="button" class="btn treinobtn" data-act="treino">Entrar no modo treino</button>
+    <p class="hint">Para aprender a usar o app. Entra como conferente, sem PIN, e nada é salvo de verdade.</p></section>`}`;
 }
 
 /* ---------- CONFERIR (pesagem da nota) ---------- */
@@ -1246,12 +1278,13 @@ function vNF(){
     return `<p><span class="pill ${d<=.01?'ok':'warn'}">${d<=.01?'Soma dos itens bate com o peso líquido da nota':`Itens somam ${kg(f.ia.soma)} kg; a nota diz ${kg(f.ia.pl)} kg. Confira.`}</span></p>`};
   let recCorpo;
   if(est==='vazio')recCorpo=`<label class="cambig">${inFoto}${ICON.cam}<span>Tirar foto da nota</span></label>
-    <label class="galeria"><input id="rgaleria" type="file" accept="image/*" multiple class="vh">ou escolher foto da galeria</label>`;
+    <label class="galeria"><input id="rgaleria" type="file" accept="image/*" multiple class="vh">ou escolher foto da galeria</label>
+    ${TREINO?`<div class="exlist"><div class="exh">Ou use uma nota de exemplo</div>${EXEMPLOS.map((x,i)=>`<button type="button" class="exi" data-act="exemplo" data-i="${i}"><span>${esc(x.nome)}<small>${esc(x.det)}</small></span><b>›</b></button>`).join('')}</div>`:''}`;
   else if(est==='fotos')recCorpo=`<div class="fotos">${fotos}${SUBINDO?'<span class="pill warn">Enviando foto…</span>':maisFoto('+ Outra folha')}</div>
     <button type="button" class="btn pri wide lernota" data-act="rler"${SUBINDO?' disabled':''}>Ler nota</button><div class="inrow">${limpar}</div>`;
   else if(est==='lendo')recCorpo=`<div class="fotos">${fotos}</div><p><span class="pill warn">Lendo a nota…</span></p><div class="inrow">${limpar}</div>`;
   else if(est==='lida'){const falta=!f.nf||!f.forn;
-    recCorpo=`<div class="nfres"><b>NF ${esc(f.nf||'—')}</b><span>${esc(FM[f.forn]?.nome||f.fornNome||'Fornecedor não reconhecido')} · ${f.fotos.length} folha${f.fotos.length===1?'':'s'}</span></div>
+    recCorpo=`<div class="nfres"><b>NF ${esc(f.nf||'—')}</b><span>${esc(FM[f.forn]?.nome||f.fornNome||'Fornecedor não reconhecido')} · ${f.exemplo?'nota de exemplo':`${f.fotos.length} folha${f.fotos.length===1?'':'s'}`}</span></div>
     ${!f.forn&&f.ia.emitente?`<p class="hint">Lido na nota: ${esc(f.ia.emitente)}. Escolha o fornecedor na lista.</p>`:''}
     ${f.fornNome&&!FM[f.forn]?`<p class="hint">Fornecedor ainda não cadastrado.${S.role==='gestor'?' <button type="button" class="btn sm" data-act="forn-novo">Cadastrar fornecedor</button>':''}</p>`:''}
     ${f.corr||falta?campos():vp?pesos:''}${somaOk()}
@@ -1271,6 +1304,8 @@ function vNF(){
     ${acc('rec',1,ed?'Corrigir nota recebida':'Receber nota','',recebHTML)}
     ${acc('lista',2,'Notas recebidas',aguard?`<span class="pill warn">${aguard} aguardando</span>`:`<span class="tag">${recebidas.length}</span>`,listaHTML)}
     ${g?acc('mes',3,'Notas do mês','<span class="tag">'+doMes+'</span>',xmlBtn):''}
+    ${TREINO?(S.treinoDel?`<div class="confirm"><p><b>Apagar tudo do treino?</b> Notas, conferências e contagens do treino somem deste celular.</p><div class="inrow"><button type="button" class="btn" data-act="treino-apagar-nao">Não</button><button type="button" class="btn pri" data-act="treino-apagar-ok">Apagar</button></div></div>`
+      :`<button type="button" class="lnk treinodel" data-act="treino-apagar">Apagar tudo do treino e começar de novo</button>`):''}
   </div>`;
 }
 /* quais blocos da aba Nota Fiscal ficam abertos (lembrado neste aparelho) */
@@ -1481,6 +1516,7 @@ const msgCodigo=x=>[`Olá, ${x.nome}! Seu acesso ao app de Conferência de Carne
 function render(){refazForn();
   resetIdx();
   const tabsEl=document.getElementById('tabs'), view=document.getElementById('view');
+  document.getElementById('treinobar').hidden=!TREINO;
   if(!curUser()){tabsEl.hidden=true;document.getElementById('ctx').innerHTML='';view.innerHTML=vLogin();return}
   tabsEl.hidden=false;
   if(S.loja>0&&!S.done){if(!S.draft.comp&&!S.draft.rec)S.draft.loja=S.loja;if(!S.rf.edit)S.rf.loja=S.loja;S.nForm.loja=S.loja;S.cd.loja=S.loja}
@@ -1542,7 +1578,8 @@ let LENDO=null; /* formulário cuja foto está sendo lida; resultado que chega d
 let LER={f:null,imgs:[]}, SUBINDO=0; /* fotos em boa resolução para a leitura (só na memória) e envios em andamento */
 const imgsLer=()=>LER.f===S.rf?LER.imgs:[];
 async function lerDanfe(f,imgs){
-  try{if(!imgs.length)throw new Error('Tire a foto de novo para ler.');
+  try{if(TREINO)throw new Error('No treino a foto não é lida. Use uma nota de exemplo ou digite os dados.');
+    if(!imgs.length)throw new Error('Tire a foto de novo para ler.');
     const r=await fn('ler-danfe',{imagens:imgs});if(S.rf!==f)return;aplicarLeitura(r.nota,r.modelo);
     toast('Nota lida.')}
   catch(e){if(S.rf===f){f.falhou=true;toast(e.message||'Não consegui ler a foto. Digite os dados.')}}
@@ -1597,7 +1634,14 @@ const erroPlanilha=e=>toast(e?.message==='leitor'?'Não foi possível carregar o
 /* ---------- eventos ---------- */
 const A={
   'lg-modo':()=>{S.lg.usuario=document.getElementById('lg-usuario')?.value.trim()||S.lg.usuario;S.lg.modo=S.lg.modo==='ativar'?'entrar':'ativar';S.lg.erro='';render();focusId(S.lg.usuario?(S.lg.modo==='ativar'?'lg-codigo':'lg-pin'):'lg-usuario')},
-  sair:async()=>{guardarCacheJa();saveDrafts();saiu();render();scrollTo(0,0);await sb.auth.signOut()},
+  sair:async()=>{if(TREINO){sairTreino();return}guardarCacheJa();saveDrafts();saiu();render();scrollTo(0,0);await sb.auth.signOut()},
+  treino:()=>entrarTreino(),
+  'treino-apagar':()=>{S.treinoDel=true;render()},
+  'treino-apagar-nao':()=>{S.treinoDel=false;render()},
+  'treino-apagar-ok':()=>{S.recs=[];S.apps=[];S.conts=[];S.rf=newRf(99);S.draft=newDraft(99);S.cd=newCd(99);S.done=null;S.openId=null;S.treinoDel=false;LER={f:null,imgs:[]};LENDO=null;resetIdx();save();S.tab='nf';render();scrollTo(0,0);toast('Treino apagado. Pode começar de novo.')},
+  exemplo:el=>{const ex=EXEMPLOS[+el.dataset.i];if(!ex)return;const n=structuredClone(ex.nota);
+    while(S.recs.some(r=>r.nf===n.numero&&r.loja===S.rf.loja))n.numero=String(+n.numero+1); /* dá para repetir o exemplo */
+    S.rf=newRf(S.rf.loja);aplicarLeitura(n,'exemplo');S.rf.exemplo=true;save();render()},
   tab:el=>{S.tab=el.dataset.v;S.openId=null;S.cxOutra=false;S.confirm=false;S.cconfirm=false;if(el.dataset.v==='conferir')S.done=null;guardaAba();render();scrollTo(0,0);sincronizar()},
   grupo:el=>{const d=S.draft;if(d.grupo!==el.dataset.v){d.grupo=el.dataset.v;d.sel=[];d.prod=null}save();render()},
   csel:el=>{const d=S.draft,c=el.dataset.c,s=d.sel||[];d.sel=s.includes(c)?s.filter(x=>x!==c):[...s,c];save();render()},
@@ -1864,6 +1908,6 @@ document.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const t=e.targ
   else if(t.id==='cpeso'){e.preventDefault();S.cd.peso=t.value;addPeca()}
 });
 render();
-sb.auth.getSession().then(({data})=>{if(data.session)entrouComSessao();else{S.boot=false;render()}}).catch(()=>{S.boot=false;render()});
+sb.auth.getSession().then(({data})=>{if(data.session)entrouComSessao();else{let t=false;try{t=sessionStorage.getItem('acougue-treino')==='1'}catch(e){}if(t)entrarTreino();else{S.boot=false;render()}}}).catch(()=>{S.boot=false;render()});
 sb.auth.onAuthStateChange(ev=>{if(ev==='SIGNED_OUT'&&S.user){saiu();render()}});
 </script>
