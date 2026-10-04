@@ -145,6 +145,10 @@ input.big{font-family:var(--f-num);font-size:1.5rem;padding:10px 12px;text-align
 .pickbox{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:9px 11px;cursor:pointer;font:inherit;font-size:.92rem;color:var(--fg)}
 .pickbox span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pickbox.on{border-color:var(--accent)}
+.somar{display:flex;align-items:center;gap:8px}.somar #somabox{margin-left:auto}
+.sbox{text-align:right;border-radius:10px;padding:6px 10px;background:var(--bg)}.sbox small{display:block;font-size:.66rem;letter-spacing:.05em;text-transform:uppercase;color:inherit;opacity:.85}
+.sbox b{white-space:nowrap;font-family:var(--f-num);font-weight:600;font-size:1.02rem}.sbox .dif{text-transform:none;letter-spacing:0;font-size:.75rem}
+.sbox.ok{background:var(--ok-soft);color:var(--ok)}.sbox.wa{background:var(--warn-soft);color:var(--warn)}
 .treinobar{background:var(--cta);color:#fff;font-size:.82rem;padding:6px 16px;text-align:center}.treinobar b{letter-spacing:.06em}
 .treinobtn{width:100%;border:2px dashed var(--cta);color:#C2500E;background:#FFF4EC}
 .exlist{border:1px solid var(--line);border-radius:10px;overflow:hidden}.exh{background:#FFF4EC;color:#C2500E;font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:6px 10px}
@@ -1242,6 +1246,11 @@ const optsLinha=sel=>{const ps=prodList().filter(p=>!p.sistema&&!p.feito), o=(p,
     +`<optgroup label="Miúdos">${ps.filter(p=>p.miudo).map(p=>o(p.c,p.n)).join('')}${o('MIUDO','Outros miúdos')}</optgroup>`
     +`<optgroup label="Cortes e outros">${ps.filter(p=>!p.miudo&&(p.cx||!pecasOf(p).length)).map(p=>o(p.c,p.n)).join('')}</optgroup>`};
 const optsOutros=sel=>`<option value="">Outro item</option>`+[...prodList().filter(p=>p.cx||!pecasOf(p).length),PM.MIUDO].map(p=>`<option value="${p.c}"${sel===p.c?' selected':''}>${esc(p.n)}</option>`).join('');
+/* soma dos pesos das linhas ao lado do "+ Outro item", comparada com o peso líquido da nota */
+function somaBox(f,ed){const soma=r3(f.out.reduce((t,o)=>t+(num(o.kg)>0?num(o.kg):0),0)), pl=f.ia?.pl||ed?.lida?.pl||0;
+  if(!pl)return `<div class="sbox"><small>Soma dos itens</small><b>${kg(soma)} kg</b></div>`;
+  const d=r3(soma-pl), ok=Math.abs(d)<=Math.max(.01,pl*.001);
+  return `<div class="sbox ${ok?'ok':'wa'}"><small>Soma · nota ${kg(pl)}</small><b>${kg(soma)} kg${ok?' ✓':''}</b>${ok?'':`<small class="dif">${d<0?'faltam':'sobram'} ${kg(Math.abs(d))} kg</small>`}</div>`}
 function vNF(){
   const f=S.rf, g=S.role!=='conferente', ed=f.edit?S.recs.find(r=>r.id===f.edit):null;
   const p=f.chave.length===44?parseChave(f.chave):null;
@@ -1256,7 +1265,7 @@ function vNF(){
   const pesos=noSis?`<div class="okline"><span class="pill ok">Esta nota já está no sistema</span></div>`
     :`<div class="field"><span class="lbl">Pesos da nota fiscal</span>
       ${f.out.map((o,i)=>`<div class="pz${o.desc?' comnota':''}"><select id="ro-c-${i}" aria-label="Item da nota"${o.c?'':' class="falta"'}>${optsLinha(o.c)}</select><input id="ro-kg-${i}" inputmode="decimal" placeholder="0,000" value="${esc(o.kg)}" aria-label="Peso em kg"><span>kg</span>${f.out.length>1?`<button type="button" class="x" data-act="ro-rm" data-i="${i}" aria-label="Remover item">×</button>`:''}</div>${o.desc?`<p class="hint apel">${i+1}. ${esc(o.desc)}${o.c?'':' · <b>escolha o produto</b>'}</p>`:''}`).join('')}
-      <button type="button" class="btn sm" data-act="ro-add" style="align-self:flex-start">+ Outro item</button></div>`;
+      <div class="somar"><button type="button" class="btn sm" data-act="ro-add">+ Outro item</button><div id="somabox">${somaBox(f,ed)}</div></div></div>`;
   const recebidas=S.recs.filter(r=>(!S.loja||r.loja===S.loja)&&(g||r.uid===S.user||!confDoRec(r))).sort((a,b)=>(b.data+b.hora).localeCompare(a.data+a.hora)).slice(0,30);
   const aguard=recebidas.filter(r=>!confDoRec(r)).length;
   const doMes=g?allNotas().filter(n=>(!S.loja||n.loja===S.loja)&&noMes(n.data,S.mesN)).length:0;
@@ -1274,8 +1283,6 @@ function vNF(){
       <div class="field"><label for="rforn">Fornecedor</label><select id="rforn" class="in"><option value="">Selecione</option>${f.fornNome&&!FM[f.forn]?`<option value="${esc(f.forn)}" selected>${esc(f.fornNome)} (da nota)</option>`:''}${FORN.map(x=>`<option value="${x.id}"${f.forn===x.id?' selected':''}>${esc(x.nome)}</option>`).join('')}</select></div>
       <div class="field"><label for="rdata">Data de entrega</label><input id="rdata" type="date" value="${f.data}"></div>
     </div>${vp?pesos:''}`;
-  const somaOk=()=>{if(!vp||!(f.ia?.pl>0))return '';const d=Math.abs(f.ia.soma-f.ia.pl)/f.ia.pl;
-    return `<p><span class="pill ${d<=.01?'ok':'warn'}">${d<=.01?'Soma dos itens bate com o peso líquido da nota':`Itens somam ${kg(f.ia.soma)} kg; a nota diz ${kg(f.ia.pl)} kg. Confira.`}</span></p>`};
   let recCorpo;
   if(est==='vazio')recCorpo=`<label class="cambig">${inFoto}${ICON.cam}<span>Tirar foto da nota</span></label>
     <label class="galeria"><input id="rgaleria" type="file" accept="image/*" multiple class="vh">ou escolher foto da galeria</label>
@@ -1287,7 +1294,7 @@ function vNF(){
     recCorpo=`<div class="nfres"><b>NF ${esc(f.nf||'—')}</b><span>${esc(FM[f.forn]?.nome||f.fornNome||'Fornecedor não reconhecido')} · ${f.exemplo?'nota de exemplo':`${f.fotos.length} folha${f.fotos.length===1?'':'s'}`}</span></div>
     ${!f.forn&&f.ia.emitente?`<p class="hint">Lido na nota: ${esc(f.ia.emitente)}. Escolha o fornecedor na lista.</p>`:''}
     ${f.fornNome&&!FM[f.forn]?`<p class="hint">Fornecedor ainda não cadastrado.${S.role==='gestor'?' <button type="button" class="btn sm" data-act="forn-novo">Cadastrar fornecedor</button>':''}</p>`:''}
-    ${f.corr||falta?campos():vp?pesos:''}${somaOk()}
+    ${f.corr||falta?campos():vp?pesos:''}
     <div class="inrow"><button type="button" class="btn pri" data-act="rsave">Confirmar</button>${f.corr||falta?'':'<button type="button" class="btn" data-act="rcorr">Corrigir dados</button>'}${limpar}</div>`}
   else recCorpo=`${f.falhou?`<p><span class="pill warn">Não consegui ler a foto. Digite os dados.</span></p>`:''}
     <div class="fotos">${fotos}${maisFoto('+ Foto')}</div>${f.falhou&&imgsLer().length?'<button type="button" class="btn sm" data-act="rler" style="align-self:flex-start">Tentar ler de novo</button>':''}
@@ -1890,6 +1897,7 @@ document.addEventListener('change',e=>{const t=e.target,id=t.id||'';
   else if(id.startsWith('zap-')){S.set.zap[id.slice(4)]=t.value.trim();save()}
 });
 document.addEventListener('input',e=>{const t=e.target;let m;
+  if((m=t.id.match(/^ro-kg-(\d+)$/))){const o=S.rf.out[+m[1]];if(o){o.kg=t.value;const b=document.getElementById('somabox');if(b)b.innerHTML=somaBox(S.rf,S.rf.edit?S.recs.find(r=>r.id===S.rf.edit):null);saveDrafts()}return}
   if(t.id==='u-nome'||t.id==='u-usuario'){S.uForm[t.id.slice(2)]=t.value;return}
   if(/^n-(nf|kg|v)$/.test(t.id)){S.nForm[t.id.slice(2)]=t.value;return}
   if((m=t.id.match(/^cl-kg-(\d+)$/))){const l=S.cd.linhas[+m[1]];if(l){l.kg=t.value;document.getElementById('cres').innerHTML=cresHTML();save()}return}
