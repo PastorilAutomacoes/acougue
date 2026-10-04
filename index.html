@@ -145,6 +145,17 @@ input.big{font-family:var(--f-num);font-size:1.5rem;padding:10px 12px;text-align
 .pickbox{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:9px 11px;cursor:pointer;font:inherit;font-size:.92rem;color:var(--fg)}
 .pickbox span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pickbox.on{border-color:var(--accent)}
+.segcx{display:grid;grid-template-columns:1fr 2fr;gap:6px}.segcx button{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:12px 8px;font:inherit;font-weight:600;font-size:.95rem;color:var(--fg);cursor:pointer}
+.segcx button.on{background:var(--accent);color:#fff;border-color:var(--accent)}.segcx small{font-weight:400;opacity:.85}
+.lnk{align-self:flex-end;border:0;background:none;color:var(--accent);text-decoration:underline;font:inherit;font-size:.82rem;padding:2px;cursor:pointer}
+.cxoutra{display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:.85rem}.cxoutra input{width:90px;text-align:right}
+.opt1{display:block;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:var(--surface);padding:10px 12px;font:inherit;font-size:.92rem;color:var(--fg);cursor:pointer}.opt1:first-child{border-top:0}.opt1.on{background:var(--accent);color:#fff;font-weight:600}
+#csug{max-height:260px;overflow:auto}
+.cg{border-top:1px solid var(--line)}.cg:first-child{border-top:0}
+.cgh{display:flex;justify-content:space-between;align-items:baseline;width:100%;border:0;background:none;padding:10px 0;font:inherit;color:var(--fg);cursor:pointer;text-align:left}
+.cgh small{color:var(--muted);font-size:.8rem;margin-left:6px}.cgh .num{font-family:var(--f-num);font-weight:600;text-align:right}.cgh .num small{display:block}
+.cpc{display:flex;justify-content:space-between;align-items:center;font-size:.85rem;color:var(--muted);padding:2px 0 6px 18px}
+.cpc .x{border:0;background:none;color:var(--muted);font-size:1.1rem;padding:2px 6px}
 .pchips{display:flex;flex-wrap:wrap;gap:6px}.pchip{font-size:.8rem;font-weight:600;background:var(--bg);color:var(--accent);border-radius:999px;padding:3px 10px;font-family:var(--f-num)}
 .pesnova .nm{display:flex;flex-direction:column;line-height:1.25}.pesnova .nm small{font-size:.75rem;color:var(--muted)}
 .pes li.pesed{flex-wrap:wrap;gap:6px}.pesed label{display:flex;align-items:center;gap:6px;font-size:.85rem}.pesed input{width:90px;text-align:right}
@@ -1029,7 +1040,7 @@ function vConferir(){
       ${S.contAberto?`<div class="optlist">${naNota.length?`<div class="optsep">Na nota</div>${naNota.map(opt).join('')}`:''}${outras.length?`<div class="optsep">${naNota.length?'Outras':'Carnes'}</div>${outras.map(opt).join('')}`:''}${naNota.length+outras.length?'':'<p class="hint">Nenhuma carne cadastrada nesta peça.</p>'}</div>`:''}</div>`;
   const tn=num(d.tara)||0;
   const taras=[['0','Sem tara'],...S.set.taras.map(t=>[String(t.kg).replace('.',','),`${t.n} ${String(+t.kg).replace('.',',')} kg`])];
-  const pesList=d.pes.map((x,i)=>({x,i})).reverse().map(({x,i})=>`<li><span class="i">${i+1}</span><span class="nm">${esc(nomePes(x))}<small>${esc(GRN[x.g]||'')}${x.t?` · tara ${kg(x.t)}${x.td?' (digitada)':''}`:''}${x.h?' · '+x.h:''}</small></span><span class="num">${kg(x.b-x.t)}</span><button type="button" class="x" data-act="rmpes" data-i="${i}" aria-label="Remover pesagem ${i+1}">×</button></li>`).join('');
+  const pesList=d.pes.map((x,i)=>({x,i})).reverse().map(({x,i})=>`<li><span class="i">${i+1}</span><span class="nm">${esc(nomePes(x))}<small>${esc(GRN[x.g]||'')}${x.t?' · '+naCaixa(x.t):''}${x.h?' · '+x.h:''}</small></span><span class="num">${kg(x.b-x.t)}</span><button type="button" class="x" data-act="rmpes" data-i="${i}" aria-label="Remover pesagem ${i+1}">×</button></li>`).join('');
   const porGrupo={};d.pes.forEach(p=>{(porGrupo[p.g]||(porGrupo[p.g]=[])).push(p)});
   return `<div class="cols">
   <div class="stackcol">
@@ -1038,10 +1049,8 @@ function vConferir(){
       <div class="card-h"><h2>Pesagem</h2><span class="tag">${d.pes.length} lançada${d.pes.length===1?'':'s'}</span></div>
       <div class="field"><span class="lbl">1. Peça</span><div class="gbtn">${vis.map(g=>`<button type="button" class="${d.grupo===g.k?'on':''}" data-act="grupo" data-v="${g.k}">${esc(g.n)}</button>`).join('')}${ocultas.length?`<button type="button" class="mais" data-act="maispecas">+ outra peça</button>`:''}</div></div>
       ${carnes}
-      <div class="field"><span class="lbl">3. Tara (kg)</span>
-        <div class="seg">${taras.map(([v,t])=>`<button type="button" class="${Math.abs(tn-num(v))<.0005?'on':''}" data-act="tara" data-v="${v}">${t}</button>`).join('')}<input id="tara" class="tara-in" inputmode="decimal" value="${esc(d.tara)}" aria-label="Outra tara em kg"></div></div>
+      <div class="field"><span class="lbl">3. Pesou dentro da caixa?</span>${perguntaCaixa(d.tara||'0','tara','tara')}</div>
       <div class="field"><label for="peso">4. Peso da balança (kg)</label><input id="peso" class="big" inputmode="decimal" autocomplete="off" placeholder="0,000" value="${esc(d.peso)}"></div>
-      <p class="prevpes" id="prevpes">${prevPes()}</p>
       <button type="button" class="btn pri wide" data-act="add">Confirmar pesagem</button>
     </section>
   </div>
@@ -1077,6 +1086,21 @@ function vDone(){
 /* ---------- CONTAGEM DE ESTOQUE ---------- */
 function clcdHTML(){const d=S.cd,b=num(d.peso)||0;
   return `<div class="lcd-top"><span>${d.prod?esc(PM[d.prod].n):'Escolha a carne'}</span><span>Peso</span></div><div class="lcd-val">${kg(b)}<small>kg</small></div>`}
+/* pergunta da caixa (no lugar de "tara"): Não / Sim, na caixa / outro peso */
+const caixaKg=()=>S.set.taras?.[0]?.kg||1;
+function perguntaCaixa(val,idIn,act){const t=num(val)||0,ck=caixaKg(),outra=t>0&&Math.abs(t-ck)>=.0005;
+  return `<div class="segcx"><button type="button" class="${t===0&&!S.cxOutra?'on':''}" data-act="${act}" data-v="0">Não</button><button type="button" class="${t>0&&!outra&&!S.cxOutra?'on':''}" data-act="${act}" data-v="${String(ck).replace('.',',')}">Sim, na caixa <small>(−${String(ck).replace('.',',')} kg)</small></button></div>
+    ${outra||S.cxOutra?`<label class="cxoutra">Peso da caixa (kg)<input id="${idIn}" inputmode="decimal" value="${esc(val)}"></label>`:`<button type="button" class="lnk" data-act="cxoutra">outro peso de caixa</button>`}`}
+const naCaixa=t=>!t?'':Math.abs(t-caixaKg())<.0005?'na caixa':`caixa ${kg(t)}`;
+function cListHTML(q){const n=norm(q.trim()),l=prodList().filter(p=>p.bov&&(!n||norm(p.n).includes(n)||p.c.startsWith(n))).sort((a,b)=>a.n.localeCompare(b.n,'pt-BR'));
+  return l.length?l.map(p=>`<button type="button" class="opt1${S.cd.prod===p.c?' on':''}" data-act="cpick" data-c="${p.c}">${esc(p.n)}</button>`).join(''):'<p class="hint" style="padding:8px 10px">Nenhuma carne com esse nome.</p>'}
+function contadoHTML(){const d=S.cd,g=S.role!=='conferente',m={};
+  d.pes.forEach((p,i)=>(m[p.c]||(m[p.c]=[])).push({...p,i}));
+  const ks=Object.keys(m).sort((a,b)=>(PM[a]?.n||a).localeCompare(PM[b]?.n||b,'pt-BR'));
+  if(!ks.length)return '<div class="empty">Nada contado ainda.</div>';
+  return `<div class="cgrp">${ks.map(c=>{const l=m[c],tt=l.reduce((t,p)=>t+p.kg,0),ab=S.cOpen?.[c];
+    return `<div class="cg"><button type="button" class="cgh" data-act="cgrp" data-c="${c}" aria-expanded="${!!ab}"><span><b>${ab?'▾':'▸'} ${esc(PM[c]?.n||c)}</b><small>${l.length} peça${l.length>1?'s':''}</small></span><span class="num">${kg(tt)} kg${g?`<small>${rs(tt*(PM[c]?.custo||0))}</small>`:''}</span></button>
+      ${ab?l.map(p=>`<div class="cpc"><span>${kg(p.kg)} kg${p.t?' · '+naCaixa(p.t):''}</span><button type="button" class="x" data-act="crm" data-i="${p.i}" aria-label="Remover peça">×</button></div>`).join(''):''}</div>`}).join('')}</div>`}
 function cresHTML(){
   const it=cdItens(S.cd),ks=Object.keys(it).sort(),tot=ks.reduce((s,c)=>s+it[c],0),g=S.role!=='conferente';
   if(!ks.length)return `<div class="empty">Nada contado ainda.</div>`;
@@ -1087,40 +1111,25 @@ function cresHTML(){
 function vContagem(){
   const d=S.cd,g=S.role!=='conferente';
   const lojaSel=S.loja===0?`<select id="cloja" class="in" style="width:auto">${lojaOpts(d.loja)}</select>`:`<span class="tag">${esc(lojaNome(d.loja))}</span>`;
-  const bovs=prodList().filter(p=>p.bov);
-  let corpo;
-  if(d.modo==='app'){
-    const prodBlock=d.prod
-      ?`<div class="okline"><span class="pill ok">${esc(PM[d.prod].n)}</span><button type="button" class="btn sm" data-act="cclr">Trocar carne</button></div>`
-      :`<div class="field"><label for="cq">Carne (código ou nome)</label><input id="cq" autocomplete="off" placeholder="Código ou nome"><div id="csug" class="sug">${sugHTML('','cpick',p=>p.bov)}</div></div>`;
-    corpo=`<div class="lcd" id="clcd">${clcdHTML()}</div>${prodBlock}
-      <div class="field"><label for="cpeso">Peso da peça (kg)</label><input id="cpeso" class="big" inputmode="decimal" autocomplete="off" placeholder="0,000" value="${esc(d.peso)}"></div>
-      <button type="button" class="btn pri wide" data-act="cadd">Adicionar peça</button>
-      ${d.pes.length?`<ul class="pes">${d.pes.map((x,i)=>({x,i})).reverse().map(({x,i})=>`<li><span class="i">${i+1}</span><span class="nm">${esc(PM[x.c]?.n||x.c)}</span><span class="num">${kg(x.kg)} kg</span><button type="button" class="x" data-act="crm" data-i="${i}" aria-label="Remover peça ${i+1}">×</button></li>`).join('')}</ul>`:''}`;
-  }else{
-    const opts=sel=>`<option value="">Escolha a carne</option>`+bovs.map(p=>`<option value="${p.c}"${sel===p.c?' selected':''}>${esc((/^\d+$/.test(p.c)?p.c+' · ':'')+p.n)}</option>`).join('');
-    corpo=`<p class="hint">Para quando a contagem foi feita no papel: digite o total de cada carne.</p>
-      <div class="tw"><table class="t mt"><thead><tr><th>Carne</th><th class="n">Kg contado</th><th></th></tr></thead><tbody>
-      ${d.linhas.map((l,i)=>`<tr><td><select id="cl-c-${i}">${opts(l.c)}</select></td><td class="n"><input id="cl-kg-${i}" inputmode="decimal" placeholder="0,000" value="${esc(l.kg)}"></td><td>${d.linhas.length>1?`<button type="button" class="btn sm ghost" data-act="cl-rm" data-i="${i}" aria-label="Remover linha">×</button>`:''}</td></tr>`).join('')}
-      </tbody></table></div>
-      <button type="button" class="btn" data-act="cl-add" style="align-self:flex-start">+ Adicionar carne</button>`;
-  }
+  d.modo='app'; /* a contagem do papel saiu: tudo é pesado no app */
+  const corpo=`<div class="field"><span class="lbl">1. Carne</span>
+      <button type="button" class="pickbox${S.cAberto?' on':''}" data-act="cabre" aria-expanded="${!!S.cAberto}"><span>${d.prod?esc(PM[d.prod]?.n||d.prod):'Toque para escolher'}</span><b>${S.cAberto?'▴':'▾'}</b></button>
+      ${S.cAberto?`<input id="cq" autocomplete="off" placeholder="Buscar carne" style="margin-top:6px"><div id="csug" class="optlist">${cListHTML('')}</div>`:''}</div>
+    <div class="field"><span class="lbl">2. Pesou dentro da caixa?</span>${perguntaCaixa(d.tara||'0','ctara','ctara')}</div>
+    <div class="field"><label for="cpeso">3. Peso da balança (kg)</label><input id="cpeso" class="big" inputmode="decimal" autocomplete="off" placeholder="0,000" value="${esc(d.peso)}"></div>
+    <button type="button" class="btn pri wide" data-act="cadd">Adicionar</button>`;
   const it=cdItens(d), existe=S.conts.some(c=>c.loja===d.loja&&c.data===d.data)||!!G.cont[d.loja]?.[d.data];
   const ids=S.loja?[S.loja]:lojaIds();
   const salvas=[...ids.flatMap(l=>CONTS.filter(x=>!S.conts.some(c=>c.loja===l&&c.data===x)&&G.cont[l]).map(x=>({loja:l,data:x,itens:G.cont[l][x],modo:'exemplo',por:'—'}))),...S.conts.filter(c=>ids.includes(c.loja))].sort((a,b)=>b.data.localeCompare(a.data)||a.loja-b.loja);
   return `<div class="cols">
   <section class="card">
-    <div class="card-h"><h2>Contagem de estoque</h2>${lojaSel}</div>
-    <div class="grid2">
-      <div class="field"><label for="cdata">Data da contagem</label><input id="cdata" type="date" value="${d.data}"></div>
-      <div class="field"><span class="lbl">Como foi contado</span><div class="segbig"><button type="button" class="${d.modo==='app'?'on':''}" data-act="cmodo" data-v="app">Pesando no app</button><button type="button" class="${d.modo==='papel'?'on':''}" data-act="cmodo" data-v="papel">Do papel</button></div></div>
-    </div>
+    <div class="card-h"><h2>Contagem de estoque</h2><div class="inrow">${S.loja===0?lojaSel:''}<input id="cdata" type="date" class="in" style="width:auto" value="${d.data}" aria-label="Data da contagem"></div></div>
     ${corpo}
   </section>
   <div class="stackcol">
     <section class="card">
-      <div class="card-h"><h2>Resumo da contagem</h2><span class="tag">${esc(dBR(d.data))}</span></div>
-      <div id="cres">${cresHTML()}</div>
+      <div class="card-h"><h2>Contado</h2><span class="tag num">${d.pes.length} peça${d.pes.length===1?'':'s'} · ${kg(Object.values(it).reduce((t,k)=>t+k,0))} kg</span></div>
+      ${contadoHTML()}
       ${S.cconfirm?`<div class="confirm"><p><b>Finalizar a contagem de ${dBR(d.data)}?</b> Ela vira o estoque final deste balanço e o inicial do próximo.${existe?' Já existe uma contagem nesta data para esta loja; ela será substituída.':''}</p>
         ${Object.keys(it).length?'':'<ul><li>Conte pelo menos uma carne.</li></ul>'}
         <div class="inrow"><button type="button" class="btn" data-act="cfin-cancel">Voltar</button><button type="button" class="btn pri" data-act="cfin-ok"${Object.keys(it).length?'':' disabled'}>Finalizar contagem</button></div></div>`
@@ -1514,7 +1523,8 @@ function addPeca(){
   const d=S.cd,b=num(d.peso);
   if(!d.prod){toast('Escolha a carne primeiro.');focusId('cq');return}
   if(!(b>0)){toast('Digite o peso da peça.');focusId('cpeso');return}
-  d.pes.push({c:d.prod,kg:r3(b)});d.peso='';save();render();focusId('cpeso');
+  const t=num(d.tara)||0;if(t>=b){toast('O peso da caixa está maior que o da balança.');return}
+  d.pes.push({c:d.prod,kg:r3(b-t),...(t?{t:r3(t)}:{})});S.cOpen={...(S.cOpen||{}),[d.prod]:true};d.peso='';save();render();focusId('cpeso');
 }
 /* diminui a foto sem abrir ela inteira na memória: celular simples fecha o app com foto de 50 megapixels */
 async function readImg(file,max=900,q=.7){
@@ -1588,7 +1598,7 @@ const erroPlanilha=e=>toast(e?.message==='leitor'?'Não foi possível carregar o
 const A={
   'lg-modo':()=>{S.lg.usuario=document.getElementById('lg-usuario')?.value.trim()||S.lg.usuario;S.lg.modo=S.lg.modo==='ativar'?'entrar':'ativar';S.lg.erro='';render();focusId(S.lg.usuario?(S.lg.modo==='ativar'?'lg-codigo':'lg-pin'):'lg-usuario')},
   sair:async()=>{guardarCacheJa();saveDrafts();saiu();render();scrollTo(0,0);await sb.auth.signOut()},
-  tab:el=>{S.tab=el.dataset.v;S.openId=null;S.confirm=false;S.cconfirm=false;if(el.dataset.v==='conferir')S.done=null;guardaAba();render();scrollTo(0,0);sincronizar()},
+  tab:el=>{S.tab=el.dataset.v;S.openId=null;S.cxOutra=false;S.confirm=false;S.cconfirm=false;if(el.dataset.v==='conferir')S.done=null;guardaAba();render();scrollTo(0,0);sincronizar()},
   grupo:el=>{const d=S.draft;if(d.grupo!==el.dataset.v){d.grupo=el.dataset.v;d.sel=[];d.prod=null}save();render()},
   csel:el=>{const d=S.draft,c=el.dataset.c,s=d.sel||[];d.sel=s.includes(c)?s.filter(x=>x!==c):[...s,c];save();render()},
   maispecas:()=>{S.maisPecas=true;render()},
@@ -1597,7 +1607,7 @@ const A={
   contabre:()=>{S.contAberto=!S.contAberto;render()},
   ccont:el=>{const d=S.draft,c=el.dataset.c;d.cont=d.cont||[];d.cont=d.cont.includes(c)?d.cont.filter(x=>x!==c):[...d.cont,c];save();render()},
   pick:el=>{S.draft.prod=el.dataset.c;save();render();focusId('peso')},
-  tara:el=>{S.draft.tara=el.dataset.v;save();render();focusId('peso')},
+  tara:el=>{S.draft.tara=el.dataset.v;S.cxOutra=false;save();render();focusId('peso')},
   add:addPes,
   rmpes:el=>{S.draft.pes.splice(+el.dataset.i,1);save();render()},
   rrmfoto:el=>{S.rf.fotos.splice(+el.dataset.i,1);if(LER.f===S.rf)LER.imgs.splice(+el.dataset.i,1);save();render()},
@@ -1672,7 +1682,11 @@ const A={
     const c=getConf(el.dataset.id);S.draft={...newDraft(c.loja),comp:c.id,nf:c.nf,forn:c.forn,grupo:d.grupo,modo:d.modo,tara:d.tara};S.done=null;S.openId=null;S.tab='conferir';save();render();scrollTo(0,0)},
   'comp-cancel':()=>{S.draft=newDraft(S.draft.loja);S.confirm=false;save();render()},
   cmodo:el=>{S.cd.modo=el.dataset.v;S.cconfirm=false;save();render()},
-  cpick:el=>{S.cd.prod=el.dataset.c;save();render();focusId('cpeso')},
+  cpick:el=>{S.cd.prod=el.dataset.c;S.cAberto=false;save();render();focusId('cpeso')},
+  cabre:()=>{S.cAberto=!S.cAberto;render();if(S.cAberto)focusId('cq')},
+  cgrp:el=>{const c=el.dataset.c;S.cOpen={...(S.cOpen||{}),[c]:!S.cOpen?.[c]};render()},
+  ctara:el=>{S.cd.tara=el.dataset.v;S.cxOutra=false;save();render();focusId('cpeso')},
+  cxoutra:()=>{S.cxOutra=true;render();focusId(S.tab==='contagem'?'ctara':'tara')},
   cclr:()=>{S.cd.prod=null;save();render();focusId('cq')},
   cadd:addPeca,
   crm:el=>{S.cd.pes.splice(+el.dataset.i,1);save();render()},
@@ -1836,15 +1850,16 @@ document.addEventListener('input',e=>{const t=e.target;let m;
   if(/^n-(nf|kg|v)$/.test(t.id)){S.nForm[t.id.slice(2)]=t.value;return}
   if((m=t.id.match(/^cl-kg-(\d+)$/))){const l=S.cd.linhas[+m[1]];if(l){l.kg=t.value;document.getElementById('cres').innerHTML=cresHTML();save()}return}
   if(t.id==='q'){document.getElementById('sug').innerHTML=chipsGrupo(S.draft.grupo,t.value,S.draft.prod)}
-  else if(t.id==='cq'){document.getElementById('csug').innerHTML=sugHTML(t.value,'cpick',p=>p.bov)}
+  else if(t.id==='cq'){const e=document.getElementById('csug');if(e)e.innerHTML=cListHTML(t.value)}
+  else if(t.id==='ctara'){S.cd.tara=t.value;save()}
   else if(t.id==='peso'||t.id==='tara'){S.draft[t.id]=t.value;const pv=document.getElementById('prevpes');if(pv)pv.innerHTML=prevPes();save()}
-  else if(t.id==='cpeso'){S.cd.peso=t.value;document.getElementById('clcd').innerHTML=clcdHTML();save()}
+  else if(t.id==='cpeso'){S.cd.peso=t.value;save()}
   else if(t.id==='rchave'){const v=t.value.replace(/\D/g,'');if(v.length===44&&v!==S.rf.chave){applyChave(v);render()}}
   else if(/^ro-kg-\d+$/.test(t.id)){const o=S.rf.out[+t.id.split('-')[2]];if(o){o.kg=t.value;save()}}
 });
 document.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const t=e.target;
   if(t.id==='q'){e.preventDefault();const q=norm(t.value.trim());const m=prodsDoGrupo(S.draft.grupo).find(p=>p.c.toLowerCase().startsWith(q)||norm(p.n).includes(q));if(q&&m){S.draft.prod=m.c;save();render();focusId('peso')}}
-  else if(t.id==='cq'){e.preventDefault();const q=norm(t.value.trim());const m=prodList().filter(p=>p.bov).find(p=>p.c.toLowerCase().startsWith(q)||norm(p.n).includes(q));if(q&&m){S.cd.prod=m.c;save();render();focusId('cpeso')}}
+  else if(t.id==='cq'){e.preventDefault();const q=norm(t.value.trim());const m=prodList().filter(p=>p.bov).find(p=>p.c.toLowerCase().startsWith(q)||norm(p.n).includes(q));if(q&&m){S.cd.prod=m.c;S.cAberto=false;save();render();focusId('cpeso')}}
   else if(t.id==='peso'||t.id==='tara'){e.preventDefault();S.draft[t.id]=t.value;addPes()}
   else if(t.id==='cpeso'){e.preventDefault();S.cd.peso=t.value;addPeca()}
 });
