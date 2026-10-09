@@ -447,6 +447,10 @@ const PROD=[
  {c:'1013',n:'Cordão do filé mignon',g:'Bovino',peca:'traseiro',cx:true,custo:0,preco:0,d:0},
  {c:'1014',n:'Paleta',g:'Bovino',peca:'dianteiro',cx:true,custo:0,preco:0,d:0},
  {c:'1015',n:'Peito',g:'Bovino',peca:'dianteiro',cx:true,custo:0,preco:0,d:0},
+ /* sobras da desossa: o retalho vira carne moída */
+ {c:'1016',n:'Retalho traseiro',g:'Bovino',peca:'traseiro',cx:false,custo:0,preco:0,d:0},
+ {c:'1017',n:'Retalho dianteiro',g:'Bovino',peca:'dianteiro',cx:false,custo:0,preco:0,d:0},
+ {c:'1018',n:'Costela do dianteiro',g:'Bovino',peca:'dianteiro',cx:false,custo:0,preco:0,d:0},
  {c:'52744',n:'Charque',g:'Bovino',peca:'outros',cx:false,custo:37.3,preco:58.99,d:0},
  /* só balanço (feitos ou cortados na loja): entram nas vendas, mas não vêm na nota nem na pesagem */
  {c:'31400',n:'Carne moída',g:'Bovino',peca:'outros',feito:true,cx:false,custo:24,preco:29.99,d:0},
@@ -1130,6 +1134,16 @@ function perguntaCaixa(val,idIn,act){const t=num(val)||0,ck=caixaKg(),outra=t>0&
 const naCaixa=t=>!t?'':Math.abs(t-caixaKg())<.0005?'na caixa':`caixa ${kg(t)}`;
 function cListHTML(q){const n=norm(q.trim()),l=prodList().filter(p=>p.bov&&(!n||norm(p.n).includes(n)||p.c.startsWith(n))).sort((a,b)=>a.n.localeCompare(b.n,'pt-BR'));
   return l.length?l.map(p=>`<button type="button" class="opt1${S.cd.prod===p.c?' on':''}" data-act="cpick" data-c="${p.c}">${esc(p.n)}</button>`).join(''):'<p class="hint" style="padding:8px 10px">Nenhuma carne com esse nome.</p>'}
+/* mensagem da contagem para o WhatsApp (valor de custo só para gerente e gestor) */
+function msgCont(c){const g=S.role!=='conferente',ks=Object.keys(c.itens).sort((a,b)=>(PM[a]?.n||a).localeCompare(PM[b]?.n||b,'pt-BR'));
+  const tot=ks.reduce((t,k)=>t+c.itens[k],0),np=c.pecas?Object.values(c.pecas).reduce((t,n)=>t+n,0):0;
+  const L=[`*Contagem de estoque* · ${lojaNome(c.loja)} · ${dBR(c.data)}`,''];
+  ks.forEach(k=>L.push(`${PM[k]?.n||k}: ${c.pecas?.[k]?c.pecas[k]+(c.pecas[k]>1?' peças':' peça')+' · ':''}${kg(c.itens[k])} kg`));
+  L.push('',`*Total:* ${np?np+' peças · ':''}${kg(tot)} kg`);
+  if(g)L.push(`Valor (custo): ${rs(bovRs(c.itens))}`);
+  if(c.por)L.push(`Contado por ${c.por}`);
+  return L.join('\n')}
+const zapCont=c=>`<button type="button" class="btn" data-act="zap" data-txt="${esc(msgCont(c))}" data-n="${esc(S.set.zap[c.loja]||S.set.zap.dir||'')}">Enviar no WhatsApp</button>`;
 function contadoHTML(){const d=S.cd,g=S.role!=='conferente',m={};
   d.pes.forEach((p,i)=>(m[p.c]||(m[p.c]=[])).push({...p,i}));
   const ks=Object.keys(m).sort((a,b)=>(PM[a]?.n||a).localeCompare(PM[b]?.n||b,'pt-BR'));
@@ -1169,11 +1183,11 @@ function vContagem(){
       ${S.cconfirm?`<div class="confirm"><p><b>Finalizar a contagem de ${dBR(d.data)}?</b> Ela vira o estoque final deste balanço e o inicial do próximo.${existe?' Já existe uma contagem nesta data para esta loja; ela será substituída.':''}</p>
         ${Object.keys(it).length?'':'<ul><li>Conte pelo menos uma carne.</li></ul>'}
         <div class="inrow"><button type="button" class="btn" data-act="cfin-cancel">Voltar</button><button type="button" class="btn pri" data-act="cfin-ok"${Object.keys(it).length?'':' disabled'}>Finalizar contagem</button></div></div>`
-      :`<button type="button" class="btn pri wide" data-act="cfin">Finalizar contagem</button>`}
+      :`<button type="button" class="btn pri wide" data-act="cfin">Finalizar contagem</button>${d.pes.length?zapCont({loja:d.loja,data:d.data,itens:it,pecas:d.pes.reduce((m,p)=>(m[p.c]=(m[p.c]||0)+1,m),{}),por:quemSou()}):''}`}
     </section>
     <section class="card"><div class="card-h"><h3>Contagens salvas</h3><span class="tag">${salvas.length}</span></div>
       <div class="rows">${salvas.map(c=>`<div class="row static"><div class="row-main"><b>${dBR(c.data)}${S.loja?'':' · '+esc(lojaNome(c.loja))}</b><span>${c.modo==='exemplo'?'Contagem de exemplo':c.modo==='app'?'Pesada no app':'Lançada do papel'}${c.por!=='—'?' · '+esc(c.por):''}</span></div>
-        <div class="row-side"><span class="num">${kg(bovKg(c.itens))} kg</span>${g?`<span class="hint num">${rs(bovRs(c.itens))}</span>`:''}</div></div>`).join('')}</div>
+        <div class="row-side"><span class="num">${kg(bovKg(c.itens))} kg</span>${g?`<span class="hint num">${rs(bovRs(c.itens))}</span>`:''}${c.modo==='exemplo'?'':`<button type="button" class="btn sm" data-act="zap" data-txt="${esc(msgCont(c))}" data-n="${esc(S.set.zap[c.loja]||S.set.zap.dir||'')}">WhatsApp</button>`}</div></div>`).join('')}</div>
     </section>
   </div></div>`;
 }
@@ -1724,7 +1738,7 @@ const A={
       S.apps.push(c);S.done=c.id;S.doneComp=false;
     }
     S.confirm=false;S.draft={...newDraft(d.loja),grupo:d.grupo,modo:d.modo,tara:d.tara};save();render();scrollTo(0,0)},
-  zap:async el=>{const txt=document.getElementById(el.dataset.src)?.textContent||'';
+  zap:async el=>{const txt=el.dataset.txt||document.getElementById(el.dataset.src)?.textContent||'';
     if(navigator.share){try{await navigator.share({text:txt});return}catch(e){if(e?.name==='AbortError')return}}
     window.open(waLink(el.dataset.n,txt),'_blank','noopener')},
   nova:()=>{S.done=null;render()},
@@ -1747,7 +1761,8 @@ const A={
   'cfin-cancel':()=>{S.cconfirm=false;render()},
   'cfin-ok':()=>{const d=S.cd,it=cdItens(d);if(!Object.keys(it).length)return;
     S.conts=S.conts.filter(c=>!(c.loja===d.loja&&c.data===d.data));
-    S.conts.push({id:'k'+Date.now(),loja:d.loja,data:d.data,itens:it,modo:d.modo,por:quemSou(),quando:nowBR()});
+    const pecas={};d.pes.forEach(p=>pecas[p.c]=(pecas[p.c]||0)+1);
+    S.conts.push({id:'k'+Date.now(),loja:d.loja,data:d.data,itens:it,pecas,modo:d.modo,por:quemSou(),quando:nowBR()});
     S.cd=newCd(d.loja);S.cconfirm=false;save();render();toast(`Contagem de ${dBR(d.data)} salva.`)},
   copy:el=>{const t=document.getElementById(el.dataset.src)?.textContent||'';
     const fb=()=>{const r=document.createRange();r.selectNodeContents(document.getElementById(el.dataset.src));const s=getSelection();s.removeAllRanges();s.addRange(r);toast('Texto selecionado. Copie com Ctrl+C ou segure para copiar.')};
