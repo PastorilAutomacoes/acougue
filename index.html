@@ -150,6 +150,13 @@ p>.pill{white-space:normal;display:inline-block;max-width:100%;border-radius:10p
 .pickbox{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:9px 11px;cursor:pointer;font:inherit;font-size:.92rem;color:var(--fg)}
 .pickbox span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pickbox.on{border-color:var(--accent)}
+.res{display:flex;flex-direction:column;gap:8px}
+.rg{border:1px solid var(--line);border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:3px}
+.rh{display:flex;justify-content:space-between;align-items:center;gap:8px}.rh b{font-size:1rem}
+.rk{font-size:.8rem;color:var(--muted);font-family:var(--f-num)}
+.ri{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.88rem;border-top:1px dashed var(--line);padding-top:5px;margin-top:3px}
+.ri small{display:block;color:var(--muted);font-size:.75rem}.ri .num{font-family:var(--f-num);white-space:nowrap}
+.rg.rtot{background:var(--fg);color:#fff;border-color:var(--fg)}.rg.rtot .rk{color:rgba(255,255,255,.75)}
 .urows{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px}.urow{padding:10px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}.urow:first-child{border-top:0}
 .un{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.un b{display:block}.un small{color:var(--muted);font-size:.8rem}
 .versao{text-align:center;font-size:.7rem;color:var(--muted);margin:4px 0 0}
@@ -904,13 +911,15 @@ function tabResultado(c,a){
     ${grResumo().filter(g=>gs[g.k]).map(g=>`<tr class="sub"><td>${esc(g.n)}</td><td class="n">${kg(gs[g.k].reduce((s,p)=>s+p.b-p.t,0))}</td></tr>`+resumo({pes:gs[g.k]}).map(r=>`<tr><td class="ind">${esc(PM[r.c]?.n||r.c)} · ${r.n}×</td><td class="n">${kg(r.kg)}</td></tr>`).join('')).join('')}
     <tr class="tot"><td>Total conferido</td><td class="n">${kg(a.conf)}</td></tr></tbody></table></div>`;
   }
+  /* resultado em blocos (cabe no celular, sem rolar para o lado) */
   const rows=a.grupos.map(g=>{
-    let h=`<tr class="sub"><td>${g.n}</td><td class="n">${kg(g.nf)}</td><td class="n">${kg(g.conf)}</td><td class="n"><span class="pill ${g.st}">${g.perda==null?'sem item na nota':pc(g.perda)}</span></td><td class="n">${pc(g.esp)}</td></tr>`;
-    if(g.k==='caixaria')h+=g.cxItens.map(r=>`<tr><td class="ind">${esc(r.nome)}</td><td class="n">${kg(r.nf)}${r.volOk&&r.vol?`<small>${r.vol} cx</small>`:''}</td><td class="n">${kg(r.conf)}<small>${r.cx} cx</small></td><td class="n"><span class="pill ${r.st}">${r.perda==null?'fora da nota':pc(r.perda)}</span>${r.falta?`<small style="color:var(--crit)">falta ${r.falta} cx</small>`:''}</td><td></td></tr>`).join('');
-    else h+=g.lista.map(r=>`<tr><td class="ind">${esc(PM[r.c]?.n||r.c)} · ${r.n}×</td><td></td><td class="n">${kg(r.kg)}</td><td></td><td></td></tr>`).join('');
-    return h}).join('');
-  return `<div class="tw"><table class="t"><thead><tr><th>Peça / carne</th><th class="n">Nota kg</th><th class="n">Conferido kg</th><th class="n">Perda</th><th class="n">Esperado</th></tr></thead><tbody>${rows}
-    <tr class="tot"><td>Geral</td><td class="n">${kg(a.nf)}</td><td class="n">${kg(a.conf)}</td><td class="n">${pc(a.perda)}</td><td></td></tr></tbody></table></div>
+    let h=`<div class="rg"><div class="rh"><b>${esc(g.n)}</b><span class="pill ${g.st}">${g.perda==null?'sem item na nota':pc(g.perda)}</span></div>
+      <div class="rk">Nota ${kg(g.nf)} · Conferido ${kg(g.conf)} · esperado ${pc(g.esp)}</div>`;
+    if(g.k==='caixaria')h+=g.cxItens.map(r=>`<div class="ri"><span>${esc(r.nome)}<small>nota ${kg(r.nf)}${r.volOk&&r.vol?` (${r.vol} cx)`:''} · conferido ${kg(r.conf)} (${r.cx} cx)${r.falta?` · <b style="color:var(--crit)">falta ${r.falta} cx</b>`:''}</small></span><span class="pill ${r.st}">${r.perda==null?'fora da nota':pc(r.perda)}</span></div>`).join('');
+    else h+=g.lista.map(r=>`<div class="ri"><span>${esc(PM[r.c]?.n||r.c)} · ${r.n}×</span><span class="num">${kg(r.kg)}</span></div>`).join('');
+    return h+'</div>'}).join('');
+  return `<div class="res">${rows}
+    <div class="rg rtot"><div class="rh"><b>Geral</b><span class="pill ${a.st}">${pc(a.perda)}</span></div><div class="rk">Nota ${kg(a.nf)} · Conferido ${kg(a.conf)}</div></div></div>
     ${a.grupos.some(g=>g.k==='caixaria'&&g.cxItens.some(r=>r.falta))||a.st==='crit'?`<p><span class="pill crit">Diferença acima do esperado. Confira se ficou mercadoria no caminhão.</span></p>`:''}`;
 }
 
@@ -1484,9 +1493,10 @@ function vBal(){
   let comp='';
   if(!S.loja){
     const L=S.lojas.map(l=>({l,T:balBov([l.id],a,b).T}));
-    comp=`<section class="card"><h3>Comparativo entre lojas</h3><div class="tw"><table class="t"><thead><tr><th>Loja</th><th class="n">CMV kg</th><th class="n">Vendas kg</th><th class="n">% Perda</th><th class="n">Vendas R$</th><th class="n">CMV R$</th><th class="n">Lucro</th><th class="n">Margem</th><th class="n">Markup</th></tr></thead><tbody>
-      ${L.map(({l,T})=>`<tr><td>${esc(l.nome)}</td><td class="n">${kg(T.cmv)}</td><td class="n">${kg(T.vk)}</td><td class="n"><span class="pill ${perdaSt(T.perda)}">${pc(T.perda)}</span></td><td class="n">${rs(T.vr)}</td><td class="n">${rs(T.cmvR)}</td><td class="n">${rs(T.lucro)}</td><td class="n">${pc(T.margem)}</td><td class="n">${pc(T.markup)}</td></tr>`).join('')}
-    </tbody></table></div>${DEMO?'<p class="hint">Números de exemplo, só para mostrar o formato. Não representam as lojas.</p>':''}</section>`;
+    comp=`<section class="card"><h3>Comparativo entre lojas</h3><div class="res">
+      ${L.map(({l,T})=>`<div class="rg"><div class="rh"><b>${esc(l.nome)}</b><span class="pill ${perdaSt(T.perda)}">${pc(T.perda)}</span></div>
+        <div class="rk">CMV ${kg(T.cmv)} kg · vendas ${kg(T.vk)} kg</div><div class="rk">Lucro ${rs(T.lucro)} · margem ${pc(T.margem)} · markup ${pc(T.markup)}</div></div>`).join('')}
+    </div></section>`;
   }
   const aviso=T.perdaKg<0?`<p><span class="pill warn">Vendas maiores que o CMV: confira se a planilha do PDV é do mesmo período das contagens (${dBR(a)} a ${dBR(b)}) e se todas as notas foram lançadas.</span></p>`:'';
   return ctrls+`<section class="card">${aviso}${kp}${tbl}
