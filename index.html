@@ -145,6 +145,7 @@ input.big{font-family:var(--f-num);font-size:1.5rem;padding:10px 12px;text-align
 .pickbox{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:9px 11px;cursor:pointer;font:inherit;font-size:.92rem;color:var(--fg)}
 .pickbox span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pickbox.on{border-color:var(--accent)}
+.novacarne{display:flex;flex-direction:column;gap:8px;border:1px dashed var(--accent);border-radius:10px;padding:10px;margin-top:8px}
 .somar{display:flex;align-items:center;gap:8px}.somar #somabox{margin-left:auto}
 .sbox{text-align:right;border-radius:10px;padding:6px 10px;background:var(--bg)}.sbox small{display:block;font-size:.66rem;letter-spacing:.05em;text-transform:uppercase;color:inherit;opacity:.85}
 .sbox b{white-space:nowrap;font-family:var(--f-num);font-weight:600;font-size:1.02rem}.sbox .dif{text-transform:none;letter-spacing:0;font-size:.75rem}
@@ -404,15 +405,15 @@ const PROD=[
  {c:'PD',n:'Dianteiro inteiro (com osso)',g:'Bovino',peca:'dianteiro',inteira:true,cx:false,custo:19,preco:0,d:0,sistema:true},
  {c:'PC1',n:'Costela c/ fraldinha (peça)',g:'Bovino',peca:'costela',cx:false,custo:18.5,preco:0,d:0},
  {c:'PC2',n:'Costela s/ fraldinha',g:'Bovino',peca:'costela',cx:false,custo:18.5,preco:0,d:0},
- {c:'1001',n:'Picanha',g:'Bovino',peca:'traseiro',cx:true,custo:62.9,preco:89.9,d:3.2},
+ {c:'1001',n:'Picanha',g:'Bovino',peca:'traseiro',cx:true,custo:62.9,preco:89.9,d:3.2,sistema:true},
  {c:'1002',n:'Alcatra',g:'Bovino',peca:'traseiro',cx:true,custo:38.5,preco:54.9,d:6.5,sistema:true},
  {c:'1003',n:'Contra-filé',g:'Bovino',peca:'traseiro',cx:true,custo:41.2,preco:59.9,d:7,sistema:true},
- {c:'1004',n:'Coxão mole',g:'Bovino',peca:'traseiro',cx:true,custo:33.9,preco:47.9,d:8},
+ {c:'1004',n:'Coxão mole',g:'Bovino',peca:'traseiro',cx:true,custo:33.9,preco:47.9,d:8,sistema:true},
  {c:'1005',n:'Coxão duro',g:'Bovino',peca:'traseiro',cx:true,custo:30.5,preco:42.9,d:4.5},
- {c:'1006',n:'Patinho',g:'Bovino',peca:'traseiro',cx:true,custo:32.8,preco:45.9,d:6},
- {c:'1007',n:'Maminha',g:'Bovino',peca:'traseiro',cx:true,custo:39.9,preco:56.9,d:2.5},
- {c:'1008',n:'Fraldinha',g:'Bovino',peca:'costela',pecas:['costela','traseiro'],cx:true,custo:34.5,preco:49.9,d:3},
- {c:'1009',n:'Músculo',g:'Bovino',peca:'traseiro',pecas:['traseiro','dianteiro'],cx:true,custo:24.9,preco:34.9,d:4},
+ {c:'1006',n:'Patinho',g:'Bovino',peca:'traseiro',cx:true,custo:32.8,preco:45.9,d:6,sistema:true},
+ {c:'1007',n:'Maminha',g:'Bovino',peca:'traseiro',cx:true,custo:39.9,preco:56.9,d:2.5,sistema:true},
+ {c:'1008',n:'Fraldinha',g:'Bovino',peca:'costela',pecas:['costela','traseiro'],cx:true,custo:34.5,preco:49.9,d:3,sistema:true},
+ {c:'1009',n:'Músculo',g:'Bovino',peca:'traseiro',pecas:['traseiro','dianteiro'],cx:true,custo:24.9,preco:34.9,d:4,sistema:true},
  {c:'1010',n:'Costela bovina',g:'Bovino',peca:'costela',cx:false,custo:19.9,preco:27.9,d:9},
  {c:'1011',n:'Acém',g:'Bovino',peca:'dianteiro',cx:true,custo:25.5,preco:35.9,d:5.5,sistema:true},
  {c:'2001',n:'Pernil suíno',g:'Suíno',peca:'outros',cx:false,custo:14.9,preco:21.9,d:5},
@@ -443,10 +444,25 @@ const PROD=[
  {c:'67866',n:'Peixinho e capa da paleta',g:'Bovino',peca:'dianteiro',cx:true,custo:24,preco:38.99,d:0},
  {c:'52743',n:'Chambari',g:'Bovino',peca:'dianteiro',pecas:['dianteiro','traseiro'],feito:true,cx:false,custo:36.88,preco:34.69,d:0},
  {c:'37608',n:'Corte americano',g:'Bovino',peca:'dianteiro',feito:true,cx:false,custo:12.89,preco:29.99,d:0},
- {c:'1012',n:'Filé mignon',g:'Bovino',peca:'traseiro',cx:true,custo:0,preco:0,d:0},
+ {c:'1012',n:'Filé mignon',g:'Bovino',peca:'traseiro',cx:true,custo:0,preco:0,d:0,sistema:true},
  {c:'1013',n:'Cordão do filé mignon',g:'Bovino',peca:'traseiro',cx:true,custo:0,preco:0,d:0},
  {c:'1014',n:'Paleta',g:'Bovino',peca:'dianteiro',cx:true,custo:0,preco:0,d:0},
  {c:'1015',n:'Peito',g:'Bovino',peca:'dianteiro',cx:true,custo:0,preco:0,d:0},
+ /* cortes com código real do PDV (antes provisórios 1001…1012) */
+ {c:'31409',n:'Picanha',g:'Bovino',peca:'traseiro',cx:true,custo:36.88,preco:76.99,d:0},
+ {c:'31396',n:'Coxão mole',g:'Bovino',peca:'traseiro',cx:true,custo:36.88,preco:44.99,d:0},
+ {c:'31395',n:'Patinho',g:'Bovino',peca:'traseiro',cx:true,custo:36.88,preco:42.99,d:0},
+ {c:'31402',n:'Maminha',g:'Bovino',peca:'traseiro',cx:true,custo:36.88,preco:49.99,d:0},
+ {c:'31404',n:'Fraldinha',g:'Bovino',peca:'costela',pecas:['costela','traseiro'],cx:true,custo:17.96,preco:49.99,d:0},
+ {c:'31405',n:'Filé mignon',g:'Bovino',peca:'traseiro',cx:true,custo:36.88,preco:48.99,d:0},
+ {c:'31403',n:'Músculo traseiro',g:'Bovino',peca:'traseiro',cx:true,custo:36.88,preco:32.99,d:0},
+ {c:'33725',n:'Músculo dianteiro',g:'Bovino',peca:'dianteiro',cx:true,custo:25.26,preco:32.99,d:0},
+ {c:'31397',n:'Miolo da paleta',g:'Bovino',peca:'dianteiro',cx:true,custo:25.26,preco:38.99,d:0},
+ {c:'1019',n:'Alcatrinha',g:'Bovino',peca:'dianteiro',cx:true,custo:0,preco:0,d:0},
+ {c:'31399',n:'Costela minga',g:'Bovino',peca:'costela',cx:false,custo:17.96,preco:28.99,d:0},
+ {c:'33727',n:'Costela ripa',g:'Bovino',peca:'costela',cx:false,custo:17.96,preco:26.99,d:0},
+ {c:'31406',n:'Ossinho',g:'Bovino',peca:'outros',feito:true,cx:false,custo:24,preco:14.99,d:0},
+ {c:'62253',n:'Pelanca',g:'Bovino',peca:'outros',feito:true,cx:false,custo:3,preco:3,d:0},
  /* sobras da desossa: o retalho vira carne moída */
  {c:'1016',n:'Retalho traseiro',g:'Bovino',peca:'traseiro',cx:false,custo:0,preco:0,d:0},
  {c:'1017',n:'Retalho dianteiro',g:'Bovino',peca:'dianteiro',cx:false,custo:0,preco:0,d:0},
@@ -1170,7 +1186,13 @@ function vContagem(){
   d.modo='app'; /* a contagem do papel saiu: tudo é pesado no app */
   const corpo=`<div class="field"><span class="lbl">1. Carne</span>
       <button type="button" class="pickbox${S.cAberto?' on':''}" data-act="cabre" aria-expanded="${!!S.cAberto}"><span>${d.prod?esc(PM[d.prod]?.n||d.prod):'Toque para escolher'}</span><b>${S.cAberto?'▴':'▾'}</b></button>
-      ${S.cAberto?`<input id="cq" autocomplete="off" placeholder="Buscar carne" style="margin-top:6px"><div id="csug" class="optlist">${cListHTML('')}</div>`:''}</div>
+      ${S.cAberto?`<input id="cq" autocomplete="off" placeholder="Buscar carne" style="margin-top:6px"><div id="csug" class="optlist">${cListHTML('')}</div>
+        ${S.role!=='conferente'?(S.cNova?`<div class="novacarne"><b>Cadastrar carne</b>
+          <div class="field"><label for="nc-nome">Nome</label><input id="nc-nome" autocomplete="off" placeholder="ex.: Alcatrinha"></div>
+          <div class="grid2"><div class="field"><label for="nc-peca">Peça</label><select id="nc-peca" class="in"><option value="traseiro">Traseiro</option><option value="dianteiro">Dianteiro</option><option value="costela">Costela</option><option value="miudos">Miúdos</option><option value="outros">Outros</option></select></div>
+          <div class="field"><label for="nc-cod">Código do PDV <small>(se tiver)</small></label><input id="nc-cod" inputmode="numeric" autocomplete="off"></div></div>
+          <div class="inrow"><button type="button" class="btn pri" data-act="nc-salvar">Cadastrar</button><button type="button" class="btn" data-act="nc-cancel">Cancelar</button></div></div>`
+          :`<button type="button" class="lnk" data-act="nc-abrir" style="align-self:flex-start">+ Cadastrar carne que não está na lista</button>`):''}`:''}</div>
     <div class="field"><span class="lbl">2. Pesou dentro da caixa?</span>${perguntaCaixa(d.tara||'0','ctara','ctara')}</div>
     <div class="field"><label for="cpeso">3. Peso da balança (kg)</label><input id="cpeso" class="big" inputmode="decimal" autocomplete="off" placeholder="0,000" value="${esc(d.peso)}"></div>
     <button type="button" class="btn pri wide" data-act="cadd">Adicionar</button>`;
@@ -1774,6 +1796,15 @@ const A={
   'comp-cancel':()=>{S.draft=newDraft(S.draft.loja);S.confirm=false;save();render()},
   cmodo:el=>{S.cd.modo=el.dataset.v;S.cconfirm=false;save();render()},
   cpick:el=>{S.cd.prod=el.dataset.c;S.cAberto=false;save();render();focusId('cpeso')},
+  'nc-abrir':()=>{S.cNova=true;render();focusId('nc-nome')},
+  'nc-cancel':()=>{S.cNova=false;render()},
+  'nc-salvar':()=>{const v=id=>document.getElementById(id)?.value.trim()||'',nome=v('nc-nome'),peca=v('nc-peca')||'outros',cod=v('nc-cod').replace(/\D/g,'');
+    if(nome.length<3){toast('Digite o nome da carne.');focusId('nc-nome');return}
+    if(prodList().some(p=>norm(p.n)===norm(nome))){toast(`“${nome}” já está na lista.`);return}
+    if(cod&&PM[cod]&&!PM[cod].sistema){toast(`O código ${cod} já é de ${PM[cod].n}.`);return}
+    const c=cod||'L'+Date.now().toString(36),pc=['traseiro','dianteiro','costela'].includes(peca)?[peca]:[];
+    const p={c,n:nome[0].toUpperCase()+nome.slice(1),g:'Bovino',bov:true,sub:'Carnes bovinas',peca:pc[0]||'outros',pecas:pc,miudo:peca==='miudos',cx:peca==='traseiro'||peca==='dianteiro',custo:0,preco:0,d:0,bovSet:true,pecaSet:true,cxSet:true,novo:true,por:quemSou()};
+    PM[c]=p;S.prods[c]=p;S.cd.prod=c;S.cNova=false;S.cAberto=false;save();render();focusId('cpeso');toast(`${p.n} cadastrada.`)},
   cabre:()=>{S.cAberto=!S.cAberto;render();if(S.cAberto)focusId('cq')},
   cgrp:el=>{const c=el.dataset.c;S.cOpen={...(S.cOpen||{}),[c]:!S.cOpen?.[c]};render()},
   ctara:el=>{S.cd.tara=el.dataset.v;S.cxOutra=false;save();render();focusId('cpeso')},
