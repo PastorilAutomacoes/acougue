@@ -94,7 +94,7 @@ button,input,select{font:inherit;color:inherit}
 main{max-width:1180px;margin:0 auto;padding:14px 16px 110px;display:flex;flex-direction:column;gap:14px;overflow-x:clip}
 main>*{min-width:0;max-width:100%}
 .t.tbal td{white-space:normal}
-@media (max-width:600px){.kpis.kbal{grid-template-columns:repeat(3,1fr);gap:6px}.kbal .kpi{padding:7px 8px}.kbal .kpi small{font-size:.62rem}.kbal .kpi b{font-size:.95rem;white-space:nowrap}.kbal .pill{font-size:.78rem;padding:2px 6px}}
+@media (max-width:600px){.kpis.kbal{grid-template-columns:repeat(3,1fr);gap:6px}.kbal .kpi{padding:7px 8px}.kbal .kpi small{font-size:.62rem}.kbal .kpi b{font-size:.92rem;white-space:normal;line-height:1.2}.kbal .pill{font-size:.78rem;padding:2px 6px}}
 @media (min-width:820px){main{padding-bottom:40px}}
 
 /* cartões e campos */
@@ -124,6 +124,8 @@ input.big{font-family:var(--f-num);font-size:1.5rem;padding:10px 12px;text-align
 .btn.lernota{padding:16px;font-size:1.15rem}
 .btn.ghost{background:none}
 .pill{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:99px;font-size:.8rem;font-weight:600;white-space:nowrap;font-family:var(--f-body)}
+p>.pill{white-space:normal;display:inline-block;max-width:100%;border-radius:10px;padding:4px 10px;line-height:1.35} /* avisos compridos quebram linha (não podem alargar a página) */
+.kpi{overflow:hidden}
 .pill.ok{background:var(--ok-soft);color:var(--ok)}
 .pill.warn{background:var(--warn-soft);color:var(--warn)}
 .pill.crit{background:var(--crit-soft);color:var(--crit)}
@@ -1431,6 +1433,7 @@ function balBov(ids,a,b){
   }
   return{T:calc(T),nNotas,nSem,nFoto,nSemV,imp};
 }
+const rsK=v=>Math.abs(v)>=1e4?`${v<0?'-':''}R$ ${F1.format(Math.abs(v)/1000)} mil`:rs(v); /* valor curto para os quadros pequenos */
 const perdaSt=p=>p==null?'sem':p*100>=S.set.perdaCrit?'crit':p*100>=S.set.perdaAt?'warn':'ok';
 const term=(l,v,res)=>`<span class="term${res?' res':''}"><small>${l}</small>${v}</span>`, op=o=>`<span class="op">${o}</span>`;
 function vBal(){
@@ -1457,7 +1460,7 @@ function vBal(){
     <div class="kpi"><small>CMV kg</small><b>${kg(T.cmv)}</b></div>
     <div class="kpi"><small>Vendas kg</small><b>${kg(T.vk)}</b></div>
     <div class="kpi hl"><small>% Perda</small><span class="pill ${perdaSt(T.perda)}">${pc(T.perda)}</span></div>
-    <div class="kpi"><small>Lucro bruto</small><b>${rs(T.lucro)}</b></div>
+    <div class="kpi"><small>Lucro bruto</small><b>${rsK(T.lucro)}</b></div>
     <div class="kpi hl"><small>Margem</small><b>${pc(T.margem)}</b></div>
     <div class="kpi hl"><small>Markup</small><b>${pc(T.markup)}</b></div></div>`;
   const tbl=`<div class="tw"><table class="t tbal"><thead><tr><th></th><th class="n">Kg</th><th class="n">R$</th></tr></thead><tbody>
