@@ -760,6 +760,12 @@ function notaDig(rec){
   return{loja:rec.loja,forn:rec.forn,nf:rec.nf,itens,kg:r3(itens.reduce((s,i)=>s+i.kg,0)),v:0,fonte:'pesos digitados da DANFE',dig:true};
 }
 const notaConf=c=>notaDe(c)||notaDig(recDe(c));
+/* nota recebida (foto ou digitada) vira compra no balanço enquanto o XML não entra */
+function notaFoto(r){if(!r?.dig?.length)return null;
+  const itens=r.dig.map(x=>({desc:x.c?(PM[x.c]?.n||x.c):GRB[x.g]||x.g,c:x.c&&x.c!=='MIUDO'?x.c:null,gd:x.g,kg:x.kg,v:x.v||0}));
+  const sv=r2(itens.reduce((t,i)=>t+i.v,0));
+  return{loja:r.loja,forn:r.forn,fornNome:r.fornNome,nf:r.nf,data:r.data,itens,kg:r3(itens.reduce((t,i)=>t+i.kg,0)),v:r.lida?.vt||sv,fonte:r.lida?'foto':'digitada',foto:true,rec:r.id}}
+function notasBal(){const m=new Map(allNotas().map(n=>[nkey(n),n]));S.recs.forEach(r=>{const k=nkey(r);if(!m.has(k)){const n=notaFoto(r);if(n)m.set(k,n)}});return [...m.values()]}
 /* excluir nota recebida: antes da pesagem, quem recebeu ou gerente/gestor; com pesagem iniciada, só gerente/gestor; conferida, ninguém */
 const podeExcluirRec=r=>!confDoRec(r)&&(S.role!=='conferente'||(!r.lock&&r.uid===S.user));
 /* compara o que foi digitado da DANFE com o XML: por peça e, na caixaria/outros, por carne */
@@ -1374,20 +1380,20 @@ function vNotas(){
 /* ---------- BALANÇO CARNE BOVINA (compras pela NF-e: kg e R$) ---------- */
 function calc(r){r.cmv=r.ei+r.c-r.ef;r.perdaKg=r.cmv-r.vk;r.perda=r.cmv>0?r.perdaKg/r.cmv:null;r.cmvR=r.eiR+r.cR-r.efR;r.lucro=r.vr-r.cmvR;r.margem=r.vr?r.lucro/r.vr:null;r.markup=r.cmvR?r.lucro/r.cmvR:null;return r}
 function balBov(ids,a,b){
-  const T={ei:0,eiR:0,c:0,cR:0,ef:0,efR:0,vk:0,vr:0};let nNotas=0,nSem=0,imp=null;
+  const T={ei:0,eiR:0,c:0,cR:0,ef:0,efR:0,vk:0,vr:0};let nNotas=0,nSem=0,nFoto=0,nSemV=0,imp=null;const NB=notasBal();
   for(const l of ids){
     const ea=contDe(l,a)||{},eb=contDe(l,b)||{};
     T.ei+=bovKg(ea);T.eiR+=bovRs(ea);T.ef+=bovKg(eb);T.efR+=bovRs(eb);
-    allNotas().filter(n=>n.loja===l&&n.data>a&&n.data<=b).forEach(n=>{
+    NB.filter(n=>n.loja===l&&n.data>a&&n.data<=b).forEach(n=>{
       const sv=n.itens.reduce((s,i)=>s+(i.v||0),0),sk=n.itens.reduce((s,i)=>s+i.kg,0);let tem=false;
       n.itens.forEach(it=>{if(grupoItem(it)!=='Bovino')return;tem=true;T.c+=it.kg;T.cR+=n.v*(sv?it.v/sv:(sk?it.kg/sk:1))});
-      if(tem){nNotas++;if(!confDe(n))nSem++}
+      if(tem){nNotas++;if(!confDe(n))nSem++;if(n.foto)nFoto++;if(!(n.v>0))nSemV++}
     });
     const key=`${l}|${a}|${b}`;
     if(ids.length===1&&S.vimp[key]){imp=S.vimp[key];Object.entries(imp.dados).forEach(([c,v])=>{if(PM[c]?.bov){T.vk+=v.kg;T.vr+=v.rs}})}
     else Object.entries(G.vend[l]||{}).forEach(([iso,dd])=>{if(iso>a&&iso<=b)Object.entries(dd).forEach(([c,v])=>{if(PM[c]?.bov){T.vk+=v.kg;T.vr+=v.rs}})});
   }
-  return{T:calc(T),nNotas,nSem,imp};
+  return{T:calc(T),nNotas,nSem,nFoto,nSemV,imp};
 }
 const perdaSt=p=>p==null?'sem':p*100>=S.set.perdaCrit?'crit':p*100>=S.set.perdaAt?'warn':'ok';
 const term=(l,v,res)=>`<span class="term${res?' res':''}"><small>${l}</small>${v}</span>`, op=o=>`<span class="op">${o}</span>`;
@@ -1406,8 +1412,10 @@ function vBal(){
     <p class="hint">${imp?`Vendas do PDV importadas de <b>${esc(imp.nome)}</b> (${Object.keys(imp.dados).length} produtos). <button type="button" class="btn sm ghost" data-act="rmimp">Tirar importação</button>`
       :S.loja?`Importe o relatório <b>Comparativo de Vendas por Produto</b> do período (pode selecionar vários arquivos de uma vez: bovinas, especiais, salgadas, linguiças).${DEMO?' Enquanto isso, as vendas são de exemplo.':' Sem a planilha, as vendas ficam zeradas.'}`:'Escolha uma loja no topo para importar as vendas do PDV.'}</p>
   </section>`;
-  if(ds.length<2)return ctrls+`<div class="empty">O balanço precisa de duas contagens de estoque${S.loja?'':' feitas na mesma data em todas as lojas'}: a inicial e a final. Faça as contagens na aba <b>Contagem</b>.</div>`;
-  if(!a||!b||a>=b)return ctrls+`<p><span class="pill warn">Escolha uma contagem final depois da contagem inicial.</span></p>`;
+  const hoje=todayISO(), pa=ds.length>=2&&a&&b&&a<b?a:hoje.slice(0,8)+'00', pb=ds.length>=2&&a&&b&&a<b?b:hoje;
+  const notasCard=vNotasPeriodo(ids,pa,pb,!(ds.length>=2&&a&&b&&a<b));
+  if(ds.length<2)return ctrls+notasCard+`<div class="empty">O balanço precisa de duas contagens de estoque${S.loja?'':' feitas na mesma data em todas as lojas'}: a inicial e a final. Faça as contagens na aba <b>Contagem</b>.</div>`;
+  if(!a||!b||a>=b)return ctrls+notasCard+`<p><span class="pill warn">Escolha uma contagem final depois da contagem inicial.</span></p>`;
   const B=balBov(ids,a,b), T=B.T;
   const kp=`<div class="kpis">
     <div class="kpi"><small>CMV kg</small><b>${kg(T.cmv)}</b></div>
@@ -1418,7 +1426,7 @@ function vBal(){
     <div class="kpi hl"><small>Markup</small><b>${pc(T.markup)}</b></div></div>`;
   const tbl=`<div class="tw"><table class="t"><thead><tr><th></th><th class="n">Kg</th><th class="n">R$</th></tr></thead><tbody>
     <tr><td>Estoque inicial (EI)<small>contagem de ${dBR(a)} · custo atual</small></td><td class="n">${kg(T.ei)}</td><td class="n">${rs(T.eiR)}</td></tr>
-    <tr><td>+ Compras<small>${B.nNotas} notas fiscais${B.nSem?`, ${B.nSem} sem conferência`:''} · valor total da nota</small></td><td class="n">${kg(T.c)}</td><td class="n">${rs(T.cR)}</td></tr>
+    <tr><td>+ Compras<small>${B.nNotas} notas fiscais${B.nFoto?` (${B.nFoto} pela foto, ${B.nNotas-B.nFoto} XML)`:''}${B.nSem?`, ${B.nSem} sem conferência`:''}${B.nSemV?` · ${B.nSemV} sem valor em R$`:''} · valor total da nota</small></td><td class="n">${kg(T.c)}</td><td class="n">${rs(T.cR)}</td></tr>
     <tr><td>− Estoque final (EF)<small>contagem de ${dBR(b)} · custo atual</small></td><td class="n">${kg(T.ef)}</td><td class="n">${rs(T.efR)}</td></tr>
     <tr class="sub"><td>= CMV</td><td class="n">${kg(T.cmv)}</td><td class="n">${rs(T.cmvR)}</td></tr>
     <tr><td>Vendas<small>${imp?'PDV (planilha importada)':DEMO?'PDV (exemplo)':'sem planilha do PDV'}</small></td><td class="n">${kg(T.vk)}</td><td class="n">${rs(T.vr)}</td></tr>
@@ -1436,9 +1444,26 @@ function vBal(){
   }
   const aviso=T.perdaKg<0?`<p><span class="pill warn">Vendas maiores que o CMV: confira se a planilha do PDV é do mesmo período das contagens (${dBR(a)} a ${dBR(b)}) e se todas as notas foram lançadas.</span></p>`:'';
   return ctrls+`<section class="card">${aviso}${kp}${tbl}${fx}
-    <p class="hint">Entra no balanço: carnes bovinas, especiais, salgadas e linguiça caseira (marcação em Ajustes → Produtos). Compras pelo peso e pelo valor total das notas (com ICMS-ST, quando houver), conferidas ou não; miúdos e outros itens da nota ficam fora. Estoque valorizado pelo custo atual. Alerta de perda: atenção a partir de ${F1.format(S.set.perdaAt)}%, crítico a partir de ${F1.format(S.set.perdaCrit)}%.</p>
-  </section>`+comp;
+    <p class="hint">Entram as carnes bovinas e os miúdos (Ajustes → Produtos). Compras pelas notas do período: XML ou, enquanto ele não entra, a nota lida pela foto. Estoque pelo custo atual. Perda: atenção a partir de ${F1.format(S.set.perdaAt)}%, crítico a partir de ${F1.format(S.set.perdaCrit)}%.</p>
+  </section>`+notasCard+comp;
 }
+/* notas do período: XML e foto, com a situação de cada uma (base do "Puxar da SEFAZ" quando o certificado chegar) */
+function vNotasPeriodo(ids,a,b,doMes){
+  const fsel=S.balForn||'', todas=notasBal().filter(n=>ids.includes(n.loja)&&n.data>a&&n.data<=b).sort((x,y)=>y.data.localeCompare(x.data)||(+y.nf)-(+x.nf));
+  const list=fsel?todas.filter(n=>n.forn===fsel):todas;
+  const tk=list.reduce((t,n)=>t+n.kg,0), tv=list.reduce((t,n)=>t+(n.v||0),0);
+  const sit=n=>{const c=confDe(n),r=n.rec?S.recs.find(x=>x.id===n.rec):S.recs.find(x=>nkey(x)===nkey(n)),dv=c&&!n.foto?divergencias(c).length:0;
+    return [!c?'<span class="pill warn">sem conferência</span>':dv?'<span class="pill warn">foto × XML diferente</span>':'<span class="pill ok">conferida</span>',
+      n.foto?`<span class="pill sem">${n.fonte==='foto'?'pela foto':'digitada'}</span>`:'<span class="pill ok">XML</span>',
+      n.v>0?'':'<span class="pill sem">sem R$</span>',!c&&!r&&!n.foto?'<span class="pill crit">não recebida na doca</span>':''].join('')};
+  return `<section class="card"><div class="card-h"><h2>Notas do período</h2><span class="tag">${doMes?mesNome(b.slice(0,7)):`${dBR(a)} a ${dBR(b)}`}</span></div>
+    <div class="ctrls"><div class="field"><label for="balForn">Fornecedor</label><select id="balForn" class="in"><option value="">Todos</option>${FORN.map(f=>`<option value="${f.id}"${fsel===f.id?' selected':''}>${esc(f.nome)}</option>`).join('')}</select></div>
+      <label class="btn">Importar XML (pode marcar vários)<input id="bxml" type="file" accept=".xml,text/xml,application/xml" multiple class="vh"></label></div>
+    ${doMes?'<p class="hint">Sem duas contagens, a lista mostra as notas deste mês.</p>':''}
+    <p class="hint"><b>${list.length} nota${list.length===1?'':'s'}</b> · ${kg(tk)} kg · ${rs(tv)}. A nota lida pela foto vale até o XML dela entrar; aí o XML substitui.</p>
+    <div class="rows">${list.length?list.map(n=>{const c=confDe(n);const main=`<div class="row-main"><b>NF ${esc(n.nf)} · ${esc(fnome(n))}</b><span>${S.loja?'':esc(lojaNome(n.loja))+' · '}${dBR(n.data)} · ${kg(n.kg)} kg · ${n.v>0?rs(n.v):'—'}</span></div><div class="row-side">${sit(n)}</div>`;
+      return c?`<button type="button" class="row" data-act="open-conf" data-id="${c.id}">${main}</button>`:`<div class="row static">${main}</div>`}).join(''):'<div class="empty">Nenhuma nota no período.</div>'}</div>
+  </section>`}
 
 /* ---------- AJUSTES ---------- */
 function vAju(){
@@ -1558,8 +1583,9 @@ function applyChave(ch){
 function digDoForm(f){
   const dig=[];
   f.out.forEach(o=>{const k=num(o.kg);if(!o.c||!(k>0))return;
-    if(o.c.startsWith('G:'))dig.push({g:o.c.slice(2),kg:r3(k)});
-    else dig.push({g:o.c==='MIUDO'?'outros':(PM[o.c]?.cx?'caixaria':'outros'),c:o.c,kg:r3(k)})});
+    const v=o.v>0?{v:r2(o.v)}:{};
+    if(o.c.startsWith('G:'))dig.push({g:o.c.slice(2),kg:r3(k),...v});
+    else dig.push({g:o.c==='MIUDO'?'outros':(PM[o.c]?.cx?'caixaria':'outros'),c:o.c,kg:r3(k),...v})});
   return dig;
 }
 function addPes(){
@@ -1621,12 +1647,12 @@ function aplicarLeitura(n,modelo){refazForn();
     const mp=matchProd(it.descricao); /* corte de caixa vence a palavra da peça: "MUSCULO DIANTEIRO" é músculo, não dianteiro inteiro */
     const c=ap&&(ap.startsWith('G:')||PM[ap])?ap:mp&&PM[mp]?.cx?mp:['traseiro','dianteiro','costela'].includes(g)?'G:'+g:(mp||(miudo?'MIUDO':''));
     if(!c)semCarne++; /* sem cadastro: a linha pede o produto, e o app aprende */
-    linhas.push({c,kg:fmt(it.quantidade),desc:descLimpa(it.descricao),...(c?{}:{novo:true})}); /* novo: só estes ensinam o app */
+    linhas.push({c,kg:fmt(it.quantidade),desc:descLimpa(it.descricao),...(it.valor_total>0?{v:r2(it.valor_total)}:{}),...(c?{}:{novo:true})}); /* novo: só estes ensinam o app */
   });
   if(!F&&/^\d{14}$/.test(n.emitente_cnpj||'')){f.forn='c'+n.emitente_cnpj;f.fornNome=n.emitente_nome||('CNPJ '+fmtCNPJ(n.emitente_cnpj))} /* fornecedor sem cadastro: usa o da nota */
   f.out=linhas.length?linhas:linhasPadrao();
   f.falhou=false;f.corr=false;
-  f.ia={modelo,soma:r3(somaKg),pl:+n.peso_liquido||0,emitente:F?'':`${n.emitente_nome} (CNPJ ${fmtCNPJ(n.emitente_cnpj)})`,semCarne,itens:(n.itens||[]).length};
+  f.ia={modelo,soma:r3(somaKg),pl:+n.peso_liquido||0,vt:+n.valor_total||0,emitente:F?'':`${n.emitente_nome} (CNPJ ${fmtCNPJ(n.emitente_cnpj)})`,semCarne,itens:(n.itens||[]).length};
 }
 function parseXML(txt){
   const d=new DOMParser().parseFromString(txt,'text/xml');
@@ -1702,11 +1728,11 @@ const A={
       Object.assign(r,{chave:f.chave,nf:f.nf,forn:f.forn,data:f.data,fotos:f.fotos,dig:dig.length?dig:null});
       if(cc)setConf(cc.id,{log:[...cc.log,`Nota corrigida por ${quemSou()} em ${nowBR()}`]});toast('Nota corrigida.')}
     else{if(f.link)S.used.push(f.link);
-      S.recs.push({id:'r'+Date.now(),loja:f.loja,chave:f.chave,nf:String(+f.nf),forn:f.forn,...(f.fornNome&&!FM[f.forn]?{fornNome:f.fornNome}:{}),data:f.data,hora:nowHM(),fotos:f.fotos,dig:dig.length?dig:null,via:f.ia?'foto-ia':f.fotos.length?'foto':'manual',...(f.ia?{lida:{soma:f.ia.soma,pl:f.ia.pl,modelo:f.ia.modelo}}:{}),por:quemSou(),uid:S.user});
+      S.recs.push({id:'r'+Date.now(),loja:f.loja,chave:f.chave,nf:String(+f.nf),forn:f.forn,...(f.fornNome&&!FM[f.forn]?{fornNome:f.fornNome}:{}),data:f.data,hora:nowHM(),fotos:f.fotos,dig:dig.length?dig:null,via:f.ia?'foto-ia':f.fotos.length?'foto':'manual',...(f.ia?{lida:{soma:f.ia.soma,pl:f.ia.pl,vt:f.ia.vt||0,modelo:f.ia.modelo}}:{}),por:quemSou(),uid:S.user});
       toast(dig.length?`Nota recebida com ${dig.length} peso(s) digitado(s). Toque em Conferir quando for pesar.`:'Nota recebida. Toque em Conferir quando for pesar.')}
     S.rf=newRf(f.loja);save();render()},
   'rec-edit':el=>{const r=S.recs.find(x=>x.id===el.dataset.id);if(!r)return;
-    const out=(r.dig||[]).map(d=>({c:d.c||('G:'+d.g),kg:String(d.kg).replace('.',',')}));
+    const out=(r.dig||[]).map(d=>({c:d.c||('G:'+d.g),kg:String(d.kg).replace('.',','),...(d.v?{v:d.v}:{})}));
     S.rf={...newRf(r.loja),edit:r.id,via:r.dig?'manual':'foto',chave:r.chave||'',nf:r.nf,forn:r.forn,data:r.data,fotos:[...(r.fotos||[])],out:out.length?out:linhasPadrao()};
     nfOpen().rec=true;save();render();scrollTo(0,0)},
   'rec-del':el=>{S.recDel=el.dataset.id;render()},
@@ -1833,6 +1859,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if
 
 const C={
   rgaleria:t=>C.rfotos(t),
+  balForn:t=>{S.balForn=t.value;render()},
   loja:t=>{S.loja=+t.value;S.openId=null;save();render()},
   rloja:t=>{S.rf.loja=+t.value;save();render()},
   cloja:t=>{S.cd.loja=+t.value;save();render()},
@@ -1855,6 +1882,13 @@ const C={
     }catch(e){toast('Não foi possível ler esse arquivo. Envie o XML da NF-e.')}
     render()},
   /* receber nota pelo XML: cria a nota (vale para o balanço) e a nota recebida (vai para Conferir) */
+  bxml:async t=>{const fs=[...t.files];if(!fs.length)return;let ok=0,dup=0,semLoja=0,ruim=0;
+    for(const f of fs){try{const x=parseXML(await f.text()),F=FCNPJ[x.cnpj];
+      const lj=S.lojas.find(l=>l.cnpj&&l.cnpj===x.dest),loja=lj?lj.id:S.loja;if(!loja){semLoja++;continue}
+      const n={id:'na'+Date.now()+ok,loja,forn:F?F.id:'c'+x.cnpj,...(F?{}:{fornNome:x.xNome}),nf:x.nNF||'0',chave:x.chave,data:x.data||todayISO(),itens:x.itens,kg:x.kg,v:x.v,origem:'app',fonte:'XML'};
+      if(allNotas().some(y=>nkey(y)===nkey(n))){dup++;continue}addNota(n);ok++}catch(e){ruim++}}
+    t.value='';render();
+    toast([ok?`${ok} nota(s) importada(s)`:'',dup?`${dup} já estava(m) no app`:'',semLoja?`${semLoja} sem loja: escolha a loja no topo ou cadastre o CNPJ da loja em Ajustes`:'',ruim?`${ruim} arquivo(s) não é XML de NF-e`:''].filter(Boolean).join(' · ')||'Nada importado.')},
   rxml:async t=>{const f=t.files[0];if(!f)return;
     try{const x=parseXML(await f.text()),F=FCNPJ[x.cnpj];
       const lj=S.lojas.find(l=>l.cnpj&&l.cnpj===x.dest), loja=S.loja?S.loja:(lj?lj.id:(+S.rf.loja||1));
