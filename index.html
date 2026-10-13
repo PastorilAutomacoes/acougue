@@ -792,7 +792,7 @@ function notaFoto(r){if(!r?.dig?.length)return null;
   return{loja:r.loja,forn:r.forn,fornNome:r.fornNome,nf:r.nf,data:r.data,itens,kg:r3(itens.reduce((t,i)=>t+i.kg,0)),v:r.lida?.vt||sv,fonte:r.lida?'foto':'digitada',foto:true,rec:r.id}}
 function notasBal(){const m=new Map(allNotas().map(n=>[nkey(n),n]));S.recs.forEach(r=>{const k=nkey(r);if(!m.has(k)){const n=notaFoto(r);if(n)m.set(k,n)}});return [...m.values()]}
 /* excluir nota recebida: antes da pesagem, quem recebeu ou gerente/gestor; com pesagem iniciada, só gerente/gestor; conferida, ninguém */
-const podeExcluirRec=r=>!confDoRec(r)&&(S.role!=='conferente'||(!r.lock&&r.uid===S.user));
+const podeExcluirRec=r=>S.role!=='conferente'||(!confDoRec(r)&&!r.lock&&r.uid===S.user); /* gerente/gestor apagam qualquer nota recebida (com a conferência junto) */
 /* compara o que foi digitado da DANFE com o XML: por peça e, na caixaria/outros, por carne */
 function divergencias(c){
   const rec=recDe(c),x=notaDe(c);if(!rec?.dig?.length||!x)return[];
@@ -1355,7 +1355,7 @@ function vNF(){
   const xmlBtn=()=>`<label class="btn sm" style="align-self:flex-start">Importar XML<input id="rxml" type="file" accept=".xml,text/xml,application/xml" class="vh"></label>${vNotas()}`;
   const listaHTML=()=>`<div class="rows">${recebidas.length?recebidas.map(r=>{const c=confDoRec(r),trav=!g&&(r.lock||!!c);
       return `<div class="row static"><div class="row-main"><b>NF ${esc(r.nf)} · ${esc(fnome(r))}</b><span>${S.loja?'':esc(lojaNome(r.loja))+' · '}${dBR(r.data)} ${r.hora} · ${esc(r.por)}${g?` · ${r.dig?'pesos digitados':'às cegas'} · ${notaDe(r)?'XML ✓':'aguardando XML'}`:''}</span></div>
-      <div class="row-side">${S.recDel===r.id?`<span class="hint">Excluir esta nota?</span><div class="inrow"><button type="button" class="btn sm" data-act="rec-del-no">Não</button><button type="button" class="btn sm pri" data-act="rec-del-ok" data-id="${r.id}">Excluir</button></div>`
+      <div class="row-side">${S.recDel===r.id?`<span class="hint">${c?'Excluir a nota <b>e a conferência</b>?':'Excluir esta nota?'}</span><div class="inrow"><button type="button" class="btn sm" data-act="rec-del-no">Não</button><button type="button" class="btn sm pri" data-act="rec-del-ok" data-id="${r.id}">Excluir</button></div>`
         :`${c?statusPill(analise(c)):`<button type="button" class="btn sm pri" data-act="startrec" data-id="${r.id}">Conferir</button>`}<div class="inrow">${!trav?`<button type="button" class="btn sm ghost" data-act="rec-edit" data-id="${r.id}">Corrigir</button>`:''}${podeExcluirRec(r)?`<button type="button" class="btn sm ghost" data-act="rec-del" data-id="${r.id}">Excluir</button>`:''}</div>`}</div></div>`}).join('')
       :'<div class="empty">Nenhuma nota recebida ainda.</div>'}</div>`;
   return `<div class="nfwrap">
@@ -1771,7 +1771,8 @@ const A={
   'rec-del':el=>{S.recDel=el.dataset.id;render()},
   'rec-del-no':()=>{S.recDel=null;render()},
   'rec-del-ok':el=>{const r=S.recs.find(x=>x.id===el.dataset.id);S.recDel=null;if(!r||!podeExcluirRec(r))return;
-    S.recs=S.recs.filter(x=>x.id!==r.id);
+    const cf=confDoRec(r);if(cf){S.apps=S.apps.filter(x=>x.id!==cf.id);if(S.openId===cf.id)S.openId=null}
+    S.recs=S.recs.filter(x=>x.id!==r.id);resetIdx();
     if(r.chave)S.used=S.used.filter(ch=>ch!==r.chave);
     if(S.draft.rec===r.id)S.draft=newDraft(S.draft.loja);
     if(S.rf.edit===r.id)S.rf=newRf(S.rf.loja);
