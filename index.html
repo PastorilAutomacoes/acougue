@@ -1154,6 +1154,11 @@ function perguntaCaixa(val,idIn,act){const t=num(val)||0,ck=caixaKg(),outra=t>0&
   return `<div class="segcx"><button type="button" class="${t===0&&!S.cxOutra?'on':''}" data-act="${act}" data-v="0">Não</button><button type="button" class="${t>0&&!outra&&!S.cxOutra?'on':''}" data-act="${act}" data-v="${String(ck).replace('.',',')}">Sim, na caixa <small>(−${String(ck).replace('.',',')} kg)</small></button></div>
     ${outra||S.cxOutra?`<label class="cxoutra">Peso da caixa (kg)<input id="${idIn}" inputmode="decimal" value="${esc(val)}"></label>`:`<button type="button" class="lnk" data-act="cxoutra">outro peso de caixa</button>`}`}
 const naCaixa=t=>!t?'':Math.abs(t-caixaKg())<.0005?'na caixa':`caixa ${kg(t)}`;
+function formNovaCarne(){return `<div class="novacarne"><b>Cadastrar carne</b>
+    <div class="field"><label for="nc-nome">Nome</label><input id="nc-nome" autocomplete="off" placeholder="ex.: Alcatrinha"></div>
+    <div class="grid2"><div class="field"><label for="nc-peca">Peça</label><select id="nc-peca" class="in"><option value="traseiro">Traseiro</option><option value="dianteiro">Dianteiro</option><option value="costela">Costela</option><option value="miudos">Miúdos</option><option value="outros">Outros</option></select></div>
+    <div class="field"><label for="nc-cod">Código do PDV <small>(se tiver)</small></label><input id="nc-cod" inputmode="numeric" autocomplete="off"></div></div>
+    <div class="inrow"><button type="button" class="btn pri" data-act="nc-salvar">Cadastrar</button><button type="button" class="btn" data-act="nc-cancel">Cancelar</button></div></div>`}
 function cListHTML(q){const n=norm(q.trim()),l=prodList().filter(p=>p.bov&&(!n||norm(p.n).includes(n)||p.c.startsWith(n))).sort((a,b)=>a.n.localeCompare(b.n,'pt-BR'));
   return l.length?l.map(p=>`<button type="button" class="opt1${S.cd.prod===p.c?' on':''}" data-act="cpick" data-c="${p.c}">${esc(p.n)}</button>`).join(''):'<p class="hint" style="padding:8px 10px">Nenhuma carne com esse nome.</p>'}
 /* mensagem da contagem para o WhatsApp (valor de custo só para gerente e gestor) */
@@ -1187,12 +1192,7 @@ function vContagem(){
   const corpo=`<div class="field"><span class="lbl">1. Carne</span>
       <button type="button" class="pickbox${S.cAberto?' on':''}" data-act="cabre" aria-expanded="${!!S.cAberto}"><span>${d.prod?esc(PM[d.prod]?.n||d.prod):'Toque para escolher'}</span><b>${S.cAberto?'▴':'▾'}</b></button>
       ${S.cAberto?`<input id="cq" autocomplete="off" placeholder="Buscar carne" style="margin-top:6px"><div id="csug" class="optlist">${cListHTML('')}</div>
-        ${S.role!=='conferente'?(S.cNova?`<div class="novacarne"><b>Cadastrar carne</b>
-          <div class="field"><label for="nc-nome">Nome</label><input id="nc-nome" autocomplete="off" placeholder="ex.: Alcatrinha"></div>
-          <div class="grid2"><div class="field"><label for="nc-peca">Peça</label><select id="nc-peca" class="in"><option value="traseiro">Traseiro</option><option value="dianteiro">Dianteiro</option><option value="costela">Costela</option><option value="miudos">Miúdos</option><option value="outros">Outros</option></select></div>
-          <div class="field"><label for="nc-cod">Código do PDV <small>(se tiver)</small></label><input id="nc-cod" inputmode="numeric" autocomplete="off"></div></div>
-          <div class="inrow"><button type="button" class="btn pri" data-act="nc-salvar">Cadastrar</button><button type="button" class="btn" data-act="nc-cancel">Cancelar</button></div></div>`
-          :`<button type="button" class="lnk" data-act="nc-abrir" style="align-self:flex-start">+ Cadastrar carne que não está na lista</button>`):''}`:''}</div>
+        ${S.role!=='conferente'?(S.cNova==='cont'?formNovaCarne():`<button type="button" class="lnk" data-act="nc-abrir" data-v="cont" style="align-self:flex-start">+ Cadastrar carne que não está na lista</button>`):''}`:''}</div>
     <div class="field"><span class="lbl">2. Pesou dentro da caixa?</span>${perguntaCaixa(d.tara||'0','ctara','ctara')}</div>
     <div class="field"><label for="cpeso">3. Peso da balança (kg)</label><input id="cpeso" class="big" inputmode="decimal" autocomplete="off" placeholder="0,000" value="${esc(d.peso)}"></div>
     <button type="button" class="btn pri wide" data-act="cadd">Adicionar</button>`;
@@ -1527,7 +1527,8 @@ function vAju(){
   </section></div>
   <section class="card"><div class="card-h"><h2>Produtos do açougue</h2><span class="tag">${ps.filter(p=>p.bov).length} no balanço bovino</span></div>
     <p class="hint">Os produtos vêm da planilha do PDV. <b>Traseiro, Dianteiro e Costela</b> definem em quais botões a carne aparece na pesagem; pode marcar mais de um (a fraldinha, por exemplo, vem no traseiro e na costela). A peça é sugerida pelo nome e pelo custo atual. Sem nenhuma marcada, a carne fica em Outros. <b>Caixaria</b> faz a carne aparecer no botão Caixaria; <b>Balanço</b> marca o que entra no balanço de carne bovina.</p>
-    <div class="inrow"><label class="btn">Importar produtos da planilha (Excel)<input id="xlsp" type="file" accept=".xlsx,.xls,.csv" multiple class="vh"></label></div>
+    <div class="inrow"><button type="button" class="btn pri" data-act="nc-abrir" data-v="aju">+ Adicionar carne</button><label class="btn">Importar produtos da planilha (Excel)<input id="xlsp" type="file" accept=".xlsx,.xls,.csv" multiple class="vh"></label></div>
+    ${S.cNova==='aju'?formNovaCarne():''}
     <div class="tw" style="max-height:460px;overflow:auto"><table class="t mt"><thead><tr><th>Produto</th><th>Subgrupo</th><th>Traseiro</th><th>Dianteiro</th><th>Costela</th><th>Caixaria</th><th>Balanço</th><th class="n">Custo atual</th></tr></thead><tbody>
     ${ps.map(p=>`<tr><td>${/^\d+$/.test(p.c)?`<span class="code">${p.c}</span> `:''}${esc(p.n)}${p.imp?'':' <span class="hint">(exemplo)</span>'}</td><td>${esc(p.sub||'')}</td>
       ${['traseiro','dianteiro','costela'].map(k=>`<td><input type="checkbox" class="chk" id="pg-${k}-${p.c}"${pecasOf(p).includes(k)?' checked':''} aria-label="${esc(p.n)} aparece em ${GRN[k]}"></td>`).join('')}
@@ -1796,7 +1797,7 @@ const A={
   'comp-cancel':()=>{S.draft=newDraft(S.draft.loja);S.confirm=false;save();render()},
   cmodo:el=>{S.cd.modo=el.dataset.v;S.cconfirm=false;save();render()},
   cpick:el=>{S.cd.prod=el.dataset.c;S.cAberto=false;save();render();focusId('cpeso')},
-  'nc-abrir':()=>{S.cNova=true;render();focusId('nc-nome')},
+  'nc-abrir':el=>{S.cNova=el.dataset.v||'cont';render();focusId('nc-nome')},
   'nc-cancel':()=>{S.cNova=false;render()},
   'nc-salvar':()=>{const v=id=>document.getElementById(id)?.value.trim()||'',nome=v('nc-nome'),peca=v('nc-peca')||'outros',cod=v('nc-cod').replace(/\D/g,'');
     if(nome.length<3){toast('Digite o nome da carne.');focusId('nc-nome');return}
@@ -1804,7 +1805,7 @@ const A={
     if(cod&&PM[cod]&&!PM[cod].sistema){toast(`O código ${cod} já é de ${PM[cod].n}.`);return}
     const c=cod||'L'+Date.now().toString(36),pc=['traseiro','dianteiro','costela'].includes(peca)?[peca]:[];
     const p={c,n:nome[0].toUpperCase()+nome.slice(1),g:'Bovino',bov:true,sub:'Carnes bovinas',peca:pc[0]||'outros',pecas:pc,miudo:peca==='miudos',cx:peca==='traseiro'||peca==='dianteiro',custo:0,preco:0,d:0,bovSet:true,pecaSet:true,cxSet:true,novo:true,por:quemSou()};
-    PM[c]=p;S.prods[c]=p;S.cd.prod=c;S.cNova=false;S.cAberto=false;save();render();focusId('cpeso');toast(`${p.n} cadastrada.`)},
+    const naCont=S.cNova==='cont';PM[c]=p;S.prods[c]=p;if(naCont){S.cd.prod=c;S.cAberto=false}S.cNova=false;save();render();if(naCont)focusId('cpeso');toast(`${p.n} cadastrada.`)},
   cabre:()=>{S.cAberto=!S.cAberto;render();if(S.cAberto)focusId('cq')},
   cgrp:el=>{const c=el.dataset.c;S.cOpen={...(S.cOpen||{}),[c]:!S.cOpen?.[c]};render()},
   ctara:el=>{S.cd.tara=el.dataset.v;S.cxOutra=false;save();render();focusId('cpeso')},
