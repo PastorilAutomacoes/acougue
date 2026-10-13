@@ -757,7 +757,7 @@ function saiu(){SY.on=false;clearTimeout(SY.tPush);SY.base=new Map();SY.cursor=n
   Object.keys(PM).forEach(k=>delete PM[k]);PROD.forEach(p=>PM[p.c]={...p});PM.CX={...PCX};PM.MIUDO={...PMI}}
 async function lgEnviar(){
   const v=id=>document.getElementById(id)?.value.trim()||'';
-  const usuario=v('lg-usuario').toLowerCase();S.lg.usuario=usuario;S.lg.erro='';
+  const usuario=v('lg-usuario').toLowerCase();S.lg.usuario=usuario;S.lg.erro='';if(document.getElementById('lg-codigo'))S.lg.codigo=v('lg-codigo'); /* o código fica na tela se der erro */
   const ativ=S.lg.modo==='ativar',pin=v('lg-pin');
   if(!usuario){S.lg.erro='Digite o usuário.';render();return}
   if(!/^\d{6}$/.test(pin)){S.lg.erro='O PIN tem 6 números.';render();return}
@@ -766,7 +766,7 @@ async function lgEnviar(){
   S.lg.busy=true;render();
   try{const s=await fn('acesso',ativ?{acao:'ativar',usuario,codigo,pin}:{acao:'entrar',usuario,pin});
     const {error}=await sb.auth.setSession(s);if(error)throw new Error('Não foi possível entrar. Tente de novo.');
-    await entrouComSessao();if(ativ)toast('PIN criado. Guarde-o: ninguém mais sabe qual é.')}
+    S.lg.codigo='';await entrouComSessao();if(ativ)toast('PIN criado. Guarde-o: ninguém mais sabe qual é.')}
   catch(e){S.lg.busy=false;S.lg.erro=e.message;render()}
 }
 document.addEventListener('submit',e=>{if(e.target.id==='lgform'){e.preventDefault();if(!S.lg.busy)lgEnviar()}});
@@ -1027,7 +1027,7 @@ function vLogin(){
     <h2>${ativ?'Primeiro acesso':'Entrar'}</h2>
     <form id="lgform" class="stackcol" novalidate>
       <div class="field"><label for="lg-usuario">Usuário</label><input id="lg-usuario" autocapitalize="none" autocomplete="username" spellcheck="false" value="${esc(L.usuario)}" placeholder="ex.: joao.trevisan"${dis}></div>
-      ${ativ?`<div class="field"><label for="lg-codigo">Código de ativação</label><input id="lg-codigo" autocapitalize="characters" autocomplete="one-time-code" spellcheck="false" placeholder="XXXX-XXXX"${dis}><span class="hint">A Diretoria envia esse código. Ele vale 48 horas e só pode ser usado uma vez.</span></div>
+      ${ativ?`<div class="field"><label for="lg-codigo">Código de ativação</label><input id="lg-codigo" autocapitalize="characters" autocomplete="one-time-code" spellcheck="false" placeholder="XXXX-XXXX" value="${esc(L.codigo||'')}"${dis}><span class="hint">A Diretoria envia esse código. Ele vale 48 horas e só pode ser usado uma vez.</span></div>
         ${pinIn('lg-pin','Crie seu PIN (6 números)','new-password')}${pinIn('lg-pin2','Repita o PIN','new-password')}
         <p class="hint">Não use datas de nascimento nem números em sequência. Ninguém mais fica sabendo o seu PIN, nem a Diretoria.</p>`
       :pinIn('lg-pin','PIN','current-password')}
