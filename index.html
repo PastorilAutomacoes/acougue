@@ -1041,6 +1041,8 @@ function vLogin(){
     <button type="button" class="btn ghost" data-act="lg-modo">${ativ?'← Já tenho PIN':'Primeiro acesso ou esqueci o PIN'}</button>
     ${ativ?'':'<p class="hint">Esqueceu o PIN? Peça um código novo à Diretoria e toque em “Primeiro acesso”.</p>'}
   </section>
+  <section class="card" style="max-width:420px;width:100%;margin:12px auto 0"><button type="button" class="btn" data-act="diag"${S.diagRodando?' disabled':''}>${S.diagRodando?'Testando…':'Testar conexão com o servidor'}</button>
+    ${S.diag?`<pre class="msg" style="white-space:pre-wrap;font-size:.8rem">${esc(S.diag)}</pre>`:''}</section>
   ${ativ?'':`<section class="card" style="max-width:420px;width:100%;margin:12px auto 0"><button type="button" class="btn treinobtn" data-act="treino">Entrar no modo treino</button>
     <p class="hint">Para aprender a usar o app. Entra como conferente, sem PIN, e nada é salvo de verdade.</p></section>`}`;
 }
@@ -1728,6 +1730,14 @@ const A={
   'lg-modo':()=>{S.lg.usuario=document.getElementById('lg-usuario')?.value.trim()||S.lg.usuario;S.lg.modo=S.lg.modo==='ativar'?'entrar':'ativar';S.lg.erro='';render();focusId(S.lg.usuario?(S.lg.modo==='ativar'?'lg-codigo':'lg-pin'):'lg-usuario')},
   sair:async()=>{if(TREINO){sairTreino();return}guardarCacheJa();saveDrafts();saiu();render();scrollTo(0,0);await sb.auth.signOut()},
   treino:()=>entrarTreino(),
+  /* diagnóstico: mostra se o celular alcança o servidor (cada etapa com tempo limite) */
+  diag:async()=>{S.diagRodando=true;S.diag='';render();const L=[],t=async(nome,f,ms=12000)=>{const t0=Date.now();try{const r=await comLimite(f(),ms);L.push(`✓ ${nome} (${Date.now()-t0} ms)${r?' · '+r:''}`)}catch(e){L.push(`✗ ${nome} (${Date.now()-t0} ms) · ${e.message||e}`)}};
+    L.push(`Aparelho: ${navigator.userAgent.replace(/\s+/g,' ').slice(0,140)}`);
+    await t('Servidor de login',async()=>{const r=await fetch(SB_URL+'/auth/v1/health',{headers:{apikey:SB_KEY}});return 'HTTP '+r.status});
+    await t('Função de acesso',async()=>{const r=await fetch(SB_URL+'/functions/v1/acesso',{method:'POST',headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({acao:'entrar',usuario:'teste.conexao',pin:'000000'})});return 'HTTP '+r.status});
+    await t('Biblioteca do login',async()=>{await sb.auth.getSession();return ''});
+    await t('Chamada pelo app',async()=>{try{await fn('acesso',{acao:'entrar',usuario:'teste.conexao',pin:'000000'})}catch(e){if(/incorretos/i.test(e.message))return 'ok';throw e}return 'ok'});
+    S.diag=L.join(String.fromCharCode(10));S.diagRodando=false;render()},
   'treino-apagar':()=>{S.treinoDel=true;render()},
   'treino-apagar-nao':()=>{S.treinoDel=false;render()},
   'treino-apagar-ok':()=>{S.recs=[];S.apps=[];S.conts=[];S.rf=newRf(99);S.draft=newDraft(99);S.cd=newCd(99);S.done=null;S.openId=null;S.treinoDel=false;LER={f:null,imgs:[]};LENDO=null;resetIdx();save();S.tab='nf';render();scrollTo(0,0);toast('Treino apagado. Pode começar de novo.')},
