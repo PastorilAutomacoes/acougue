@@ -353,7 +353,9 @@ details summary{cursor:pointer;font-weight:600;font-size:.9rem;padding:4px 0}
 /* ---------- servidor (Supabase) ---------- */
 /* chave publicável: pode ficar no código; quem protege os dados são as regras de acesso (RLS) do banco */
 const SB_URL='https://gbstpyqhptguhvvpybmv.supabase.co', SB_KEY='sb_publishable_rtqSg-zjHAGRGq_O0Cb9dQ_Au2lbxIp';
-const sb=window.supabase.createClient(SB_URL,SB_KEY);
+/* sem o cadeado do navegador (navigator.locks): em alguns navegadores embutidos (WhatsApp, Samsung) ele não libera e o login fica em "Aguarde…" */
+const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{lock:async(_n,_t,f)=>await f()}});
+const comLimite=(p,ms=20000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('O servidor não respondeu. Verifique a internet e tente de novo.')),ms))]);
 const DEMO=false; /* true = volta a gerar os dados de exemplo de setembro/2026 */
 /* ---------- app instalável (ícone na tela, tela cheia, abre sem sinal) ---------- */
 let INSTALL=null;
@@ -732,7 +734,7 @@ function sairTreino(){TREINO=false;try{sessionStorage.removeItem('acougue-treino
 
 /* ---------- login ---------- */
 async function fn(nome,body){
-  const {data,error}=await sb.functions.invoke(nome,{body});
+  const {data,error}=await comLimite(sb.functions.invoke(nome,{body}),nome==='ler-danfe'?70000:20000);
   if(error){let m='Sem conexão com o servidor. Verifique a internet.';try{const j=await error.context.json();if(j?.erro)m=j.erro}catch(_){}throw new Error(m)}
   return data;
 }
@@ -767,8 +769,8 @@ async function lgEnviar(){
   const codigo=v('lg-codigo');if(ativ&&!codigo){S.lg.erro='Digite o código que a Diretoria enviou.';render();return}
   S.lg.busy=true;render();
   try{const s=await fn('acesso',ativ?{acao:'ativar',usuario,codigo,pin}:{acao:'entrar',usuario,pin});
-    const {error}=await sb.auth.setSession(s);if(error)throw new Error('Não foi possível entrar. Tente de novo.');
-    S.lg.codigo='';await entrouComSessao();if(ativ)toast('PIN criado. Guarde-o: ninguém mais sabe qual é.')}
+    const {error}=await comLimite(sb.auth.setSession(s));if(error)throw new Error('Não foi possível entrar. Tente de novo.');
+    S.lg.codigo='';await comLimite(entrouComSessao(),25000);if(ativ)toast('PIN criado. Guarde-o: ninguém mais sabe qual é.')}
   catch(e){S.lg.busy=false;S.lg.erro=e.message;render()}
 }
 document.addEventListener('submit',e=>{if(e.target.id==='lgform'){e.preventDefault();if(!S.lg.busy)lgEnviar()}});
