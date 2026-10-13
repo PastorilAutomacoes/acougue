@@ -145,6 +145,14 @@ input.big{font-family:var(--f-num);font-size:1.5rem;padding:10px 12px;text-align
 .pickbox{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:9px 11px;cursor:pointer;font:inherit;font-size:.92rem;color:var(--fg)}
 .pickbox span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pickbox.on{border-color:var(--accent)}
+.plist{display:flex;flex-direction:column;max-height:520px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.prow{padding:9px 10px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}.prow:first-child{border-top:0}
+.pn{display:flex;justify-content:space-between;gap:8px;font-size:.95rem}.pn small{color:var(--muted);font-family:var(--f-num);white-space:nowrap}
+.ptgs{display:flex;flex-wrap:wrap;gap:5px}
+.ptg span{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:.78rem;color:var(--muted);background:var(--surface);cursor:pointer}
+.ptg input:checked+span{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.ptg input:disabled+span{opacity:.4;cursor:default}
+.ptg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
 .novacarne{display:flex;flex-direction:column;gap:8px;border:1px dashed var(--accent);border-radius:10px;padding:10px;margin-top:8px}
 .somar{display:flex;align-items:center;gap:8px}.somar #somabox{margin-left:auto}
 .sbox{text-align:right;border-radius:10px;padding:6px 10px;background:var(--bg)}.sbox small{display:block;font-size:.66rem;letter-spacing:.05em;text-transform:uppercase;color:inherit;opacity:.85}
@@ -1487,6 +1495,12 @@ function vNotasPeriodo(ids,a,b,doMes){
       return c?`<button type="button" class="row" data-act="open-conf" data-id="${c.id}">${main}</button>`:`<div class="row static">${main}</div>`}).join(''):'<div class="empty">Nenhuma nota no período.</div>'}</div>
   </section>`}
 
+/* lista de produtos em Ajustes: cada carne com botões de marcar (cabe no celular) */
+function prodRows(){const q=norm((S.pFiltro||'').trim()),ps=prodList().filter(p=>!q||norm(p.n).includes(q)||p.c.startsWith(q)).sort((a,b)=>a.n.localeCompare(b.n,'pt-BR'));
+  const tg=(id,on,txt,dis)=>`<label class="ptg"><input type="checkbox" id="${id}" class="vh"${on?' checked':''}${dis?' disabled':''}><span>${txt}</span></label>`;
+  return ps.length?ps.map(p=>`<div class="prow"><div class="pn"><span>${/^\d+$/.test(p.c)?`<span class="code">${p.c}</span> `:''}${esc(p.n)}</span><small>${rs(p.custo)}</small></div>
+    <div class="ptgs">${['traseiro','dianteiro','costela'].map(k=>tg(`pg-${k}-${p.c}`,pecasOf(p).includes(k),GRB[k])).join('')}${tg(`pcx-${p.c}`,p.cx,'Caixaria',p.inteira)}${tg(`pb-${p.c}`,p.bov,'Balanço')}</div></div>`).join('')
+    :'<p class="hint">Nenhum produto com esse nome.</p>'}
 /* ---------- AJUSTES ---------- */
 function vAju(){
   const f=(id,l,v,h)=>`<div class="field"><label for="${id}">${l}</label><input id="${id}" inputmode="decimal" value="${esc(String(v).replace('.',','))}">${h?`<span class="hint">${h}</span>`:''}</div>`;
@@ -1529,12 +1543,8 @@ function vAju(){
     <p class="hint">Os produtos vêm da planilha do PDV. <b>Traseiro, Dianteiro e Costela</b> definem em quais botões a carne aparece na pesagem; pode marcar mais de um (a fraldinha, por exemplo, vem no traseiro e na costela). A peça é sugerida pelo nome e pelo custo atual. Sem nenhuma marcada, a carne fica em Outros. <b>Caixaria</b> faz a carne aparecer no botão Caixaria; <b>Balanço</b> marca o que entra no balanço de carne bovina.</p>
     <div class="inrow"><button type="button" class="btn pri" data-act="nc-abrir" data-v="aju">+ Adicionar carne</button><label class="btn">Importar produtos da planilha (Excel)<input id="xlsp" type="file" accept=".xlsx,.xls,.csv" multiple class="vh"></label></div>
     ${S.cNova==='aju'?formNovaCarne():''}
-    <div class="tw" style="max-height:460px;overflow:auto"><table class="t mt"><thead><tr><th>Produto</th><th>Subgrupo</th><th>Traseiro</th><th>Dianteiro</th><th>Costela</th><th>Caixaria</th><th>Balanço</th><th class="n">Custo atual</th></tr></thead><tbody>
-    ${ps.map(p=>`<tr><td>${/^\d+$/.test(p.c)?`<span class="code">${p.c}</span> `:''}${esc(p.n)}${p.imp?'':' <span class="hint">(exemplo)</span>'}</td><td>${esc(p.sub||'')}</td>
-      ${['traseiro','dianteiro','costela'].map(k=>`<td><input type="checkbox" class="chk" id="pg-${k}-${p.c}"${pecasOf(p).includes(k)?' checked':''} aria-label="${esc(p.n)} aparece em ${GRN[k]}"></td>`).join('')}
-      <td><input type="checkbox" class="chk" id="pcx-${p.c}"${p.cx?' checked':''}${p.inteira?' disabled':''} aria-label="${esc(p.n)} aparece em Caixaria"></td>
-      <td><input type="checkbox" class="chk" id="pb-${p.c}"${p.bov?' checked':''} aria-label="${esc(p.n)} entra no balanço bovino"></td>
-      <td class="n">${rs(p.custo)}</td></tr>`).join('')}</tbody></table></div></section>
+    <input id="pfiltro" class="in" autocomplete="off" placeholder="Buscar produto" value="${esc(S.pFiltro||'')}">
+    <div id="plist" class="plist">${prodRows()}</div></section>
   <section class="card"><div class="card-h"><h2>Lojas</h2><span class="tag">${S.lojas.length}</span></div>
     <div class="tw"><table class="t mt"><thead><tr><th>Loja</th><th>Cidade</th><th>CNPJ</th><th>Certificado A1</th><th>Pesagem das peças</th></tr></thead><tbody>
       ${S.lojas.map(l=>`<tr><td><input id="lj-nome-${l.id}" value="${esc(l.nome)}" aria-label="Nome da loja" style="min-width:180px"></td><td><input id="lj-cidade-${l.id}" value="${esc(l.cidade)}" aria-label="Cidade" style="min-width:160px"></td>
@@ -1983,6 +1993,7 @@ document.addEventListener('input',e=>{const t=e.target;let m;
   if(/^n-(nf|kg|v)$/.test(t.id)){S.nForm[t.id.slice(2)]=t.value;return}
   if((m=t.id.match(/^cl-kg-(\d+)$/))){const l=S.cd.linhas[+m[1]];if(l){l.kg=t.value;document.getElementById('cres').innerHTML=cresHTML();save()}return}
   if(t.id==='q'){document.getElementById('sug').innerHTML=chipsGrupo(S.draft.grupo,t.value,S.draft.prod)}
+  else if(t.id==='pfiltro'){S.pFiltro=t.value;const l=document.getElementById('plist');if(l)l.innerHTML=prodRows()}
   else if(t.id==='cq'){const e=document.getElementById('csug');if(e)e.innerHTML=cListHTML(t.value)}
   else if(t.id==='ctara'){S.cd.tara=t.value;save()}
   else if(t.id==='peso'||t.id==='tara'){S.draft[t.id]=t.value;const pv=document.getElementById('prevpes');if(pv)pv.innerHTML=prevPes();save()}
