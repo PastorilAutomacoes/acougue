@@ -31,7 +31,7 @@
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-html{-webkit-text-size-adjust:100%}
+html{-webkit-text-size-adjust:100%;overflow-x:hidden} /* nada pode alargar a página: no celular isso estica a barra de baixo */
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.45;-webkit-tap-highlight-color:transparent}
 img{max-width:100%}
 h1,h2,h3{font-family:var(--f-display);font-weight:700;letter-spacing:.01em;margin:0;text-wrap:balance}
@@ -91,7 +91,10 @@ button,input,select{font:inherit;color:inherit}
   .tabs button svg{width:18px;height:18px}
 }
 
-main{max-width:1180px;margin:0 auto;padding:14px 16px 110px;display:flex;flex-direction:column;gap:14px}
+main{max-width:1180px;margin:0 auto;padding:14px 16px 110px;display:flex;flex-direction:column;gap:14px;overflow-x:clip}
+main>*{min-width:0;max-width:100%}
+.t.tbal td{white-space:normal}
+@media (max-width:600px){.kpis.kbal{grid-template-columns:repeat(3,1fr);gap:6px}.kbal .kpi{padding:7px 8px}.kbal .kpi small{font-size:.62rem}.kbal .kpi b{font-size:.95rem;white-space:nowrap}.kbal .pill{font-size:.78rem;padding:2px 6px}}
 @media (min-width:820px){main{padding-bottom:40px}}
 
 /* cartões e campos */
@@ -1441,31 +1444,28 @@ function vBal(){
       ${S.loja?`<label class="btn pri">Importar vendas do PDV (Excel)<input id="xls" type="file" accept=".xlsx,.xls,.csv" multiple class="vh"></label>`:''}
     </div>
     <p class="hint">${imp?`Vendas do PDV importadas de <b>${esc(imp.nome)}</b> (${Object.keys(imp.dados).length} produtos). <button type="button" class="btn sm ghost" data-act="rmimp">Tirar importação</button>`
-      :S.loja?`Importe o relatório <b>Comparativo de Vendas por Produto</b> do período (pode selecionar vários arquivos de uma vez: bovinas, especiais, salgadas, linguiças).${DEMO?' Enquanto isso, as vendas são de exemplo.':' Sem a planilha, as vendas ficam zeradas.'}`:'Escolha uma loja no topo para importar as vendas do PDV.'}</p>
+      :S.loja?`Importe o <b>Comparativo de Vendas por Produto</b> do período (pode marcar vários arquivos).`:'Escolha uma loja no topo para importar as vendas do PDV.'}</p>
   </section>`;
   const hoje=todayISO(), pa=ds.length>=2&&a&&b&&a<b?a:hoje.slice(0,8)+'00', pb=ds.length>=2&&a&&b&&a<b?b:hoje;
   const notasCard=vNotasPeriodo(ids,pa,pb,!(ds.length>=2&&a&&b&&a<b));
   if(ds.length<2)return ctrls+notasCard+`<div class="empty">O balanço precisa de duas contagens de estoque${S.loja?'':' feitas na mesma data em todas as lojas'}: a inicial e a final. Faça as contagens na aba <b>Contagem</b>.</div>`;
   if(!a||!b||a>=b)return ctrls+notasCard+`<p><span class="pill warn">Escolha uma contagem final depois da contagem inicial.</span></p>`;
   const B=balBov(ids,a,b), T=B.T;
-  const kp=`<div class="kpis">
+  const kp=`<div class="kpis kbal">
     <div class="kpi"><small>CMV kg</small><b>${kg(T.cmv)}</b></div>
     <div class="kpi"><small>Vendas kg</small><b>${kg(T.vk)}</b></div>
-    <div class="kpi hl"><small>% Perda (sobre CMV)</small><span class="pill ${perdaSt(T.perda)}">${pc(T.perda)}</span></div>
+    <div class="kpi hl"><small>% Perda</small><span class="pill ${perdaSt(T.perda)}">${pc(T.perda)}</span></div>
     <div class="kpi"><small>Lucro bruto</small><b>${rs(T.lucro)}</b></div>
     <div class="kpi hl"><small>Margem</small><b>${pc(T.margem)}</b></div>
     <div class="kpi hl"><small>Markup</small><b>${pc(T.markup)}</b></div></div>`;
-  const tbl=`<div class="tw"><table class="t"><thead><tr><th></th><th class="n">Kg</th><th class="n">R$</th></tr></thead><tbody>
-    <tr><td>Estoque inicial (EI)<small>contagem de ${dBR(a)} · custo atual</small></td><td class="n">${kg(T.ei)}</td><td class="n">${rs(T.eiR)}</td></tr>
-    <tr><td>+ Compras<small>${B.nNotas} notas fiscais${B.nFoto?` (${B.nFoto} pela foto, ${B.nNotas-B.nFoto} XML)`:''}${B.nSem?`, ${B.nSem} sem conferência`:''}${B.nSemV?` · ${B.nSemV} sem valor em R$`:''} · valor total da nota</small></td><td class="n">${kg(T.c)}</td><td class="n">${rs(T.cR)}</td></tr>
-    <tr><td>− Estoque final (EF)<small>contagem de ${dBR(b)} · custo atual</small></td><td class="n">${kg(T.ef)}</td><td class="n">${rs(T.efR)}</td></tr>
+  const tbl=`<div class="tw"><table class="t tbal"><thead><tr><th></th><th class="n">Kg</th><th class="n">R$</th></tr></thead><tbody>
+    <tr><td>Estoque inicial<small>${dBR(a)}</small></td><td class="n">${kg(T.ei)}</td><td class="n">${rs(T.eiR)}</td></tr>
+    <tr><td>+ Compras<small>${B.nNotas} nota${B.nNotas===1?'':'s'}${B.nSem?` · ${B.nSem} sem conferência`:''}${B.nSemV?` · ${B.nSemV} sem R$`:''}</small></td><td class="n">${kg(T.c)}</td><td class="n">${rs(T.cR)}</td></tr>
+    <tr><td>− Estoque final<small>${dBR(b)}</small></td><td class="n">${kg(T.ef)}</td><td class="n">${rs(T.efR)}</td></tr>
     <tr class="sub"><td>= CMV</td><td class="n">${kg(T.cmv)}</td><td class="n">${rs(T.cmvR)}</td></tr>
-    <tr><td>Vendas<small>${imp?'PDV (planilha importada)':DEMO?'PDV (exemplo)':'sem planilha do PDV'}</small></td><td class="n">${kg(T.vk)}</td><td class="n">${rs(T.vr)}</td></tr>
+    <tr><td>Vendas<small>${imp?'PDV':DEMO?'exemplo':'sem planilha do PDV'}</small></td><td class="n">${kg(T.vk)}</td><td class="n">${rs(T.vr)}</td></tr>
     <tr class="sub"><td>Perda = CMV − Vendas</td><td class="n">${kg(T.perdaKg)}</td><td class="n"><span class="pill ${perdaSt(T.perda)}">${pc(T.perda)}</span></td></tr>
     <tr class="tot"><td>Lucro bruto = Vendas − CMV</td><td class="n"></td><td class="n">${rs(T.lucro)}</td></tr></tbody></table></div>`;
-  const fx=`<div class="formula">
-    <div class="eq">${op('(')}${term('CMV kg',kg(T.cmv))}${op('−')}${term('Vendas kg',kg(T.vk))}${op(') ÷')}${term('CMV kg',kg(T.cmv))}${op('=')}${term('% Perda',pc(T.perda),1)}</div>
-    <div class="eq">${term('Margem = Lucro ÷ Vendas',pc(T.margem),1)}<span class="op" style="padding:0 8px">·</span>${term('Markup = Lucro ÷ CMV',pc(T.markup),1)}</div></div>`;
   let comp='';
   if(!S.loja){
     const L=S.lojas.map(l=>({l,T:balBov([l.id],a,b).T}));
@@ -1474,8 +1474,8 @@ function vBal(){
     </tbody></table></div>${DEMO?'<p class="hint">Números de exemplo, só para mostrar o formato. Não representam as lojas.</p>':''}</section>`;
   }
   const aviso=T.perdaKg<0?`<p><span class="pill warn">Vendas maiores que o CMV: confira se a planilha do PDV é do mesmo período das contagens (${dBR(a)} a ${dBR(b)}) e se todas as notas foram lançadas.</span></p>`:'';
-  return ctrls+`<section class="card">${aviso}${kp}${tbl}${fx}
-    <p class="hint">Entram as carnes bovinas e os miúdos (Ajustes → Produtos). Compras pelas notas do período: XML ou, enquanto ele não entra, a nota lida pela foto. Estoque pelo custo atual. Perda: atenção a partir de ${F1.format(S.set.perdaAt)}%, crítico a partir de ${F1.format(S.set.perdaCrit)}%.</p>
+  return ctrls+`<section class="card">${aviso}${kp}${tbl}
+    <p class="hint">Compras: XML ou, sem ele, a nota lida pela foto. Estoque pelo custo atual.</p>
   </section>`+notasCard+comp;
 }
 /* notas do período: XML e foto, com a situação de cada uma (base do "Puxar da SEFAZ" quando o certificado chegar) */
