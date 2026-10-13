@@ -733,10 +733,14 @@ function entrarTreino(){
 function sairTreino(){TREINO=false;try{sessionStorage.removeItem('acougue-treino')}catch(e){}saiu();render();scrollTo(0,0)}
 
 /* ---------- login ---------- */
+/* chamada às funções do servidor direto pelo fetch: no iPhone a biblioteca perdia o texto do erro ("Sem conexão" no lugar de "código já usado") */
 async function fn(nome,body){
-  const {data,error}=await comLimite(sb.functions.invoke(nome,{body}),nome==='ler-danfe'?70000:20000);
-  if(error){let m='Sem conexão com o servidor. Verifique a internet.';try{const j=await error.context.json();if(j?.erro)m=j.erro}catch(_){}throw new Error(m)}
-  return data;
+  const {data:{session}}=await comLimite(sb.auth.getSession());
+  let r;try{r=await comLimite(fetch(`${SB_URL}/functions/v1/${nome}`,{method:'POST',headers:{apikey:SB_KEY,Authorization:'Bearer '+(session?.access_token||SB_KEY),'Content-Type':'application/json'},body:JSON.stringify(body)}),nome==='ler-danfe'?70000:20000)}
+  catch(e){throw new Error(/não respondeu/.test(e.message)?e.message:'Sem conexão com o servidor. Verifique a internet.')}
+  let j=null;try{j=await r.json()}catch(_){}
+  if(!r.ok)throw new Error(j?.erro||`O servidor recusou o pedido (erro ${r.status}). Tente de novo.`);
+  return j;
 }
 const mapPerfil=p=>({id:p.id,nome:p.nome,usuario:p.usuario,perfil:p.perfil,loja:p.loja||0,ativo:p.ativo,pin_definido:p.pin_definido});
 async function carregarUsuarios(){const {data}=await sb.from('perfis').select('*').order('nome');if(data)S.users=data.map(mapPerfil)}
