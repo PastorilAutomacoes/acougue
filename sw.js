@@ -24,7 +24,7 @@ self.addEventListener('fetch', e => {
   /* páginas: tenta a versão nova primeiro; sem sinal, abre a última guardada */
   if (r.mode === 'navigate') {
     e.respondWith(
-      fetch(r)
+      fetch(r, { cache: 'no-cache' }) /* sempre confere no site se há versão nova (o site guarda a página por até 10 min) */
         .then(res => { const cp = res.clone(); caches.open(CACHE).then(c => c.put('./', cp)); return res; })
         .catch(() => caches.match('./'))
     );

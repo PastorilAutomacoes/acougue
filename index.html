@@ -148,6 +148,7 @@ input.big{font-family:var(--f-num);font-size:1.5rem;padding:10px 12px;text-align
 .pickbox{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:9px 11px;cursor:pointer;font:inherit;font-size:.92rem;color:var(--fg)}
 .pickbox span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pickbox.on{border-color:var(--accent)}
+.versao{text-align:center;font-size:.7rem;color:var(--muted);margin:4px 0 0}
 .ljlist{display:flex;flex-direction:column;gap:10px}.ljrow{border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px}
 .plist{display:flex;flex-direction:column;max-height:520px;overflow:auto;border:1px solid var(--line);border-radius:10px}
 .prow{padding:9px 10px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}.prow:first-child{border-top:0}
@@ -585,7 +586,7 @@ const S={role:'conferente',loja:1,tab:'nf',openId:null,filtro:'todas',nfiltro:'t
   lg:{modo:'entrar',usuario:'',erro:'',busy:false},boot:true};
 const curUser=()=>S.users.find(u=>u.id===S.user)||null;
 function applyUser(){const u=curUser();if(!u){S.user=null;return}S.role=u.perfil;if(u.perfil!=='gestor')S.loja=u.loja;else if(S.loja==null)S.loja=0}
-const mergeSet=d=>{const s={...structuredClone(DEF_SET),...(d||{})};s.perdaEsp={...DEF_SET.perdaEsp,...(d?.perdaEsp||{})};s.zap={...DEF_SET.zap,...(d?.zap||{})};if(!Array.isArray(s.taras))s.taras=structuredClone(DEF_SET.taras);if(!Array.isArray(s.pecas)||!s.pecas.length)s.pecas=structuredClone(DEF_SET.pecas);if(!Array.isArray(s.forns)||!s.forns.length)s.forns=structuredClone(DEF_SET.forns);return s};
+const mergeSet=d=>{const s={...structuredClone(DEF_SET),...(d||{})};s.perdaEsp={...DEF_SET.perdaEsp,...(d?.perdaEsp||{})};s.zap={...DEF_SET.zap,...(d?.zap||{})};s.grupos={...(d?.grupos||{})};if(!Array.isArray(s.taras))s.taras=structuredClone(DEF_SET.taras);if(!Array.isArray(s.pecas)||!s.pecas.length)s.pecas=structuredClone(DEF_SET.pecas);if(!Array.isArray(s.forns)||!s.forns.length)s.forns=structuredClone(DEF_SET.forns);return s};
 
 /* ---------- sincronização com o servidor ----------
    Cada nota recebida, conferência, contagem etc. é um documento na tabela "registros".
@@ -1152,7 +1153,7 @@ function vDone(){
   <div class="cols">
     <section class="card"><h3>Mensagem para o WhatsApp</h3>
       <pre class="msg" id="msg">${esc(m)}</pre>
-      <div class="inrow"><button type="button" class="btn pri" data-act="zap" data-src="msg" data-n="${esc(z||'')}">Enviar no WhatsApp</button><button type="button" class="btn" data-act="copy" data-src="msg">Copiar texto</button></div></section>
+      <div class="inrow"><button type="button" class="btn pri" data-act="zap" data-src="msg" data-n="${esc(z||'')}">Enviar no WhatsApp</button>${btnGrupo(c.loja,'msg')}<button type="button" class="btn" data-act="copy" data-src="msg">Copiar texto</button></div></section>
     <section class="card"><button type="button" class="btn wide pri" data-act="nova">Nova conferência</button></section>
   </div>`;
 }
@@ -1182,7 +1183,8 @@ function msgCont(c){const g=S.role!=='conferente',ks=Object.keys(c.itens).sort((
   if(g)L.push(`Valor (custo): ${rs(bovRs(c.itens))}`);
   if(c.por)L.push(`Contado por ${c.por}`);
   return L.join('\n')}
-const zapCont=c=>`<button type="button" class="btn" data-act="zap" data-txt="${esc(msgCont(c))}" data-n="${esc(S.set.zap[c.loja]||S.set.zap.dir||'')}">Enviar no WhatsApp</button>`;
+const btnGrupo=(loja,src,txt)=>S.set.grupos?.[loja]?`<button type="button" class="btn" data-act="zapgrupo" data-l="${loja}"${src?` data-src="${src}"`:''}${txt?` data-txt="${esc(txt)}"`:''}>Enviar no grupo</button>`:'';
+const zapCont=c=>`<button type="button" class="btn" data-act="zap" data-txt="${esc(msgCont(c))}" data-n="${esc(S.set.zap[c.loja]||S.set.zap.dir||'')}">Enviar no WhatsApp</button>${btnGrupo(c.loja,'',msgCont(c))}`;
 function contadoHTML(){const d=S.cd,g=S.role!=='conferente',m={};
   d.pes.forEach((p,i)=>(m[p.c]||(m[p.c]=[])).push({...p,i}));
   const ks=Object.keys(m).sort((a,b)=>(PM[a]?.n||a).localeCompare(PM[b]?.n||b,'pt-BR'));
@@ -1279,7 +1281,7 @@ function vDet(){
   </section>
   <div class="cols">
     <section class="card"><h3>Mensagem${g?' para os gestores':''}</h3><pre class="msg" id="amsg">${esc(m)}</pre>
-      <div class="inrow"><button type="button" class="btn pri" data-act="zap" data-src="amsg" data-n="${esc(z||'')}">Enviar no WhatsApp</button><button type="button" class="btn" data-act="copy" data-src="amsg">Copiar texto</button></div></section>
+      <div class="inrow"><button type="button" class="btn pri" data-act="zap" data-src="amsg" data-n="${esc(z||'')}">Enviar no WhatsApp</button>${btnGrupo(c.loja,'amsg')}<button type="button" class="btn" data-act="copy" data-src="amsg">Copiar texto</button></div></section>
     <section class="card"><h3>Nota fiscal e registro</h3>
       <div class="fotos">${c.fotos?.length?c.fotos.map((f,i)=>`<div class="foto">${imgFoto(f,`Foto ${i+1} da nota`)}</div>`).join(''):'<span class="hint">Sem foto da nota.</span>'}</div>
       ${n&&g?`<p class="hint">Nota lançada (${esc(n.fonte||'XML')}): ${kg(n.kg)} kg · ${rs(n.v)}</p>`:''}
@@ -1577,6 +1579,10 @@ function vAju(){
   <div class="cols">
   <section class="card"><h2>Alerta de perda no balanço</h2>
     <div class="set-grid">${f('set-perdaAt','Atenção a partir de (%)',S.set.perdaAt)}${f('set-perdaCrit','Crítico a partir de (%)',S.set.perdaCrit)}</div></section>
+  <section class="card"><h2>Grupos dos açougueiros</h2>
+    <div class="set-grid">${S.lojas.map(l=>`<div class="field"><label for="grp-${l.id}">${esc(l.nome)}</label><input id="grp-${l.id}" inputmode="url" placeholder="https://chat.whatsapp.com/…" value="${esc(S.set.grupos?.[l.id]||'')}"></div>`).join('')}</div>
+    <p class="hint">No grupo do WhatsApp: toque no nome do grupo → Convidar via link → Copiar link, e cole aqui.</p>
+  </section>
   <section class="card"><h2>WhatsApp dos gestores</h2>
     <div class="set-grid">${S.lojas.map(l=>`<div class="field"><label for="zap-${l.id}">Gerente · ${esc(l.nome)}</label><input id="zap-${l.id}" inputmode="tel" placeholder="69 99999-0000" value="${esc(S.set.zap[l.id]||'')}"></div>`).join('')}
     <div class="field"><label for="zap-dir">Diretoria (número ou grupo)</label><input id="zap-dir" inputmode="tel" placeholder="69 99999-0000" value="${esc(S.set.zap.dir)}"></div></div>
@@ -1602,7 +1608,8 @@ function render(){refazForn();
   if(!tabsFor().some(([k])=>k===S.tab))S.tab='nf';
   document.getElementById('ctx').innerHTML=vCtx();
   tabsEl.innerHTML=vTabs();
-  view.innerHTML=vInstalar()+({nf:vNF,conferir:vConferir,contagem:vContagem,lista:()=>S.openId?vDet():vLista(),balanco:vBal,ajustes:vAju})[S.tab]();
+  const vs=new Date(document.lastModified);const versao=isNaN(vs)?'':`<p class="versao">versão ${pad(vs.getDate())}/${pad(vs.getMonth()+1)} ${pad(vs.getHours())}:${pad(vs.getMinutes())}</p>`;
+  view.innerHTML=vInstalar()+({nf:vNF,conferir:vConferir,contagem:vContagem,lista:()=>S.openId?vDet():vLista(),balanco:vBal,ajustes:vAju})[S.tab]()+versao;
   syncUI();carregarFotos().catch(()=>{});
 }
 let tt;function toast(t){const el=document.getElementById('toast');el.textContent=t;el.hidden=false;clearTimeout(tt);tt=setTimeout(()=>el.hidden=true,4000)}
@@ -1798,6 +1805,10 @@ const A={
       S.apps.push(c);S.done=c.id;S.doneComp=false;
     }
     S.confirm=false;S.draft={...newDraft(d.loja),grupo:d.grupo,modo:d.modo,tara:d.tara};save();render();scrollTo(0,0)},
+  zapgrupo:async el=>{const txt=el.dataset.txt||document.getElementById(el.dataset.src)?.textContent||'',link=S.set.grupos?.[el.dataset.l];if(!link)return;
+    let ok=false;try{await navigator.clipboard.writeText(txt);ok=true}catch(e){}
+    toast(ok?'Mensagem copiada. No grupo, toque na caixa de texto, segure e escolha Colar.':'Não consegui copiar. Use "Copiar texto" e cole no grupo.');
+    setTimeout(()=>window.open(link,'_blank','noopener'),ok?700:1500)},
   zap:async el=>{const txt=el.dataset.txt||document.getElementById(el.dataset.src)?.textContent||'';
     if(navigator.share){try{await navigator.share({text:txt});return}catch(e){if(e?.name==='AbortError')return}}
     window.open(waLink(el.dataset.n,txt),'_blank','noopener')},
@@ -1984,6 +1995,8 @@ document.addEventListener('change',e=>{const t=e.target,id=t.id||'';
   if((m=id.match(/^forn-(nome|cnpj)-(\d+)$/))){const x=S.set.forns[+m[2]];if(!x)return;
     if(m[1]==='nome'){if(t.value.trim())x.nome=t.value.trim()}else{const c=t.value.replace(/\D/g,'');if(c&&c.length!==14){toast('O CNPJ tem 14 dígitos.');return}x.cnpj=c}
     save();render();return}
+  if((m=id.match(/^grp-(\d+)$/))){const v=t.value.trim();if(v&&!/^https:\/\/chat\.whatsapp\.com\//.test(v)){toast('Cole o link do grupo (começa com https://chat.whatsapp.com/).');return}
+    S.set.grupos={...(S.set.grupos||{}),[m[1]]:v};save();return}
   if(id==='cfg-confPesos'){S.set.confPesos=t.checked;save();render();return}
   if(id.startsWith('set-')){const v=num(t.value);if(isFinite(v)){S.set[id.slice(4)]=v;save()}}
   else if(id.startsWith('zap-')){S.set.zap[id.slice(4)]=t.value.trim();save()}
