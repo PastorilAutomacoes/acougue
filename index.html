@@ -145,6 +145,7 @@ input.big{font-family:var(--f-num);font-size:1.5rem;padding:10px 12px;text-align
 .pickbox{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:9px 11px;cursor:pointer;font:inherit;font-size:.92rem;color:var(--fg)}
 .pickbox span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pickbox.on{border-color:var(--accent)}
+.ljlist{display:flex;flex-direction:column;gap:10px}.ljrow{border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px}
 .plist{display:flex;flex-direction:column;max-height:520px;overflow:auto;border:1px solid var(--line);border-radius:10px}
 .prow{padding:9px 10px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}.prow:first-child{border-top:0}
 .pn{display:flex;justify-content:space-between;gap:8px;font-size:.95rem}.pn small{color:var(--muted);font-family:var(--f-num);white-space:nowrap}
@@ -1546,13 +1547,12 @@ function vAju(){
     <input id="pfiltro" class="in" autocomplete="off" placeholder="Buscar produto" value="${esc(S.pFiltro||'')}">
     <div id="plist" class="plist">${prodRows()}</div></section>
   <section class="card"><div class="card-h"><h2>Lojas</h2><span class="tag">${S.lojas.length}</span></div>
-    <div class="tw"><table class="t mt"><thead><tr><th>Loja</th><th>Cidade</th><th>CNPJ</th><th>Certificado A1</th><th>Pesagem das peças</th></tr></thead><tbody>
-      ${S.lojas.map(l=>`<tr><td><input id="lj-nome-${l.id}" value="${esc(l.nome)}" aria-label="Nome da loja" style="min-width:180px"></td><td><input id="lj-cidade-${l.id}" value="${esc(l.cidade)}" aria-label="Cidade" style="min-width:160px"></td>
-        <td><input id="lj-cnpj-${l.id}" value="${esc(fmtCNPJ(l.cnpj))}" inputmode="numeric" placeholder="00.000.000/0000-00" aria-label="CNPJ" style="min-width:170px"></td>
-        <td><select id="lj-cert-${l.id}" aria-label="Certificado A1"><option value="0"${l.cert?'':' selected'}>Não enviado</option><option value="1"${l.cert?' selected':''}>Enviado</option></select></td>
-        <td><select id="lj-modo-${l.id}" aria-label="Modo de pesagem" style="min-width:160px">${Object.entries(MODOS).map(([k,t])=>`<option value="${k}"${(l.modo||'ambos')===k?' selected':''}>${t}</option>`).join('')}</select></td></tr>`).join('')}
-    </tbody></table></div>
-    <p class="hint"><b>Pesagem das peças</b> (traseiro, dianteiro, costela): “Caixa fechada” pesa a caixa sem abrir; “Carne individual” pesa carne por carne. Comece com os dois e aperte depois. O CNPJ faz o app reconhecer de qual loja é cada NF-e. O certificado A1 (arquivo .pfx e senha) de cada loja vai ser guardado no servidor da versão final, nunca no celular; aqui só marcamos se já foi enviado.</p>
+    <div class="ljlist">${S.lojas.map(l=>`<div class="ljrow">
+      <div class="field"><label for="lj-nome-${l.id}">Loja</label><input id="lj-nome-${l.id}" value="${esc(l.nome)}"></div>
+      <div class="field"><label for="lj-cnpj-${l.id}">CNPJ</label><input id="lj-cnpj-${l.id}" value="${esc(fmtCNPJ(l.cnpj))}" inputmode="numeric" placeholder="00.000.000/0000-00">${l.cnpj?'':'<span class="hint" style="color:var(--warn)">Falta o CNPJ</span>'}</div>
+      <div class="grid2"><div class="field"><label for="lj-cidade-${l.id}">Cidade</label><input id="lj-cidade-${l.id}" value="${esc(l.cidade)}"></div>
+        <div class="field"><label for="lj-cert-${l.id}">Certificado A1</label><select id="lj-cert-${l.id}" class="in"><option value="0"${l.cert?'':' selected'}>Não enviado</option><option value="1"${l.cert?' selected':''}>Enviado</option></select></div></div></div>`).join('')}</div>
+    <p class="hint">O CNPJ faz o app reconhecer de qual loja é cada NF-e importada.</p>
     <button type="button" class="btn" data-act="lj-add" style="align-self:flex-start">+ Adicionar loja</button>
   </section>
   <section class="card"><div class="card-h"><h2>Usuários</h2><span class="tag">${S.users.length}</span></div>
