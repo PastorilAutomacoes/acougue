@@ -150,6 +150,9 @@ p>.pill{white-space:normal;display:inline-block;max-width:100%;border-radius:10p
 .pickbox{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:9px 11px;cursor:pointer;font:inherit;font-size:.92rem;color:var(--fg)}
 .pickbox span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pickbox.on{border-color:var(--accent)}
+.pes li.pd{display:block;padding:8px 10px}.pd1{display:flex;align-items:baseline;gap:8px}.pd1 .nm2{flex:1;min-width:0}.pd1 .num{font-family:var(--f-num);white-space:nowrap}
+.pd2{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px;margin:3px 0 0 2.6em}.pd2 small{color:var(--muted);font-size:.78rem}
+.pd2 .acts{display:flex;gap:6px;align-items:center;margin-left:auto}
 .res{display:flex;flex-direction:column;gap:8px}
 .rg{border:1px solid var(--line);border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:3px}
 .rh{display:flex;justify-content:space-between;align-items:center;gap:8px}.rh b{font-size:1rem}
@@ -1287,9 +1290,11 @@ function vDet(){
     if(g&&S.pesEd===i)return `<li class="pesed"><span class="i">${i+1}</span><span class="nm">${nome}</span>
       <label>Bruto<input id="pz-b" inputmode="decimal" value="${kv(x.b)}"></label><label>Tara<input id="pz-t" inputmode="decimal" value="${kv(x.t)}"></label>
       <div class="inrow"><button type="button" class="btn sm pri" data-act="pes-salvar" data-i="${i}">Salvar</button><button type="button" class="btn sm" data-act="pes-cancel">Cancelar</button></div></li>`;
-    return `<li><span class="i">${i+1}</span><span class="nm">${nome}${x.h?` <span class="hint">${x.h}</span>`:''}</span><span class="num">${kg(x.b-x.t)} kg</span>${x.t?`<span class="hint num">tara ${kg(x.t)}</span>`:''}${x.td?'<span class="mini">tara digitada</span>':''}${x.comp?`<span class="mini">complemento ${x.comp}</span>`:''}${x.alt?'<span class="mini">alterada</span>':''}
-      ${g?(S.pesDel===i?`<span class="hint">Excluir?</span><button type="button" class="btn sm pri" data-act="pes-del-ok" data-i="${i}">Sim</button><button type="button" class="btn sm" data-act="pes-cancel">Não</button>`
-        :`<button type="button" class="x" data-act="pes-ed" data-i="${i}" aria-label="Alterar pesagem ${i+1}">✎</button><button type="button" class="x" data-act="pes-del" data-i="${i}" aria-label="Excluir pesagem ${i+1}">×</button>`):''}</li>`}).join('');
+    /* duas linhas: carne e peso em cima; detalhes e botões embaixo (cabe no celular) */
+    const det=[x.t?`tara ${kg(x.t)}${x.td?' (digitada)':''}`:'',x.comp?`complemento ${x.comp}`:'',x.alt?'alterada':'',x.h&&!x.comp?x.h:''].filter(Boolean).join(' · ');
+    return `<li class="pd"><div class="pd1"><span class="i">${i+1}</span><span class="nm2">${nome}</span><b class="num">${kg(x.b-x.t)} kg</b></div>
+      <div class="pd2"><small>${det}</small>${g?(S.pesDel===i?`<span class="acts"><span class="hint">Excluir?</span><button type="button" class="btn sm pri" data-act="pes-del-ok" data-i="${i}">Sim</button><button type="button" class="btn sm" data-act="pes-cancel">Não</button></span>`
+        :`<span class="acts"><button type="button" class="btn sm ghost" data-act="pes-ed" data-i="${i}" aria-label="Alterar pesagem ${i+1}">✎ Alterar</button><button type="button" class="btn sm ghost" data-act="pes-del" data-i="${i}" aria-label="Excluir pesagem ${i+1}">× Excluir</button></span>`):''}</div></li>`}).join('');
   return `<div><button type="button" class="btn ghost sm" data-act="back">← Voltar</button></div>
   <section class="card">
     <div class="card-h"><div><h2>NF ${esc(c.nf)} · ${esc(fnome(c))}</h2><p class="muted">${esc(lojaNome(c.loja))} · ${dBR(c.data)} às ${c.hora} · ${esc(c.conferente)}</p></div>
@@ -1619,7 +1624,10 @@ const msgCodigo=x=>[`Olá, ${x.nome}! Seu acesso ao app de Conferência de Carne
   `${linkApp()?`Abra ${linkApp()} e toque`:'Abra o app e toque'} em "Primeiro acesso". Digite o usuário e o código e crie o seu PIN de 6 números.`,'O código vale 48 horas e só funciona uma vez. Não conte o seu PIN para ninguém.'].join('\n');
 
 /* ---------- render ---------- */
+const ROLA='#view .pes,#view #plist,#view #csug,#view .optlist';
 function render(){refazForn();
+  /* guarda onde a pessoa estava (página e listas com rolagem) para não voltar ao topo a cada toque */
+  const _y=scrollY,_mesma=S._ultAba===S.tab&&S._ultOpen===S.openId,_sc=[...document.querySelectorAll(ROLA)].map(e=>e.scrollTop);
   resetIdx();
   const tabsEl=document.getElementById('tabs'), view=document.getElementById('view');
   document.getElementById('treinobar').hidden=!TREINO;
@@ -1631,6 +1639,8 @@ function render(){refazForn();
   tabsEl.innerHTML=vTabs();
   const vs=new Date(document.lastModified);const versao=isNaN(vs)?'':`<p class="versao">versão ${pad(vs.getDate())}/${pad(vs.getMonth()+1)} ${pad(vs.getHours())}:${pad(vs.getMinutes())}</p>`;
   view.innerHTML=vInstalar()+({nf:vNF,conferir:vConferir,contagem:vContagem,lista:()=>S.openId?vDet():vLista(),balanco:vBal,ajustes:vAju})[S.tab]()+versao;
+  if(_mesma){scrollTo(0,_y);document.querySelectorAll(ROLA).forEach((e,i)=>{if(_sc[i])e.scrollTop=_sc[i]})}
+  S._ultAba=S.tab;S._ultOpen=S.openId;
   syncUI();carregarFotos().catch(()=>{});
 }
 let tt;function toast(t){const el=document.getElementById('toast');el.textContent=t;el.hidden=false;clearTimeout(tt);tt=setTimeout(()=>el.hidden=true,4000)}
@@ -1765,7 +1775,10 @@ const A={
     S.rf=newRf(S.rf.loja);aplicarLeitura(n,'exemplo');S.rf.exemplo=true;save();render()},
   tab:el=>{S.tab=el.dataset.v;S.openId=null;S.cxOutra=false;S.confirm=false;S.cconfirm=false;if(el.dataset.v==='conferir')S.done=null;guardaAba();render();scrollTo(0,0);sincronizar()},
   grupo:el=>{const d=S.draft;if(d.grupo!==el.dataset.v){d.grupo=el.dataset.v;d.sel=[];d.prod=null}save();render()},
-  csel:el=>{const d=S.draft,c=el.dataset.c,s=d.sel||[];d.sel=s.includes(c)?s.filter(x=>x!==c):[...s,c];save();render()},
+  csel:el=>{const d=S.draft,c=el.dataset.c,s=d.sel||[];d.sel=s.includes(c)?s.filter(x=>x!==c):[...s,c];save();
+    /* só marca o botão, sem redesenhar a tela: assim a lista não volta para o início */
+    const on=d.sel.includes(c);el.classList.toggle('on',on);el.setAttribute('aria-pressed',on);
+    const pk=document.querySelector('[data-act=contabre] span');if(pk)pk.textContent=d.sel.length?d.sel.map(k=>PM[k]?.n||k).join(', '):'Toque para escolher'},
   maispecas:()=>{S.maisPecas=true;render()},
   veritens:()=>{S.verItens=!S.verItens;render()},
   pmodo:el=>{S.draft.modo=el.dataset.v;S.draft.cont=[];save();render()},
