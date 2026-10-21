@@ -1364,11 +1364,11 @@ function vNF(){
   if(est==='vazio')recCorpo=`<label class="cambig">${inFoto}${ICON.cam}<span>Tirar foto da nota</span></label>
     <label class="galeria"><input id="rgaleria" type="file" accept="image/*" multiple class="vh">ou escolher foto da galeria</label>
     ${TREINO?`<div class="exlist"><div class="exh">Ou use uma nota de exemplo</div>${EXEMPLOS.map((x,i)=>`<button type="button" class="exi" data-act="exemplo" data-i="${i}"><span>${esc(x.nome)}<small>${esc(x.det)}</small></span><b>›</b></button>`).join('')}</div>`:''}`;
-  else if(est==='fotos')recCorpo=`<div class="fotos">${fotos}${SUBINDO?'<span class="pill warn">Enviando foto…</span>':maisFoto('+ Outra folha')}</div>
+  else if(est==='fotos')recCorpo=`<div class="fotos">${fotos}${SUBINDO?'<span class="pill warn">Enviando foto…</span>':maisFoto('+ Outra folha ou nota')}</div>
     <button type="button" class="btn pri wide lernota" data-act="rler"${SUBINDO?' disabled':''}>Ler nota</button><div class="inrow">${limpar}</div>`;
   else if(est==='lendo')recCorpo=`<div class="fotos">${fotos}</div><p><span class="pill warn">Lendo a nota…</span></p><div class="inrow">${limpar}</div>`;
   else if(est==='lida'){const falta=!f.nf||!f.forn;
-    recCorpo=`<div class="nfres"><b>NF ${esc(f.nf||'—')}</b><span>${esc(FM[f.forn]?.nome||f.fornNome||'Fornecedor não reconhecido')} · ${f.exemplo?'nota de exemplo':`${f.fotos.length} folha${f.fotos.length===1?'':'s'}`}</span></div>
+    recCorpo=`${f.nTotal>1?`<p><span class="pill warn">Nota ${f.nAtual} de ${f.nTotal}${f.nAtual<f.nTotal?' · confirme para abrir a próxima':''}</span></p>`:''}<div class="nfres"><b>NF ${esc(f.nf||'—')}</b><span>${esc(FM[f.forn]?.nome||f.fornNome||'Fornecedor não reconhecido')} · ${f.exemplo?'nota de exemplo':`${f.fotos.length} folha${f.fotos.length===1?'':'s'}`}</span></div>
     ${!f.forn&&f.ia.emitente?`<p class="hint">Lido na nota: ${esc(f.ia.emitente)}. Escolha o fornecedor na lista.</p>`:''}
     ${f.fornNome&&!FM[f.forn]?`<p class="hint">Fornecedor ainda não cadastrado.${S.role==='gestor'?' <button type="button" class="btn sm" data-act="forn-novo">Cadastrar fornecedor</button>':''}</p>`:''}
     ${f.corr||falta?campos():vp?pesos:''}
@@ -1685,11 +1685,16 @@ async function readImg(file,max=900,q=.7){
 let LENDO=null; /* formulário cuja foto está sendo lida; resultado que chega depois de salvar/limpar é descartado */
 let LER={f:null,imgs:[]}, SUBINDO=0; /* fotos em boa resolução para a leitura (só na memória) e envios em andamento */
 const imgsLer=()=>LER.f===S.rf?LER.imgs:[];
+/* fotos de cada nota quando várias notas são lidas juntas (a leitura diz quais fotos são de qual nota) */
+const fotosDaNota=(f,n)=>{const t=f.fotosTodas||f.fotos;const sel=(n?.fotos||[]).map(i=>t[i-1]).filter(Boolean);return sel.length?sel:[...t]};
 async function lerDanfe(f,imgs){
   try{if(TREINO)throw new Error('No treino a foto não é lida. Use uma nota de exemplo ou digite os dados.');
     if(!imgs.length)throw new Error('Tire a foto de novo para ler.');
-    const r=await fn('ler-danfe',{imagens:imgs});if(S.rf!==f)return;aplicarLeitura(r.nota,r.modelo);
-    toast('Nota lida.')}
+    const r=await fn('ler-danfe',{imagens:imgs});if(S.rf!==f)return;
+    const ns=(r.notas&&r.notas.length?r.notas:[r.nota]).filter(Boolean);
+    f.fotosTodas=[...f.fotos];f.nTotal=ns.length;f.nAtual=1;f.fila=ns.slice(1);f.modelo=r.modelo;
+    aplicarLeitura(ns[0],r.modelo);f.fotos=fotosDaNota(f,ns[0]);
+    toast(ns.length>1?`${ns.length} notas lidas. Confira a 1ª e confirme; a próxima abre em seguida.`:'Nota lida.')}
   catch(e){if(S.rf===f){f.falhou=true;toast(e.message||'Não consegui ler a foto. Digite os dados.')}}
   finally{if(LENDO===f)LENDO=null;save();render()}
 }
@@ -1799,6 +1804,10 @@ const A={
     else{if(f.link)S.used.push(f.link);
       S.recs.push({id:'r'+Date.now(),loja:f.loja,chave:f.chave,nf:String(+f.nf),forn:f.forn,...(f.fornNome&&!FM[f.forn]?{fornNome:f.fornNome}:{}),data:f.data,hora:nowHM(),fotos:f.fotos,dig:dig.length?dig:null,via:f.ia?'foto-ia':f.fotos.length?'foto':'manual',...(f.ia?{lida:{soma:f.ia.soma,pl:f.ia.pl,vt:f.ia.vt||0,modelo:f.ia.modelo}}:{}),por:quemSou(),uid:S.user});
       toast(dig.length?`Nota recebida com ${dig.length} peso(s) digitado(s). Toque em Conferir quando for pesar.`:'Nota recebida. Toque em Conferir quando for pesar.')}
+    if(!f.edit&&f.fila?.length){const prox=f.fila[0],nf=newRf(f.loja);
+      Object.assign(nf,{fotosTodas:f.fotosTodas,fila:f.fila.slice(1),nTotal:f.nTotal,nAtual:(f.nAtual||1)+1,modelo:f.modelo});
+      S.rf=nf;aplicarLeitura(prox,f.modelo);nf.fotos=fotosDaNota(nf,prox);save();render();scrollTo(0,0);
+      toast(`Nota salva. Agora confira a nota ${nf.nAtual} de ${nf.nTotal}.`);return}
     S.rf=newRf(f.loja);save();render()},
   'rec-edit':el=>{const r=S.recs.find(x=>x.id===el.dataset.id);if(!r)return;
     const out=(r.dig||[]).map(d=>({c:d.c||('G:'+d.g),kg:String(d.kg).replace('.',','),...(d.v?{v:d.v}:{})}));
