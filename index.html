@@ -975,6 +975,15 @@ function pecaPorCusto(){
 }
 
 /* ---------- contagem de estoque ---------- */
+/* nota entra no balanço se chegou DEPOIS da contagem inicial e ANTES da contagem final.
+   No dia de uma contagem, vale a hora: nota recebida antes da contagem já está no estoque contado. */
+const horaCont=(l,d)=>(S.conts.find(c=>c.loja===l&&c.data===d)?.quando||'').slice(11,16);
+const horaNota=n=>n.hora||S.recs.find(r=>nkey(r)===nkey(n))?.hora||'';
+function noPeriodo(n,a,b){const l=n.loja;
+  if(n.data>a&&n.data<b)return true;
+  if(n.data===a){const hn=horaNota(n),hc=horaCont(l,a);return !(hn&&hc)||hn>hc} /* sem hora: considera contagem feita cedo */
+  if(n.data===b){const hn=horaNota(n),hc=horaCont(l,b);return !!(hn&&hc)&&hn<hc}
+  return false}
 function contDe(l,iso){const u=S.conts.find(c=>c.loja===l&&c.data===iso);if(u)return u.itens;return G.cont[l]?.[iso]||null}
 function contDatas(ids){return [...new Set([...CONTS,...S.conts.map(c=>c.data)])].filter(d=>ids.every(l=>contDe(l,d))).sort()}
 function cdItens(d){const m={};
@@ -1446,7 +1455,7 @@ function balBov(ids,a,b){
   for(const l of ids){
     const ea=contDe(l,a)||{},eb=contDe(l,b)||{};
     T.ei+=bovKg(ea);T.eiR+=bovRs(ea);T.ef+=bovKg(eb);T.efR+=bovRs(eb);
-    NB.filter(n=>n.loja===l&&n.data>a&&n.data<=b).forEach(n=>{
+    NB.filter(n=>n.loja===l&&noPeriodo(n,a,b)).forEach(n=>{
       const sv=n.itens.reduce((s,i)=>s+(i.v||0),0),sk=n.itens.reduce((s,i)=>s+i.kg,0);let tem=false;
       n.itens.forEach(it=>{if(grupoItem(it)!=='Bovino')return;tem=true;T.c+=it.kg;T.cR+=n.v*(sv?it.v/sv:(sk?it.kg/sk:1))});
       if(tem){nNotas++;if(!confDe(n))nSem++;if(n.foto)nFoto++;if(!(n.v>0))nSemV++}
@@ -1510,7 +1519,7 @@ function vBal(){
 }
 /* notas do período: XML e foto, com a situação de cada uma (base do "Puxar da SEFAZ" quando o certificado chegar) */
 function vNotasPeriodo(ids,a,b,doMes){
-  const fsel=S.balForn||'', todas=notasBal().filter(n=>ids.includes(n.loja)&&n.data>a&&n.data<=b).sort((x,y)=>y.data.localeCompare(x.data)||(+y.nf)-(+x.nf));
+  const fsel=S.balForn||'', todas=notasBal().filter(n=>ids.includes(n.loja)&&(doMes?n.data>a&&n.data<=b:noPeriodo(n,a,b))).sort((x,y)=>y.data.localeCompare(x.data)||(+y.nf)-(+x.nf));
   const list=fsel?todas.filter(n=>n.forn===fsel):todas;
   const tk=list.reduce((t,n)=>t+n.kg,0), tv=list.reduce((t,n)=>t+(n.v||0),0);
   const sit=n=>{const c=confDe(n),r=n.rec?S.recs.find(x=>x.id===n.rec):S.recs.find(x=>nkey(x)===nkey(n)),dv=c&&!n.foto?divergencias(c).length:0;
