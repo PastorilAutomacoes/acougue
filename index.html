@@ -597,7 +597,7 @@ const linhasPadrao=()=>['traseiro','dianteiro','costela'].map(g=>({c:'G:'+g,kg:'
 function newNForm(loja){return{loja:loja||1,nf:'',forn:'',data:todayISO(),kg:'',v:''}}
 function newCd(loja){return{loja:loja||1,data:todayISO(),modo:'app',pes:[],prod:null,peso:'',linhas:[{c:'',kg:''}]}}
 const S={role:'conferente',loja:1,tab:'nf',openId:null,filtro:'todas',nfiltro:'todas',mesC:MES0,mesN:MES0,bal:{a:CONTS[0],b:CONTS[2]},set:structuredClone(DEF_SET),
-  lojas:structuredClone(DEF_LOJAS),prods:{},vimp:{},apps:[],notasApp:[],conts:[],mods:{},used:[],apel:{},
+  lojas:structuredClone(DEF_LOJAS),prods:{},vimp:{},vend:{},custos:{},apps:[],notasApp:[],conts:[],mods:{},used:[],apel:{},
   recs:[],rf:newRf(1),draft:newDraft(1),nForm:newNForm(1),cd:newCd(1),done:null,doneComp:false,confirm:false,cconfirm:false,resetAsk:false,users:[],user:null,uForm:{nome:'',usuario:'',perfil:'conferente',loja:1},uCode:null,
   lg:{modo:'entrar',usuario:'',erro:'',busy:false},boot:true};
 const curUser=()=>S.users.find(u=>u.id===S.user)||null;
@@ -618,13 +618,15 @@ const T={
   loja:arrT(()=>S.lojas,v=>S.lojas=v,l=>l.id),
   prod:objT(()=>S.prods),
   vimp:objT(()=>S.vimp),
+  vend:objT(()=>S.vend),   /* vendas por loja e dia vindas do Brajan (função erp-receber) */
+  custo:objT(()=>S.custos), /* custo e preço atuais por loja vindos do Brajan */
   apel:objT(()=>S.apel), /* nome do item na nota do fornecedor → produto do cadastro */
   used:{list:()=>S.used.map(ch=>[ch,{ch}]),put:k=>{if(!S.used.includes(k))S.used.push(k)},del:k=>{S.used=S.used.filter(x=>x!==k)}},
   set:{list:()=>[['set',S.set]],put:(k,d)=>{S.set=mergeSet(d)},del:()=>{}},
 };
 const lojaDoc=(t,d,k)=>['rec','conf','nota','cont'].includes(t)?d.loja:t==='vimp'?(+k.split('|')[0]||null):null;
 /* espelho da regra do banco (app_private.pode_escrever): evita mandar o que o servidor recusaria */
-function podeEscrever(t,loja){const u=curUser();if(!u)return false;if(u.perfil==='gestor')return true;if(t==='used'||t==='apel')return true;
+function podeEscrever(t,loja){const u=curUser();if(!u||t==='vend'||t==='custo')return false;if(u.perfil==='gestor')return true;if(t==='used'||t==='apel')return true;
   if(u.perfil==='gerente'&&t==='prod')return true;
   return (u.perfil==='gerente'?['rec','conf','cont','nota','vimp']:['rec','conf','cont']).includes(t)&&loja===u.loja}
 const SY={on:false,busy:false,cursor:null,base:new Map(),pend:0,off:false,tPush:null,tCache:null,avisou:false};
@@ -677,10 +679,10 @@ async function sincronizar(){if(!SY.on||TREINO)return;try{const m=await puxar(fa
 function agendarEnvio(){clearTimeout(SY.tPush);SY.tPush=setTimeout(enviar,700)}
 function guardarCache(){if(!S.user)return;clearTimeout(SY.tCache);SY.tCache=setTimeout(guardarCacheJa,300)}
 function guardarCacheJa(){if(!S.user||TREINO)return;clearTimeout(SY.tCache);
-  const d={v:1,recs:S.recs,apps:S.apps,notasApp:S.notasApp,conts:S.conts,prods:S.prods,vimp:S.vimp,used:S.used,apel:S.apel,set:S.set,lojas:S.lojas,base:[...SY.base],cursor:SY.cursor};
+  const d={v:1,recs:S.recs,apps:S.apps,notasApp:S.notasApp,conts:S.conts,prods:S.prods,vimp:S.vimp,vend:S.vend,custos:S.custos,used:S.used,apel:S.apel,set:S.set,lojas:S.lojas,base:[...SY.base],cursor:SY.cursor};
   try{localStorage.setItem(KEY+':dados:'+S.user,JSON.stringify(d))}catch(e){}}
 function lerCache(){try{const d=JSON.parse(localStorage.getItem(KEY+':dados:'+S.user)||'null');if(!d||d.v!==1)return false;
-  ['recs','apps','notasApp','conts','prods','vimp','used','lojas','apel'].forEach(k=>{if(d[k])S[k]=d[k]});S.set=mergeSet(d.set);
+  ['recs','apps','notasApp','conts','prods','vimp','vend','custos','used','lojas','apel'].forEach(k=>{if(d[k])S[k]=d[k]});S.set=mergeSet(d.set);
   SY.base=new Map(d.base||[]);SY.cursor=d.cursor||null;depoisDeReceber();return true}catch(e){return false}}
 function syncUI(){const el=document.getElementById('sync');if(!el)return;if(TREINO){el.textContent='';return}
   el.textContent=SY.off?`Sem internet${SY.pend?' · '+SY.pend+' para enviar':''}`:SY.pend||SY.busy?'· salvando…':'· ✓';el.title=SY.off||SY.pend||SY.busy?'':'Salvo no servidor';
@@ -770,7 +772,7 @@ async function entrouComSessao(){
   render();
 }
 function saiu(){SY.on=false;clearTimeout(SY.tPush);SY.base=new Map();SY.cursor=null;SY.pend=0;
-  Object.assign(S,{user:null,users:[],recs:[],apps:[],notasApp:[],conts:[],prods:{},vimp:{},used:[],apel:{},mods:{},set:structuredClone(DEF_SET),lojas:structuredClone(DEF_LOJAS),
+  Object.assign(S,{user:null,users:[],recs:[],apps:[],notasApp:[],conts:[],prods:{},vimp:{},vend:{},custos:{},used:[],apel:{},mods:{},set:structuredClone(DEF_SET),lojas:structuredClone(DEF_LOJAS),
     rf:newRf(1),draft:newDraft(1),cd:newCd(1),nForm:newNForm(1),openId:null,done:null,confirm:false,cconfirm:false,uCode:null,tab:'nf'});
   Object.keys(PM).forEach(k=>delete PM[k]);PROD.forEach(p=>PM[p.c]={...p});PM.CX={...PCX};PM.MIUDO={...PMI}}
 async function lgEnviar(){
@@ -990,6 +992,11 @@ function cdItens(d){const m={};
   if(d.modo==='app')d.pes.forEach(p=>m[p.c]=(m[p.c]||0)+p.kg);else d.linhas.forEach(l=>{const k=num(l.kg);if(l.c&&k>0)m[l.c]=(m[l.c]||0)+k});
   Object.keys(m).forEach(c=>m[c]=r3(m[c]));return m}
 const bovKg=it=>Object.entries(it).reduce((s,[c,k])=>s+(PM[c]?.bov?k:0),0);
+/* custo atual: o do Brajan para a loja, quando chegou; senão o do cadastro */
+const custoDe=(l,c)=>{const x=S.custos?.[l]?.itens?.[c]?.custo;return x>0?x:(PM[c]?.custo||0)};
+const bovRsL=(it,l)=>Object.entries(it||{}).reduce((s,[c,k])=>s+(PM[c]?.bov?k*custoDe(l,c):0),0);
+/* vendas do Brajan entre as contagens: do dia da contagem inicial até a véspera da final (contagem feita de manhã) */
+const vendDias=(l,a,b)=>Object.values(S.vend||{}).filter(v=>v.loja===l&&v.data>=a&&v.data<b);
 const bovRs=it=>Object.entries(it).reduce((s,[c,k])=>s+(PM[c]?.bov?k*(PM[c].custo||0):0),0);
 
 /* ---------- mensagens WhatsApp ---------- */
@@ -1451,20 +1458,23 @@ function vNotas(){
 /* ---------- BALANÇO CARNE BOVINA (compras pela NF-e: kg e R$) ---------- */
 function calc(r){r.cmv=r.ei+r.c-r.ef;r.perdaKg=r.cmv-r.vk;r.perda=r.cmv>0?r.perdaKg/r.cmv:null;r.cmvR=r.eiR+r.cR-r.efR;r.lucro=r.vr-r.cmvR;r.margem=r.vr?r.lucro/r.vr:null;r.markup=r.cmvR?r.lucro/r.cmvR:null;return r}
 function balBov(ids,a,b){
-  const T={ei:0,eiR:0,c:0,cR:0,ef:0,efR:0,vk:0,vr:0};let nNotas=0,nSem=0,nFoto=0,nSemV=0,imp=null;const NB=notasBal();
+  const T={ei:0,eiR:0,c:0,cR:0,ef:0,efR:0,vk:0,vr:0};let nNotas=0,nSem=0,nFoto=0,nSemV=0,imp=null,erp=0,ultErp='';const NB=notasBal();
   for(const l of ids){
     const ea=contDe(l,a)||{},eb=contDe(l,b)||{};
-    T.ei+=bovKg(ea);T.eiR+=bovRs(ea);T.ef+=bovKg(eb);T.efR+=bovRs(eb);
+    T.ei+=bovKg(ea);T.eiR+=bovRsL(ea,l);T.ef+=bovKg(eb);T.efR+=bovRsL(eb,l);
     NB.filter(n=>n.loja===l&&noPeriodo(n,a,b)).forEach(n=>{
       const sv=n.itens.reduce((s,i)=>s+(i.v||0),0),sk=n.itens.reduce((s,i)=>s+i.kg,0);let tem=false;
       n.itens.forEach(it=>{if(grupoItem(it)!=='Bovino')return;tem=true;T.c+=it.kg;T.cR+=n.v*(sv?it.v/sv:(sk?it.kg/sk:1))});
       if(tem){nNotas++;if(!confDe(n))nSem++;if(n.foto)nFoto++;if(!(n.v>0))nSemV++}
     });
     const key=`${l}|${a}|${b}`;
+    const vd=vendDias(l,a,b);
     if(ids.length===1&&S.vimp[key]){imp=S.vimp[key];Object.entries(imp.dados).forEach(([c,v])=>{if(PM[c]?.bov){T.vk+=v.kg;T.vr+=v.rs}})}
+    else if(vd.length){erp=(erp||0)+vd.length;vd.forEach(v=>Object.entries(v.itens||{}).forEach(([c,x])=>{if(PM[c]?.bov){T.vk+=x.kg;T.vr+=x.rs}}));
+      vd.forEach(v=>{if(!ultErp||v.recebido>ultErp)ultErp=v.recebido})}
     else Object.entries(G.vend[l]||{}).forEach(([iso,dd])=>{if(iso>a&&iso<=b)Object.entries(dd).forEach(([c,v])=>{if(PM[c]?.bov){T.vk+=v.kg;T.vr+=v.rs}})});
   }
-  return{T:calc(T),nNotas,nSem,nFoto,nSemV,imp};
+  return{T:calc(T),nNotas,nSem,nFoto,nSemV,imp,erp,ultErp};
 }
 const rsK=v=>Math.abs(v)>=1e4?`${v<0?'-':''}R$ ${F1.format(Math.abs(v)/1000)} mil`:rs(v); /* valor curto para os quadros pequenos */
 const perdaSt=p=>p==null?'sem':p*100>=S.set.perdaCrit?'crit':p*100>=S.set.perdaAt?'warn':'ok';
@@ -1501,7 +1511,7 @@ function vBal(){
     <tr><td>+ Compras<small>${B.nNotas} nota${B.nNotas===1?'':'s'}${B.nSem?` · ${B.nSem} sem conferência`:''}${B.nSemV?` · ${B.nSemV} sem R$`:''}</small></td><td class="n">${kg(T.c)}</td><td class="n">${rs(T.cR)}</td></tr>
     <tr><td>− Estoque final<small>${dBR(b)}</small></td><td class="n">${kg(T.ef)}</td><td class="n">${rs(T.efR)}</td></tr>
     <tr class="sub"><td>= CMV</td><td class="n">${kg(T.cmv)}</td><td class="n">${rs(T.cmvR)}</td></tr>
-    <tr><td>Vendas<small>${imp?'PDV':DEMO?'exemplo':'sem planilha do PDV'}</small></td><td class="n">${kg(T.vk)}</td><td class="n">${rs(T.vr)}</td></tr>
+    <tr><td>Vendas<small>${imp?'PDV (planilha)':B.erp?`Brajan, automático · ${B.erp} dia${B.erp>1?'s':''}${B.ultErp?' · '+new Date(B.ultErp).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):''}`:DEMO?'exemplo':'sem vendas do Brajan nem planilha'}</small></td><td class="n">${kg(T.vk)}</td><td class="n">${rs(T.vr)}</td></tr>
     <tr class="sub"><td>Perda = CMV − Vendas</td><td class="n">${kg(T.perdaKg)}</td><td class="n"><span class="pill ${perdaSt(T.perda)}">${pc(T.perda)}</span></td></tr>
     <tr class="tot"><td>Lucro bruto = Vendas − CMV</td><td class="n"></td><td class="n">${rs(T.lucro)}</td></tr></tbody></table></div>`;
   let comp='';
