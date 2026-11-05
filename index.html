@@ -871,7 +871,9 @@ function notaFoto(r){if(!r?.dig?.length)return null;
   const itens=r.dig.map(x=>({desc:x.c?(PM[x.c]?.n||x.c):GRB[x.g]||x.g,c:x.c&&x.c!=='MIUDO'?x.c:null,gd:x.g,kg:x.kg,v:x.v||0}));
   const sv=r2(itens.reduce((t,i)=>t+i.v,0));
   return{loja:r.loja,forn:r.forn,fornNome:r.fornNome,nf:r.nf,data:r.data,itens,kg:r3(itens.reduce((t,i)=>t+i.kg,0)),v:r.lida?.vt||sv,fonte:r.lida?'foto':'digitada',foto:true,rec:r.id}}
-function notasBal(){const m=new Map(allNotas().map(n=>[nkey(n),n]));S.recs.forEach(r=>{const k=nkey(r);if(!m.has(k)){const n=notaFoto(r);if(n)m.set(k,n)}});return [...m.values()]}
+/* loja que já manda as notas pelo Brajan: a nota lida pela foto não entra mais na conta (evita contar duas vezes uma nota com número digitado errado) */
+const brajanLoja=l=>Object.values(S.comps||{}).some(c=>c.loja===l);
+function notasBal(){const m=new Map(allNotas().map(n=>[nkey(n),n]));S.recs.forEach(r=>{const k=nkey(r);if(!m.has(k)&&!brajanLoja(r.loja)){const n=notaFoto(r);if(n)m.set(k,n)}});return [...m.values()]}
 /* excluir nota recebida: antes da pesagem, quem recebeu ou gerente/gestor; com pesagem iniciada, só gerente/gestor; conferida, ninguém */
 const podeExcluirRec=r=>S.role!=='conferente'||(!confDoRec(r)&&!r.lock&&r.uid===S.user); /* gerente/gestor apagam qualquer nota recebida (com a conferência junto) */
 /* compara o que foi digitado da DANFE com o XML: por peça e, na caixaria/outros, por carne */
@@ -1773,15 +1775,19 @@ function vPainelLoja(l,a,b,pa,pb){const lj=S.lojas.find(x=>x.id===l),h=todayISO(
     ${top.map(q=>`<tr><td>${esc(PM[q.c]?.n||S.custos?.[l]?.itens?.[q.c]?.n||q.c)}</td><td class="n">${kgI(q.kg)}</td><td class="n">${rs(q.rs)}</td><td class="n">${pc(q.rs?(q.rs-q.cv)/q.rs:null)}</td></tr>`).join('')}</table>`:'<p class="pn-vazio">Sem vendas no período.</p>'}</section>`;
   /* notas de entrada: todas as notas emitidas para a loja no período (Brajan/XML, ou foto enquanto o XML não chega) e as recebidas ainda sem pesagem */
   const nm=new Map();notasBal().filter(n=>n.loja===l&&n.data>=a&&n.data<=b&&temBov(n)).forEach(n=>nm.set(nkey(n),n));
-  S.recs.filter(x=>x.loja===l&&!confDoRec(x)&&!nm.has(nkey(x))).forEach(x=>nm.set(nkey(x),notaFoto(x)||{loja:l,forn:x.forn,fornNome:x.fornNome,nf:x.nf,data:x.data,itens:[],kg:0,v:0,foto:true}));
+  const bl=brajanLoja(l);
+  S.recs.filter(x=>x.loja===l&&!nm.has(nkey(x))&&(!confDoRec(x)||(bl&&x.data>=a&&x.data<=b))).forEach(x=>nm.set(nkey(x),{...(notaFoto(x)||{loja:l,forn:x.forn,fornNome:x.fornNome,nf:x.nf,data:x.data,itens:[],kg:0,v:0,foto:true}),fora:bl}));
   const notas=[...nm.values()].sort((x,y)=>(y.data||'').localeCompare(x.data||'')||(+y.nf)-(+x.nf));
-  const sitN=n=>{const c=confDe(n);if(c){const x=analise(c);return{act:'open-conf',id:c.id,st:x.st==='sem'?'ok':perdaSt(x.perda),t:x.st==='sem'?'Conferida':`Conferida · perda ${pc(x.perda)}`}}
+  const sitN=n=>{const c=confDe(n);
+    if(n.fora){const r=S.recs.find(y=>nkey(y)===nkey(n));return c?{act:'open-conf',id:c.id,st:'warn',t:'Nº não achado no Brajan'}:{act:'startrec',id:r?.id,st:'warn',t:'Nº não achado no Brajan'}}
+    if(c){const x=analise(c);return{act:'open-conf',id:c.id,st:x.st==='sem'?'ok':perdaSt(x.perda),t:x.st==='sem'?'Conferida':`Conferida · perda ${pc(x.perda)}`}}
     const r=S.recs.find(y=>nkey(y)===nkey(n));if(r)return{act:'startrec',id:r.id,st:'warn',t:'Recebida, sem pesagem'};
     if(!entrou(n))return{st:'sem',t:'A caminho'};return{st:'crit',t:'Não conferida'}};
   const L=notas.map(n=>({n,x:sitN(n)})),nao=L.filter(o=>o.x.st==='crit'&&o.x.t==='Não conferida').length,semp=L.filter(o=>o.x.act==='startrec').length;
-  const tk=notas.filter(entrou).reduce((t,n)=>t+(n.kg||0),0),tv=notas.filter(entrou).reduce((t,n)=>t+(n.v||0),0);
+  const conta=n=>entrou(n)&&!n.fora,tk=notas.filter(conta).reduce((t,n)=>t+(n.kg||0),0),tv=notas.filter(conta).reduce((t,n)=>t+(n.v||0),0);
   const notasH=`<section class="card"><div class="card-h"><h3>Notas de entrada</h3><span class="tag">${notas.length} nota${notas.length===1?'':'s'} · ${kgI(tk)} kg · ${rsK(tv)}</span></div>
     ${nao||semp?`<p class="hint">${[nao?`<b>${nao}</b> não conferida${nao>1?'s':''}`:'',semp?`<b>${semp}</b> recebida${semp>1?'s':''} sem pesagem`:''].filter(Boolean).join(' · ')}. Todas entram no balanço.</p>`:''}
+    ${L.some(o=>o.n.fora)?'<p class="hint"><b>Nº não achado no Brajan:</b> a nota foi recebida no app com um número que não existe no Brajan (provável erro de digitação). Corrija o número na aba Nota Fiscal.</p>':''}
     ${notas.length?`<div class="pn-notas">${L.map(({n,x})=>{const t=`<span class="pn-nf"><b>NF ${esc(n.nf)}</b> · ${esc(fnome(n))} · ${dBR(n.data).slice(0,5)}</span><span class="pn-nk">${n.kg?kgI(n.kg)+' kg':''}${n.v?' · '+rs(n.v):''}</span><span class="pill ${x.st}">${x.t}</span>`;
       return x.act?`<button type="button" class="pn-nl" data-act="${x.act}" data-id="${x.id}">${t}</button>`:`<div class="pn-nl">${t}</div>`}).join('')}</div>`:'<p class="pn-vazio">Nenhuma nota no período.</p>'}
     ${Object.values(S.comps||{}).some(c=>c.loja===l)?'':'<p class="hint">As notas emitidas para a loja chegam pelo Brajan. Enquanto isso, aparecem só as recebidas no app.</p>'}</section>`;
