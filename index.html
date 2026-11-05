@@ -852,6 +852,8 @@ function notaBrajan(x){const F=FCNPJ[x.cnpj];
     kg:r3(itens.reduce((t,i)=>t+i.kg,0)),v:r2(itens.reduce((t,i)=>t+i.v,0)),fonte:'Brajan',brajan:true,caminho:x.situacao==='a_caminho'}}
 /* nota a caminho só conta depois que chega (lançada no Brajan ou recebida no app) */
 const entrou=n=>!n.caminho||S.recs.some(r=>nkey(r)===nkey(n));
+/* só notas com carne bovina aparecem nas listas (o Brajan manda também frango e suíno) */
+const temBov=n=>!n.itens?.length||n.itens.some(it=>grupoItem(it)==='Bovino');
 function allNotas(){const m=new Map();[...G.notas,...Object.values(S.comps||{}).filter(x=>x.emissao&&x.loja).map(notaBrajan),...S.notasApp].forEach(n=>m.set(nkey(n),n));return [...m.values()].sort((a,b)=>b.data.localeCompare(a.data)||(+b.nf)-(+a.nf))}
 let NIDX=null,CIDX=null;
 function notaDe(c){if(!NIDX)NIDX=new Map(allNotas().map(n=>[nkey(n),n]));return NIDX.get(nkey(c))||null}
@@ -1584,7 +1586,7 @@ function vBal(){
 }
 /* notas do período: XML e foto, com a situação de cada uma (base do "Puxar da SEFAZ" quando o certificado chegar) */
 function vNotasPeriodo(ids,a,b,doMes){
-  const fsel=S.balForn||'', todas=notasBal().filter(n=>ids.includes(n.loja)&&(doMes?n.data>a&&n.data<=b:noPeriodo(n,a,b))).sort((x,y)=>y.data.localeCompare(x.data)||(+y.nf)-(+x.nf));
+  const fsel=S.balForn||'', todas=notasBal().filter(n=>ids.includes(n.loja)&&temBov(n)&&(doMes?n.data>a&&n.data<=b:noPeriodo(n,a,b))).sort((x,y)=>y.data.localeCompare(x.data)||(+y.nf)-(+x.nf));
   const list=fsel?todas.filter(n=>n.forn===fsel):todas;
   const tk=list.reduce((t,n)=>t+n.kg,0), tv=list.reduce((t,n)=>t+(n.v||0),0);
   const sit=n=>{const c=confDe(n),r=n.rec?S.recs.find(x=>x.id===n.rec):S.recs.find(x=>nkey(x)===nkey(n)),dv=c&&!n.foto?divergencias(c).length:0;
@@ -1770,7 +1772,7 @@ function vPainelLoja(l,a,b,pa,pb){const lj=S.lojas.find(x=>x.id===l),h=todayISO(
   const tops=`<section class="card"><h3>Carnes mais vendidas</h3>${top.length?`<table class="pn-t"><tr><th>Carne</th><th class="n">Kg</th><th class="n">R$</th><th class="n">Margem</th></tr>
     ${top.map(q=>`<tr><td>${esc(PM[q.c]?.n||S.custos?.[l]?.itens?.[q.c]?.n||q.c)}</td><td class="n">${kgI(q.kg)}</td><td class="n">${rs(q.rs)}</td><td class="n">${pc(q.rs?(q.rs-q.cv)/q.rs:null)}</td></tr>`).join('')}</table>`:'<p class="pn-vazio">Sem vendas no período.</p>'}</section>`;
   /* notas de entrada: todas as notas emitidas para a loja no período (Brajan/XML, ou foto enquanto o XML não chega) e as recebidas ainda sem pesagem */
-  const nm=new Map();notasBal().filter(n=>n.loja===l&&n.data>=a&&n.data<=b).forEach(n=>nm.set(nkey(n),n));
+  const nm=new Map();notasBal().filter(n=>n.loja===l&&n.data>=a&&n.data<=b&&temBov(n)).forEach(n=>nm.set(nkey(n),n));
   S.recs.filter(x=>x.loja===l&&!confDoRec(x)&&!nm.has(nkey(x))).forEach(x=>nm.set(nkey(x),notaFoto(x)||{loja:l,forn:x.forn,fornNome:x.fornNome,nf:x.nf,data:x.data,itens:[],kg:0,v:0,foto:true}));
   const notas=[...nm.values()].sort((x,y)=>(y.data||'').localeCompare(x.data||'')||(+y.nf)-(+x.nf));
   const sitN=n=>{const c=confDe(n);if(c){const x=analise(c);return{act:'open-conf',id:c.id,st:x.st==='sem'?'ok':perdaSt(x.perda),t:x.st==='sem'?'Conferida':`Conferida · perda ${pc(x.perda)}`}}
