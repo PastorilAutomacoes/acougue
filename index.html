@@ -354,6 +354,35 @@ details summary{cursor:pointer;font-weight:600;font-size:.9rem;padding:4px 0}
 .toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:.88rem;z-index:50;max-width:calc(100% - 32px);box-shadow:0 6px 20px rgba(0,0,0,.2)}
 @media (min-width:820px){.toast{bottom:24px}}
 @media (prefers-reduced-motion:no-preference){.toast{animation:up .18s ease-out}@keyframes up{from{transform:translate(-50%,8px);opacity:0}}}
+
+/* painel do gestor (só em tela de computador) */
+.pn-top{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.pn-top h2{margin:0;flex:1;min-width:200px}
+.pn-per{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.pn-per button{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:6px 12px;font:inherit;font-weight:600;cursor:pointer}
+.pn-per button.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.pn-per input{padding:5px 8px;border:1px solid var(--line);border-radius:8px;font:inherit}
+.pn-k{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.pn-k .kpi b{font-size:1.5rem}.pn-k i{font-style:normal;font-size:.8rem;color:var(--muted)}
+.pn-up{color:var(--ok)!important}.pn-dn{color:var(--crit)!important}
+.pn-lojas{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.pn-lj{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--accent);border-radius:var(--r);padding:12px 14px;text-align:left;font:inherit;color:inherit;cursor:pointer;display:flex;flex-direction:column;gap:6px}
+.pn-lj:hover{box-shadow:0 2px 8px rgba(14,26,58,.12)}
+.pn-lj.warn{border-top-color:var(--gold)}.pn-lj.crit{border-top-color:var(--crit)}
+.pn-lj h3{margin:0;font-size:1rem}.pn-lj .c{color:var(--muted);font-size:.78rem}
+.pn-lj table{width:100%;border-collapse:collapse;font-size:.86rem}.pn-lj td{padding:3px 0}.pn-lj td:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.pn-tags{display:flex;flex-wrap:wrap;gap:4px}
+.pn-row{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:12px;align-items:start}
+.pn-leg{display:flex;flex-wrap:wrap;gap:12px;font-size:.78rem;color:var(--muted)}
+.pn-leg span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;background:var(--c)}
+.pn-pend{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.pn-pend li{font-size:.88rem;padding-left:18px;position:relative}
+.pn-pend li::before{content:"";position:absolute;left:2px;top:6px;width:9px;height:9px;border-radius:50%;background:var(--gold)}
+.pn-pend li.crit::before{background:var(--crit)}.pn-pend li.info::before{background:var(--accent)}
+.pn-pend button{border:0;background:none;padding:0;font:inherit;color:var(--accent);text-decoration:underline;cursor:pointer;text-align:left}
+.pn-t{width:100%;border-collapse:collapse;font-size:.88rem}.pn-t th{text-align:left;color:var(--muted);font-size:.74rem;font-weight:600;padding:4px 0}
+.pn-t td{padding:6px 0;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}.pn-t td.n,.pn-t th.n{text-align:right}
+.pn-vazio{color:var(--muted);font-size:.86rem}
 </style>
 
 <header class="top">
@@ -434,7 +463,7 @@ const DEF_LOJAS=[
  {id:1,nome:'G. Trevisan',cidade:'Alto Alegre dos Parecis',cnpj:'02635457000106',cert:false,modo:'ambos'},
  {id:2,nome:'K. Barbosa',cidade:"Santa Luzia d'Oeste",cnpj:'',cert:false,modo:'ambos'},
  {id:3,nome:'FK Cristina',cidade:'Parecis',cnpj:'',cert:false,modo:'ambos'},
- {id:4,nome:'Pastoril São Felipe',cidade:"São Felipe d'Oeste",cnpj:'',cert:false,modo:'ambos'},
+ {id:4,nome:'Pastoril São Felipe',cidade:"São Felipe d'Oeste",cnpj:'01718567000160',cert:false,modo:'ambos'},
  {id:5,nome:'Pastoril Presidente Médici',cidade:'Presidente Médici',cnpj:'',cert:false,modo:'ambos'},
 ];
 const MODOS={ambos:'Caixa e individual',caixa:'Só caixa',ind:'Só individual'};
@@ -607,7 +636,7 @@ const linhasPadrao=()=>['traseiro','dianteiro','costela'].map(g=>({c:'G:'+g,kg:'
 function newNForm(loja){return{loja:loja||1,nf:'',forn:'',data:todayISO(),kg:'',v:''}}
 function newCd(loja){return{loja:loja||1,data:todayISO(),modo:'app',pes:[],prod:null,peso:'',linhas:[{c:'',kg:''}]}}
 const S={role:'conferente',loja:1,tab:'nf',openId:null,filtro:'todas',nfiltro:'todas',mesC:MES0,mesN:MES0,bal:{a:CONTS[0],b:CONTS[2]},set:structuredClone(DEF_SET),
-  lojas:structuredClone(DEF_LOJAS),prods:{},vimp:{},vend:{},custos:{},apps:[],notasApp:[],conts:[],mods:{},used:[],apel:{},
+  lojas:structuredClone(DEF_LOJAS),prods:{},vimp:{},vend:{},custos:{},comps:{},pn:{p:'semana',a:'',b:''},apps:[],notasApp:[],conts:[],mods:{},used:[],apel:{},
   recs:[],rf:newRf(1),draft:newDraft(1),nForm:newNForm(1),cd:newCd(1),done:null,doneComp:false,confirm:false,cconfirm:false,resetAsk:false,users:[],user:null,uForm:{nome:'',usuario:'',perfil:'conferente',loja:1},uCode:null,
   lg:{modo:'entrar',usuario:'',erro:'',busy:false},boot:true};
 const curUser=()=>S.users.find(u=>u.id===S.user)||null;
@@ -630,13 +659,14 @@ const T={
   vimp:objT(()=>S.vimp),
   vend:objT(()=>S.vend),   /* vendas por loja e dia vindas do Brajan (função erp-receber) */
   custo:objT(()=>S.custos), /* custo e preço atuais por loja vindos do Brajan */
+  comp:objT(()=>S.comps),   /* notas de compra de carne vindas do Brajan (a caminho ou lançadas) */
   apel:objT(()=>S.apel), /* nome do item na nota do fornecedor → produto do cadastro */
   used:{list:()=>S.used.map(ch=>[ch,{ch}]),put:k=>{if(!S.used.includes(k))S.used.push(k)},del:k=>{S.used=S.used.filter(x=>x!==k)}},
   set:{list:()=>[['set',S.set]],put:(k,d)=>{S.set=mergeSet(d)},del:()=>{}},
 };
 const lojaDoc=(t,d,k)=>['rec','conf','nota','cont'].includes(t)?d.loja:t==='vimp'?(+k.split('|')[0]||null):null;
 /* espelho da regra do banco (app_private.pode_escrever): evita mandar o que o servidor recusaria */
-function podeEscrever(t,loja){const u=curUser();if(!u||t==='vend'||t==='custo')return false;if(u.perfil==='gestor')return true;if(t==='used'||t==='apel')return true;
+function podeEscrever(t,loja){const u=curUser();if(!u||t==='vend'||t==='custo'||t==='comp')return false;if(u.perfil==='gestor')return true;if(t==='used'||t==='apel')return true;
   if(u.perfil==='gerente'&&t==='prod')return true;
   return (u.perfil==='gerente'?['rec','conf','cont','nota','vimp']:['rec','conf','cont']).includes(t)&&loja===u.loja}
 const SY={on:false,busy:false,cursor:null,base:new Map(),pend:0,off:false,tPush:null,tCache:null,avisou:false};
@@ -689,10 +719,10 @@ async function sincronizar(){if(!SY.on||TREINO)return;try{const m=await puxar(fa
 function agendarEnvio(){clearTimeout(SY.tPush);SY.tPush=setTimeout(enviar,700)}
 function guardarCache(){if(!S.user)return;clearTimeout(SY.tCache);SY.tCache=setTimeout(guardarCacheJa,300)}
 function guardarCacheJa(){if(!S.user||TREINO)return;clearTimeout(SY.tCache);
-  const d={v:1,recs:S.recs,apps:S.apps,notasApp:S.notasApp,conts:S.conts,prods:S.prods,vimp:S.vimp,vend:S.vend,custos:S.custos,used:S.used,apel:S.apel,set:S.set,lojas:S.lojas,base:[...SY.base],cursor:SY.cursor};
+  const d={v:1,recs:S.recs,apps:S.apps,notasApp:S.notasApp,conts:S.conts,prods:S.prods,vimp:S.vimp,vend:S.vend,custos:S.custos,comps:S.comps,used:S.used,apel:S.apel,set:S.set,lojas:S.lojas,base:[...SY.base],cursor:SY.cursor};
   try{localStorage.setItem(KEY+':dados:'+S.user,JSON.stringify(d))}catch(e){}}
 function lerCache(){try{const d=JSON.parse(localStorage.getItem(KEY+':dados:'+S.user)||'null');if(!d||d.v!==1)return false;
-  ['recs','apps','notasApp','conts','prods','vimp','vend','custos','used','lojas','apel'].forEach(k=>{if(d[k])S[k]=d[k]});S.set=mergeSet(d.set);
+  ['recs','apps','notasApp','conts','prods','vimp','vend','custos','comps','used','lojas','apel'].forEach(k=>{if(d[k])S[k]=d[k]});S.set=mergeSet(d.set);
   SY.base=new Map(d.base||[]);SY.cursor=d.cursor||null;depoisDeReceber();return true}catch(e){return false}}
 function syncUI(){const el=document.getElementById('sync');if(!el)return;if(TREINO){el.textContent='';return}
   el.textContent=SY.off?`Sem internet${SY.pend?' · '+SY.pend+' para enviar':''}`:SY.pend||SY.busy?'· salvando…':'· ✓';el.title=SY.off||SY.pend||SY.busy?'':'Salvo no servidor';
@@ -782,7 +812,7 @@ async function entrouComSessao(){
   render();
 }
 function saiu(){SY.on=false;clearTimeout(SY.tPush);SY.base=new Map();SY.cursor=null;SY.pend=0;
-  Object.assign(S,{user:null,users:[],recs:[],apps:[],notasApp:[],conts:[],prods:{},vimp:{},vend:{},custos:{},used:[],apel:{},mods:{},set:structuredClone(DEF_SET),lojas:structuredClone(DEF_LOJAS),
+  Object.assign(S,{user:null,users:[],recs:[],apps:[],notasApp:[],conts:[],prods:{},vimp:{},vend:{},custos:{},comps:{},used:[],apel:{},mods:{},set:structuredClone(DEF_SET),lojas:structuredClone(DEF_LOJAS),
     rf:newRf(1),draft:newDraft(1),cd:newCd(1),nForm:newNForm(1),openId:null,done:null,confirm:false,cconfirm:false,uCode:null,tab:'nf'});
   Object.keys(PM).forEach(k=>delete PM[k]);PROD.forEach(p=>PM[p.c]={...p});PM.CX={...PCX};PM.MIUDO={...PMI}}
 async function lgEnviar(){
@@ -1043,6 +1073,7 @@ const ICON={
   lista:ic('<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>'),
   nf:ic('<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 16h5"/>'),
   balanco:ic('<path d="M4 20V11M10 20V5M16 20v-6M21 20H3"/>'),
+  painel:ic('<rect x="3" y="4" width="7" height="7" rx="1"/><rect x="14" y="4" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="6" rx="1"/><rect x="14" y="14" width="7" height="6" rx="1"/>'),
   ajustes:ic('<path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/>'),
   lock:ic('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'),
   chev:ic('<path d="M6 9l6 6 6-6"/>'),
@@ -1054,6 +1085,7 @@ const ICON={
 /* ---------- cabeçalho, abas, login ---------- */
 function tabsFor(){
   const t=[['nf','Nota Fiscal'],['conferir','Conferir'],['contagem','Contagem'],['lista','Conferências']];
+  if(S.role==='gestor'&&LARGO.matches)t.unshift(['painel','Painel']);
   if(S.role!=='conferente')t.push(['balanco','Balanço']);
   if(S.role==='gestor')t.push(['ajustes','Ajustes']);
   return t;
@@ -1654,6 +1686,95 @@ const msgCodigo=x=>[`Olá, ${x.nome}! Seu acesso ao app de Conferência de Carne
 
 /* ---------- render ---------- */
 const ROLA='#view .pes,#view #plist,#view #csug,#view .optlist';
+
+/* ---------- painel do gestor (tela de computador) ---------- */
+const LARGO=matchMedia('(min-width:1000px)');
+const kgI=n=>new Intl.NumberFormat('pt-BR',{maximumFractionDigits:0}).format(n||0); /* kg inteiro nos quadros do painel */
+const diaMais=(iso,n)=>{const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
+const segunda=iso=>{const d=new Date(iso+'T12:00:00');return diaMais(iso,-((d.getDay()+6)%7))};
+const CORES_LJ=['#1846C4','#16A39E','#E0A21B','#8E5BD0','#D0453A','#55627F'];
+/* período escolhido (a e b inclusive) e o período anterior do mesmo tamanho, para comparar */
+function pnPeriodo(){const h=todayISO(),p=S.pn.p;let a,b,pa,pb;
+  if(p==='hoje'){a=b=h;pa=pb=diaMais(h,-1)}
+  else if(p==='mes'){a=h.slice(0,8)+'01';const f=new Date(+h.slice(0,4),+h.slice(5,7),0).getDate();b=h.slice(0,8)+pad(f);pb=diaMais(a,-1);pa=pb.slice(0,8)+'01'}
+  else if(p==='livre'&&S.pn.a&&S.pn.b&&S.pn.a<=S.pn.b){a=S.pn.a;b=S.pn.b;const n=Math.round((new Date(b)-new Date(a))/864e5)+1;pb=diaMais(a,-1);pa=diaMais(a,-n)}
+  else{a=segunda(h);b=diaMais(a,6);pa=diaMais(a,-7);pb=diaMais(a,-1)}
+  return{a,b,pa,pb}}
+/* números de uma loja num período: vendas do Brajan, compras pelas notas, perda da desossa pelas conferências */
+function pnLoja(l,a,b){const r={vk:0,vr:0,cv:0,ck:0,cr:0,nn:0,nf:0,conf:0,forn:{},crit:[],peca:{}};
+  Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||v.data<a||v.data>b)return;
+    Object.entries(v.itens||{}).forEach(([c,x])=>{if(!PM[c]?.bov)return;r.vk+=x.kg;r.vr+=x.rs;r.cv+=x.kg*custoDe(l,c)})});
+  notasBal().forEach(n=>{if(n.loja!==l||n.data<a||n.data>b)return;
+    const sv=n.itens.reduce((t,i)=>t+(i.v||0),0),sk=n.itens.reduce((t,i)=>t+i.kg,0);let tem=false;
+    n.itens.forEach(it=>{if(grupoItem(it)!=='Bovino')return;tem=true;const v=n.v*(sv?(it.v||0)/sv:(sk?it.kg/sk:1));r.ck+=it.kg;r.cr+=v;
+      const g=classNF(it);if(['traseiro','dianteiro','caixaria'].includes(g)&&v>0){const q=r.peca[g]||(r.peca[g]={kg:0,v:0});q.kg+=it.kg;q.v+=v}
+      const f=r.forn[n.forn]||(r.forn[n.forn]={nome:fnome(n),kg:0,nf:0,conf:0});f.kg+=it.kg});
+    if(tem)r.nn++});
+  allConfs().forEach(c=>{if(c.loja!==l||c.data<a||c.data>b)return;const x=analise(c);if(x.st==='sem')return;
+    r.nf+=x.nf;r.conf+=x.conf;const f=r.forn[c.forn]||(r.forn[c.forn]={nome:fnome(c),kg:0,nf:0,conf:0});f.nf+=x.nf;f.conf+=x.conf;
+    if(x.st==='crit')r.crit.push({c,perda:x.perda})});
+  r.margem=r.vr?(r.vr-r.cv)/r.vr:null;r.perda=r.nf?1-r.conf/r.nf:null;return r}
+function pnSoma(rs_){const t={vk:0,vr:0,cv:0,ck:0,cr:0,nn:0,nf:0,conf:0};rs_.forEach(r=>Object.keys(t).forEach(k=>t[k]+=r[k]));
+  t.margem=t.vr?(t.vr-t.cv)/t.vr:null;t.perda=t.nf?1-t.conf/t.nf:null;return t}
+const ultCont=l=>[...S.conts.filter(c=>c.loja===l).map(c=>c.data),...Object.keys(G.cont[l]||{})].sort().pop()||'';
+const ultVend=l=>Object.values(S.vend||{}).filter(v=>v.loja===l).map(v=>v.data).sort().pop()||'';
+const dias=(a,b)=>Math.round((new Date(b)-new Date(a))/864e5);
+function pnVar(x,y,pontos){if(x==null||y==null||!isFinite(x)||!isFinite(y)||(!pontos&&!y))return '';
+  const d=pontos?(x-y)*100:(x/y-1)*100;if(Math.abs(d)<.05)return '<i>= período anterior</i>';
+  return `<i class="${d>0?'pn-up':'pn-dn'}">${d>0?'▲':'▼'} ${F1.format(Math.abs(d))}${pontos?' ponto'+(Math.abs(d)>=2?'s':''):'%'} vs período anterior</i>`}
+function pnGrafico(){const fim=segunda(todayISO()),sem=[...Array(8)].map((_,i)=>diaMais(fim,-7*(7-i)));
+  const val=sem.map(a=>S.lojas.map(l=>{let t=0;Object.values(S.vend||{}).forEach(v=>{if(v.loja===l.id&&v.data>=a&&v.data<=diaMais(a,6))Object.entries(v.itens||{}).forEach(([c,x])=>{if(PM[c]?.bov)t+=x.rs})});return t/1000}));
+  const mx=Math.max(10,...val.map(w=>w.reduce((s,v)=>s+v,0))),top=Math.ceil(mx/50)*50,H=170,y0=190,k=H/top;
+  let g='';[0,.5,1].forEach(f=>{const y=y0-H*f;g+=`<line x1="40" y1="${y}" x2="630" y2="${y}" stroke="var(--line)"/><text x="34" y="${y+4}" text-anchor="end" fill="var(--muted)">${Math.round(top*f)}</text>`});
+  val.forEach((w,i)=>{let y=y0;const x=52+i*72;w.forEach((v,j)=>{const h=v*k;if(h<=0)return;y-=h;g+=`<rect x="${x}" y="${y.toFixed(1)}" width="46" height="${h.toFixed(1)}" fill="${CORES_LJ[j%6]}"><title>${esc(S.lojas[j].nome)}: R$ ${F1.format(v)} mil</title></rect>`});
+    g+=`<text x="${x+23}" y="${y0+16}" text-anchor="middle" fill="var(--muted)">${dBR(sem[i]).slice(0,5)}</text>`});
+  const vazio=!val.some(w=>w.some(v=>v>0));
+  return `<section class="card"><h3>Vendas por semana (R$ mil)</h3>${vazio?'<p class="pn-vazio">Ainda sem vendas do Brajan nestas semanas.</p>':''}
+    <svg viewBox="0 0 640 215" width="100%" font-size="11" role="img" aria-label="Vendas de carne bovina por semana e por loja">${g}</svg>
+    <div class="pn-leg">${S.lojas.map((l,j)=>`<span style="--c:${CORES_LJ[j%6]}">${esc(l.nome)}</span>`).join('')}</div></section>`}
+function vPainel(){
+  const {a,b,pa,pb}=pnPeriodo(),h=todayISO();
+  const L=S.lojas.map(l=>({l,r:pnLoja(l.id,a,b),ant:pnLoja(l.id,pa,pb),uc:ultCont(l.id),uv:ultVend(l.id)}));
+  const T=pnSoma(L.map(x=>x.r)),A=pnSoma(L.map(x=>x.ant));
+  const bt=(k,t)=>`<button type="button" class="${S.pn.p===k?'on':''}" data-act="pn-per" data-v="${k}">${t}</button>`;
+  const per=`<section class="card"><div class="pn-top"><h2>Painel do gestor · ${a===b?dBR(a):`${dBR(a)} a ${dBR(b)}`}</h2>
+    <div class="pn-per">${bt('hoje','Hoje')}${bt('semana','Semana')}${bt('mes','Mês')}${bt('livre','Escolher período')}
+    ${S.pn.p==='livre'?`<input type="date" id="pnA" value="${S.pn.a||a}" aria-label="De"><input type="date" id="pnB" value="${S.pn.b||b}" aria-label="Até">`:''}</div></div>
+    <p class="hint">Carne bovina. Vendas e custo: Brajan${L.some(x=>x.uv)?` (último dia recebido: ${dBR(L.map(x=>x.uv).sort().pop())})`:', ainda sem dados'}. Compras: notas recebidas. Perda: conferências de peso.</p></section>`;
+  const kp=`<div class="pn-k">
+    <div class="kpi"><small>Vendas · todas as lojas</small><b>${T.vr?rsK(T.vr):'—'}</b>${pnVar(T.vr,A.vr)}</div>
+    <div class="kpi"><small>Kg vendidos</small><b>${T.vk?kgI(T.vk)+' kg':'—'}</b>${pnVar(T.vk,A.vk)}</div>
+    <div class="kpi"><small>Compras (notas)</small><b>${T.cr?rsK(T.cr):'—'}</b><i>${kgI(T.ck)} kg · ${T.nn} nota${T.nn===1?'':'s'}</i></div>
+    <div class="kpi"><small>Margem bruta</small><b>${pc(T.margem)}</b>${pnVar(T.margem,A.margem,true)}</div>
+    <div class="kpi"><small>Perda na desossa</small><b>${pc(T.perda)}</b><i>limite de atenção ${S.set.perdaAt}%</i></div></div>`;
+  const pend=[];
+  const lojas=`<div class="pn-lojas">${L.map(({l,r,uc,uv})=>{const tags=[];let st='ok';
+    const atr=!uc?'Sem contagem':dias(uc,h)>7?'Contagem atrasada':'';if(atr){tags.push(['warn',atr]);st='warn'}
+    if(r.perda!=null&&r.perda*100>=S.set.perdaCrit){tags.push(['crit','Perda acima do limite']);st='crit'}else if(r.perda!=null&&r.perda*100>=S.set.perdaAt){tags.push(['warn','Perda em atenção']);if(st==='ok')st='warn'}
+    const sp=S.recs.filter(x=>x.loja===l.id&&!confDoRec(x)).length;if(sp){tags.push(['warn',`${sp} nota${sp>1?'s':''} sem pesagem`]);if(st==='ok')st='warn';pend.push(['',`${esc(l.nome)}: ${sp} nota${sp>1?'s recebidas':' recebida'} sem pesagem`])}
+    tags.push(uv&&dias(uv,h)<=3?['ok','Brajan ok']:uv?['warn','Brajan parado desde '+dBR(uv).slice(0,5)]:['sem','Sem Brajan']);
+    r.crit.forEach(({c,perda})=>pend.push(['crit',`${esc(l.nome)}: perda de ${pc(perda)} na NF ${esc(c.nf)} (${esc(fnome(c))})`,c.id]));
+    return `<button type="button" class="pn-lj ${st}" data-act="pn-loja" data-id="${l.id}" title="Abrir o balanço da loja"><h3>${esc(l.nome)}</h3><span class="c">${esc(l.cidade||'')}</span>
+      <table><tr><td>Vendas</td><td>${r.vr?rsK(r.vr):'—'}</td></tr><tr><td>Kg vendidos</td><td>${r.vk?kgI(r.vk):'—'}</td></tr>
+      <tr><td>Margem</td><td>${pc(r.margem)}</td></tr><tr><td>Perda desossa</td><td>${r.perda==null?'—':`<span class="pill ${perdaSt(r.perda)}">${pc(r.perda)}</span>`}</td></tr>
+      <tr><td>Compras</td><td>${r.ck?kgI(r.ck)+' kg':'—'}</td></tr><tr><td>Última contagem</td><td>${uc?dBR(uc).slice(0,5):'—'}</td></tr></table>
+      <div class="pn-tags">${tags.map(([c,t])=>`<span class="pill ${c}">${t}</span>`).join('')}</div></button>`}).join('')}</div>`;
+  const atras=L.filter(x=>!x.uc||dias(x.uc,h)>7).map(x=>x.l.nome);
+  if(atras.length)pend.push(['',`Sem contagem há mais de 7 dias: ${esc(atras.join(', '))}`]);
+  Object.values(S.comps||{}).filter(c=>c.situacao==='a_caminho').sort((x,y)=>(y.emissao||'').localeCompare(x.emissao||'')).slice(0,5)
+    .forEach(c=>pend.push(['info',`${esc(c.fornecedor||'Nota')} NF ${esc(c.numero)} a caminho de ${esc(lojaNome(c.loja))} (${kgI(c.itens.reduce((t,i)=>t+(i.unidade==='KG'?i.qtd:0),0))} kg)`]));
+  const semVend=L.filter(x=>!x.uv).map(x=>x.l.nome);if(semVend.length)pend.push(['',`Sem vendas do Brajan: ${esc(semVend.join(', '))}`]);
+  const semCnpj=S.lojas.filter(l=>!l.cnpj).map(l=>l.nome);if(semCnpj.length)pend.push(['',`CNPJ faltando: ${esc(semCnpj.join(', '))}`]);
+  const pendH=`<section class="card"><h3>Pendências</h3>${pend.length?`<ul class="pn-pend">${pend.slice(0,12).map(([c,t,id])=>`<li class="${c}">${id?`<button type="button" data-act="open-conf" data-id="${id}">${t}</button>`:t}</li>`).join('')}</ul>`:'<p class="pn-vazio">Nada pendente.</p>'}</section>`;
+  const F={};L.forEach(({r})=>Object.entries(r.forn).forEach(([k,f])=>{const x=F[k]||(F[k]={nome:f.nome,kg:0,nf:0,conf:0});x.kg+=f.kg;x.nf+=f.nf;x.conf+=f.conf}));
+  const P={},PA={};L.forEach(({r,ant})=>{[[r,P],[ant,PA]].forEach(([o,d])=>Object.entries(o.peca).forEach(([g,q])=>{const x=d[g]||(d[g]={kg:0,v:0});x.kg+=q.kg;x.v+=q.v}))});
+  const cm=g=>P[g]?.kg?P[g].v/P[g].kg:null,cma=g=>PA[g]?.kg?PA[g].v/PA[g].kg:null;
+  const fr=`<section class="card"><h3>Frigoríficos · rendimento</h3>${Object.keys(F).length?`<table class="pn-t"><tr><th>Fornecedor</th><th class="n">Kg comprados</th><th class="n">Perda</th></tr>
+    ${Object.values(F).sort((x,y)=>y.kg-x.kg).map(f=>{const p=f.nf?1-f.conf/f.nf:null;return `<tr><td>${esc(f.nome)}</td><td class="n">${kgI(f.kg)}</td><td class="n">${p==null?'—':`<span class="pill ${perdaSt(p)}">${pc(p)}</span>`}</td></tr>`}).join('')}</table>`:'<p class="pn-vazio">Nenhuma nota no período.</p>'}
+    <h3>Custo médio do kg</h3><table class="pn-t">${['traseiro','dianteiro','caixaria'].map(g=>{const v=cm(g),w=cma(g),d=v&&w?(v/w-1)*100:null;
+      return `<tr><td>${GRN[g]||g}</td><td class="n">${v?rs(v):'—'}</td><td class="n">${d==null?'':Math.abs(d)<.5?'=':`<span class="${d>0?'pn-dn':'pn-up'}">${d>0?'▲':'▼'} ${F1.format(Math.abs(d))}%</span>`}</td></tr>`}).join('')}</table></section>`;
+  return per+kp+`<h3 style="margin:4px 0 -4px">Lojas</h3>`+lojas+`<div class="pn-row">${pnGrafico()}${pendH}${fr}</div>`}
+
 function render(){refazForn();
   /* guarda onde a pessoa estava (página e listas com rolagem) para não voltar ao topo a cada toque */
   const _y=scrollY,_mesma=S._ultAba===S.tab&&S._ultOpen===S.openId,_sc=[...document.querySelectorAll(ROLA)].map(e=>e.scrollTop);
@@ -1663,11 +1784,12 @@ function render(){refazForn();
   if(!curUser()){tabsEl.hidden=true;document.getElementById('ctx').innerHTML='';view.innerHTML=vLogin();return}
   tabsEl.hidden=false;
   if(S.loja>0&&!S.done){if(!S.draft.comp&&!S.draft.rec)S.draft.loja=S.loja;if(!S.rf.edit)S.rf.loja=S.loja;S.nForm.loja=S.loja;S.cd.loja=S.loja}
+  if(!S._pnIni&&S.role==='gestor'&&LARGO.matches&&S.tab==='nf'){S.tab='painel'} S._pnIni=true; /* no computador, o gestor abre no painel */
   if(!tabsFor().some(([k])=>k===S.tab))S.tab='nf';
   document.getElementById('ctx').innerHTML=vCtx();
   tabsEl.innerHTML=vTabs();
   const vs=new Date(document.lastModified);const versao=isNaN(vs)?'':`<p class="versao">versão ${pad(vs.getDate())}/${pad(vs.getMonth()+1)} ${pad(vs.getHours())}:${pad(vs.getMinutes())}</p>`;
-  view.innerHTML=vInstalar()+({nf:vNF,conferir:vConferir,contagem:vContagem,lista:()=>S.openId?vDet():vLista(),balanco:vBal,ajustes:vAju})[S.tab]()+versao;
+  view.innerHTML=vInstalar()+({painel:vPainel,nf:vNF,conferir:vConferir,contagem:vContagem,lista:()=>S.openId?vDet():vLista(),balanco:vBal,ajustes:vAju})[S.tab]()+versao;
   if(_mesma){scrollTo(0,_y);document.querySelectorAll(ROLA).forEach((e,i)=>{if(_sc[i])e.scrollTop=_sc[i]})}
   S._ultAba=S.tab;S._ultOpen=S.openId;
   syncUI();carregarFotos().catch(()=>{});
@@ -1802,6 +1924,8 @@ const A={
   exemplo:el=>{const ex=EXEMPLOS[+el.dataset.i];if(!ex)return;const n=structuredClone(ex.nota);
     while(S.recs.some(r=>r.nf===n.numero&&r.loja===S.rf.loja))n.numero=String(+n.numero+1); /* dá para repetir o exemplo */
     S.rf=newRf(S.rf.loja);aplicarLeitura(n,'exemplo');S.rf.exemplo=true;save();render()},
+  'pn-per':el=>{if(el.dataset.v==='livre'&&!(S.pn.a&&S.pn.b)){const x=pnPeriodo();S.pn.a=x.a;S.pn.b=x.b}S.pn.p=el.dataset.v;render()},
+  'pn-loja':el=>{S.loja=+el.dataset.id;S.tab='balanco';guardaAba();render();scrollTo(0,0)},
   tab:el=>{S.tab=el.dataset.v;S.openId=null;S.cxOutra=false;S.confirm=false;S.cconfirm=false;if(el.dataset.v==='conferir')S.done=null;guardaAba();render();scrollTo(0,0);sincronizar()},
   grupo:el=>{const d=S.draft;if(d.grupo!==el.dataset.v){d.grupo=el.dataset.v;d.sel=[];d.prod=null}save();render()},
   csel:el=>{const d=S.draft,c=el.dataset.c,s=d.sel||[];d.sel=s.includes(c)?s.filter(x=>x!==c):[...s,c];save();
@@ -2010,6 +2134,8 @@ document.addEventListener('click',e=>{
   VISOR={el,srcs:imgs.map(x=>x.src),i:Math.max(0,imgs.indexOf(im))};mostrarVisor();history.pushState({visor:1},'');
 });
 addEventListener('popstate',()=>{if(VISOR)fecharVisor()});
+let _largo=LARGO.matches;const trocaLargura=()=>{if(LARGO.matches===_largo)return;_largo=LARGO.matches;if(curUser()&&!digitando())render()};
+LARGO.addEventListener?.('change',trocaLargura);addEventListener('resize',trocaLargura);
 addEventListener('keydown',e=>{if(VISOR&&e.key==='Escape')history.back()});
 
 const C={
@@ -2069,6 +2195,8 @@ const C={
   xlsp:async t=>{const fs=[...t.files];if(!fs.length)return;
     try{const r=await importarPlanilhas(fs,false);render();toast(`${r.linhas} produtos atualizados a partir de ${fs.length} arquivo(s). Confira a peça de cada um.`)}catch(e){erroPlanilha(e)}},
   balA:t=>{S.bal.a=t.value;render()},
+  pnA:t=>{S.pn.a=t.value;render()},
+  pnB:t=>{S.pn.b=t.value;render()},
   balB:t=>{S.bal.b=t.value;render()},
 };
 document.addEventListener('change',e=>{const t=e.target,id=t.id||'';
