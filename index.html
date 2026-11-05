@@ -1802,7 +1802,7 @@ function vPainel(){
   const T=pnSoma(L.map(x=>x.r)),A=pnSoma(L.map(x=>x.ant));
   const bt=(k,t)=>`<button type="button" class="${S.pn.p===k?'on':''}" data-act="pn-per" data-v="${k}">${t}</button>`;
   const lj=S.loja?S.lojas.find(x=>x.id===S.loja):null;
-  const per=`<section class="card"><div class="pn-top">${lj?'<button type="button" class="btn sm" data-act="pn-todas">← Todas as lojas</button>':''}<h2>${lj?esc(lj.nome):'Painel do gestor'} · ${a===b?dBR(a):`${dBR(a)} a ${dBR(b)}`}</h2>
+  const per=`<section class="card"><div class="pn-top">${lj?'<button type="button" class="btn sm" data-act="pn-todas">← Voltar ao painel do gestor</button>':''}<h2>${lj?esc(lj.nome):'Painel do gestor'} · ${a===b?dBR(a):`${dBR(a)} a ${dBR(b)}`}</h2>
     <div class="pn-per">${bt('hoje','Hoje')}${bt('semana','Semana')}${bt('mes','Mês')}${bt('livre','Escolher período')}
     ${S.pn.p==='livre'?`<input type="date" id="pnA" value="${S.pn.a||a}" aria-label="De"><input type="date" id="pnB" value="${S.pn.b||b}" aria-label="Até">`:''}</div></div>
     <p class="hint">Carne bovina. Vendas e custo: Brajan${L.some(x=>x.uv)?` (último dia recebido: ${dBR(L.map(x=>x.uv).sort().pop())})`:', ainda sem dados'}. Compras: notas recebidas. Perda: conferências de peso.</p></section>`;
