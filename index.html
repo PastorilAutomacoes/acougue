@@ -251,8 +251,17 @@ table.t{border-collapse:collapse;width:100%;font-size:.88rem}
 .t tr.sub td{background:var(--surface-2);font-weight:600}
 .t tr.bx{cursor:pointer}.t tr.bx:hover td{background:var(--accent-soft)}.t tr.bx.on td{background:var(--accent-soft);font-weight:600}
 .bxc{display:inline-block;width:1.1em;color:var(--accent)}
+.btn.xl{background:#1D6F42;border-color:#1D6F42;color:#fff}
+.t tr.nota.off td{color:#9aa4bb;background:#f6f7fa}.t tr.nota.off .nf{text-decoration:line-through}
+.bnf{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.bmini{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:3px 10px;font:inherit;font-size:.8rem;font-weight:600;color:var(--crit);cursor:pointer}
+.bmini.back{color:var(--accent)}
+.bnf-m{display:none}
+@media (max-width:600px){.tbal th:nth-child(4),.tbal td:nth-child(4){display:none}.bnf-m{display:flex;justify-content:flex-start;margin-top:4px}.tbal td[colspan="4"]{display:table-cell}.tbal tr.bdet .hint{display:none}.tbal tr.nota td{padding:6px 6px 6px 12px;font-size:.8rem}.bnf-m .pill{white-space:normal;font-size:.72rem}}
+.pill.lucro{background:#fff;color:var(--fg)}
 .t tr.bdet td{font-size:.86rem;padding:5px 10px 5px 30px;color:var(--fg);background:var(--surface)}.t tr.bdet td.n{padding-left:10px}
 .t tr.bdet small{display:inline;margin-left:6px;color:var(--muted)}
+.t tr.nota td small{display:block;margin-left:0}
 .t tr.tot td{background:var(--fg);color:var(--bg);font-weight:600}
 .t tr.tot .pill{background:var(--bg)}
 .t td:first-child,.t th:first-child{position:sticky;left:0;background:var(--surface);z-index:1}
@@ -1526,12 +1535,54 @@ function vNotas(){
 
 /* ---------- BALANÇO CARNE BOVINA (compras pela NF-e: kg e R$) ---------- */
 function calc(r){r.cmv=r.ei+r.c-r.ef;r.perdaKg=r.cmv-r.vk;r.perda=r.cmv>0?r.perdaKg/r.cmv:null;r.cmvR=r.eiR+r.cR-r.efR;r.lucro=r.vr-r.cmvR;r.margem=r.vr?r.lucro/r.vr:null;r.markup=r.cmvR?r.lucro/r.cmvR:null;return r}
+/* notas que entram nas compras do balanço: as do Brajan/XML e, na loja sem Brajan, as lidas pela foto.
+   A nota da foto que não achou par no Brajan fica de fora, mas pode ser incluída; qualquer nota pode ser tirada.
+   A escolha fica salva por loja e período (documento vimp "loja|EI|EF|notas", que o gerente da loja também pode gravar). */
+const selKey=(l,a,b)=>`${l}|${a}|${b}|notas`;
+function comprasCand(l,a,b){const m=new Map(notasBal().filter(n=>n.loja===l).map(n=>[nkey(n),n]));
+  if(brajanLoja(l))S.recs.forEach(r=>{if(r.loja!==l||m.has(nkey(r)))return;const n=notaFoto(r);if(n)m.set(nkey(r),{...n,fora:true})});
+  return [...m.values()].filter(n=>entrou(n)&&noPeriodo(n,a,b)&&temBov(n)).sort((x,y)=>(x.data||'').localeCompare(y.data||'')||(+x.nf)-(+y.nf))}
+function incluida(n,a,b){const s=S.vimp[selKey(n.loja,a,b)],k=nkey(n);if(s?.fora?.[k])return false;if(s?.dentro?.[k])return true;return !n.fora}
+const bovDaNota=n=>{const sv=n.itens.reduce((t,i)=>t+(i.v||0),0),sk=n.itens.reduce((t,i)=>t+i.kg,0);let kgv=0,rsv=0;
+  n.itens.forEach(it=>{if(grupoItem(it)!=='Bovino')return;kgv+=it.kg;rsv+=n.v*(sv?(it.v||0)/sv:(sk?it.kg/sk:1))});return{kg:kgv,rs:rsv}};
+function sitNota(n){const c=confDe(n);if(c){const x=analise(c);return x.st==='sem'?['ok','Conferida']:[perdaSt(x.perda),`Conferida · ${pc(x.perda)}`]}
+  if(n.fora)return['warn','Nº não achado no Brajan'];if(S.recs.some(r=>nkey(r)===nkey(n)))return['warn','Recebida, sem pesagem'];return['crit','Não conferida']}
+function balDetCompras(ids,a,b){const L=ids.flatMap(l=>comprasCand(l,a,b));
+  const rows=L.map(n=>{const on=incluida(n,a,b),q=bovDaNota(n),[st,t]=sitNota(n);
+    const ctl=`${on?`<span class="pill ${st}">${t}</span>`:'<span class="pill sem">Fora da conta</span>'}
+      <button type="button" class="bmini${on?'':' back'}" data-act="bal-nota" data-l="${n.loja}" data-k="${esc(nkey(n))}" data-v="${on?'tirar':'incluir'}">${on?'Tirar':n.fora?'Incluir':'Voltar'}</button>`;
+    return `<tr class="bdet nota${on?'':' off'}"><td><span class="nf"><b>NF ${esc(n.nf)}</b> · ${esc(fnome(n))}${ids.length>1?' · '+esc(lojaNome(n.loja)):''} · ${dBR(n.data).slice(0,5)}</span>${on?'':`<small>${n.fora&&!S.vimp[selKey(n.loja,a,b)]?.fora?.[nkey(n)]?'Fora da conta (nº não está no Brajan)':'Tirada do balanço'}</small>`}<div class="bnf bnf-m">${ctl}</div></td>
+      <td class="n">${kg(q.kg)}</td><td class="n">${rs(q.rs)}</td><td class="bcol"><div class="bnf">${ctl}</div></td></tr>`}).join('');
+  return (rows||'<tr class="bdet"><td colspan="4">Nenhuma nota no período.</td></tr>')+`<tr class="bdet"><td colspan="4"><label class="btn sm">+ Adicionar nota (XML)<input id="bxml2" type="file" accept=".xml,text/xml,application/xml" multiple class="vh"></label>
+    <span class="hint"> A nota que não está na lista entra pelo XML, com data dentro do período.</span></td></tr>`}
+/* exporta o balanço (resumo, estoques, compras nota a nota e vendas) para Excel */
+function exportarBal(){if(typeof XLSX==='undefined'){toast('Sem a biblioteca do Excel. Verifique a internet e tente de novo.');return}
+  const ids=S.loja?[S.loja]:lojaIds(),{a,b}=S.bal,B=balBov(ids,a,b),T=B.T,nome=S.loja?lojaNome(S.loja):'Todas as lojas';
+  const r2_=v=>Math.round((v||0)*100)/100,r3_=v=>Math.round((v||0)*1000)/1000,p1=v=>v==null||!isFinite(v)?'':Math.round(v*1000)/10;
+  const res=[['Balanço carne bovina',nome],['Contagem inicial (EI)',dBR(a)],['Contagem final (EF)',dBR(b)],[],['','Kg','R$'],
+    ['Estoque inicial',r3_(T.ei),r2_(T.eiR)],['+ Compras',r3_(T.c),r2_(T.cR)],['− Estoque final',r3_(T.ef),r2_(T.efR)],['= CMV',r3_(T.cmv),r2_(T.cmvR)],
+    ['Vendas',r3_(T.vk),r2_(T.vr)],['Perda = CMV − Vendas',r3_(T.perdaKg),''],['Lucro bruto = Vendas − CMV','',r2_(T.lucro)],[],
+    ['% Perda',p1(T.perda)],['% Lucro (sobre vendas)',p1(T.margem)],['Markup (sobre o custo)',p1(T.markup)],[],
+    ['Notas nas compras',B.nNotas],['Notas fora da conta',B.nFora],['Vendas',B.imp?'Planilha do PDV':B.erp?'Brajan':'—'],['Gerado em',nowBR()]];
+  const det=k=>{const m={};const add=(c,kgv,rsv)=>{const q=m[c]||(m[c]={c,kg:0,rs:0});q.kg+=kgv;q.rs+=rsv};
+    if(k!=='vd'){const iso=k==='ei'?a:b;ids.forEach(l=>Object.entries(contDe(l,iso)||{}).forEach(([c,x])=>{if(PM[c]?.bov)add(c,x,x*custoDe(l,c))}))}
+    else ids.forEach(l=>{const imp=ids.length===1&&S.vimp[`${l}|${a}|${b}`],vd=vendDias(l,a,b);
+      if(imp)Object.entries(imp.dados).forEach(([c,v])=>{if(PM[c]?.bov)add(c,v.kg,v.rs)});
+      else vd.forEach(v=>Object.entries(v.itens||{}).forEach(([c,x])=>{if(PM[c]?.bov)add(c,x.kg,x.rs)}))});
+    const L=Object.values(m).filter(q=>Math.abs(q.kg)>.0005).sort((x,y)=>y.kg-x.kg);
+    return [['Código','Carne','Kg',k==='vd'?'Preço médio do kg':'Custo do kg','R$'],...L.map(q=>[q.c,PM[q.c]?.n||q.c,r3_(q.kg),q.kg?r2_(q.rs/q.kg):'',r2_(q.rs)]),[],['Total','',r3_(L.reduce((t,q)=>t+q.kg,0)),'',r2_(L.reduce((t,q)=>t+q.rs,0))]]};
+  const cp=[['Loja','NF','Fornecedor','Emissão','Kg (carne bovina)','R$ (carne bovina)','Situação','No balanço'],
+    ...ids.flatMap(l=>comprasCand(l,a,b)).map(n=>{const q=bovDaNota(n);return[lojaNome(n.loja),n.nf,fnome(n),dBR(n.data),r3_(q.kg),r2_(q.rs),sitNota(n)[1],incluida(n,a,b)?'Sim':'Não (tirada)']})];
+  const wb=XLSX.utils.book_new(),aba=(rows,nm,w)=>{const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=w.map(x=>({wch:x}));XLSX.utils.book_append_sheet(wb,ws,nm)};
+  aba(res,'Resumo',[30,16,16]);aba(det('ei'),'Estoque inicial',[10,30,12,16,14]);aba(cp,'Compras',[22,12,30,12,16,16,26,14]);
+  aba(det('ef'),'Estoque final',[10,30,12,16,14]);aba(det('vd'),'Vendas',[10,30,12,18,14]);
+  XLSX.writeFile(wb,`Balanco ${nome} ${a} a ${b}.xlsx`.replace(/[\\/:*?"<>|]/g,''));toast('Planilha gerada.')}
 function balBov(ids,a,b){
-  const T={ei:0,eiR:0,c:0,cR:0,ef:0,efR:0,vk:0,vr:0};let nNotas=0,nSem=0,nFoto=0,nSemV=0,imp=null,erp=0,ultErp='';const NB=notasBal();
+  const T={ei:0,eiR:0,c:0,cR:0,ef:0,efR:0,vk:0,vr:0};let nNotas=0,nSem=0,nFoto=0,nSemV=0,nFora=0,imp=null,erp=0,ultErp='';
   for(const l of ids){
     const ea=contDe(l,a)||{},eb=contDe(l,b)||{};
     T.ei+=bovKg(ea);T.eiR+=bovRsL(ea,l);T.ef+=bovKg(eb);T.efR+=bovRsL(eb,l);
-    NB.filter(n=>n.loja===l&&entrou(n)&&noPeriodo(n,a,b)).forEach(n=>{
+    comprasCand(l,a,b).forEach(n=>{if(!incluida(n,a,b)){nFora++;return}
       const sv=n.itens.reduce((s,i)=>s+(i.v||0),0),sk=n.itens.reduce((s,i)=>s+i.kg,0);let tem=false;
       n.itens.forEach(it=>{if(grupoItem(it)!=='Bovino')return;tem=true;T.c+=it.kg;T.cR+=n.v*(sv?it.v/sv:(sk?it.kg/sk:1))});
       if(tem){nNotas++;if(!confDe(n))nSem++;if(n.foto)nFoto++;if(!(n.v>0))nSemV++}
@@ -1543,7 +1594,7 @@ function balBov(ids,a,b){
       vd.forEach(v=>{if(!ultErp||v.recebido>ultErp)ultErp=v.recebido})}
     else Object.entries(G.vend[l]||{}).forEach(([iso,dd])=>{if(iso>a&&iso<=b)Object.entries(dd).forEach(([c,v])=>{if(PM[c]?.bov){T.vk+=v.kg;T.vr+=v.rs}})});
   }
-  return{T:calc(T),nNotas,nSem,nFoto,nSemV,imp,erp,ultErp};
+  return{T:calc(T),nNotas,nSem,nFoto,nSemV,nFora,imp,erp,ultErp};
 }
 const rsK=v=>Math.abs(v)>=1e4?`${v<0?'-':''}R$ ${F1.format(Math.abs(v)/1000)} mil`:rs(v); /* valor curto para os quadros pequenos */
 const perdaSt=p=>p==null?'sem':p*100>=S.set.perdaCrit?'crit':p*100>=S.set.perdaAt?'warn':'ok';
@@ -1556,10 +1607,10 @@ function balDet(ids,k,a,b){const m={};const add=(c,kgv,rsv)=>{const q=m[c]||(m[c
     else if(vd.length)vd.forEach(v=>Object.entries(v.itens||{}).forEach(([c,x])=>{if(PM[c]?.bov)add(c,x.kg,x.rs)}));
     else Object.entries(G.vend[l]||{}).forEach(([iso,dd])=>{if(iso>a&&iso<=b)Object.entries(dd).forEach(([c,v])=>{if(PM[c]?.bov)add(c,v.kg,v.rs)})})});
   const L=Object.values(m).filter(q=>Math.abs(q.kg)>.0005).sort((x,y)=>y.kg-x.kg);
-  if(!L.length)return `<tr class="bdet"><td colspan="3">${k==='vd'?'Sem vendas neste período.':'Sem contagem.'}</td></tr>`;
-  return L.map(q=>`<tr class="bdet"><td>${esc(PM[q.c]?.n||q.c)}${k==='vd'&&q.kg?`<small>${rs(q.rs/q.kg)}/kg</small>`:''}</td><td class="n">${kg(q.kg)}</td><td class="n">${rs(q.rs)}</td></tr>`).join('')}
+  if(!L.length)return `<tr class="bdet"><td colspan="4">${k==='vd'?'Sem vendas neste período.':'Sem contagem.'}</td></tr>`;
+  return L.map(q=>`<tr class="bdet"><td>${esc(PM[q.c]?.n||q.c)}${k==='vd'&&q.kg?`<small>${rs(q.rs/q.kg)}/kg</small>`:''}</td><td class="n">${kg(q.kg)}</td><td class="n">${rs(q.rs)}</td><td></td></tr>`).join('')}
 const balLinha=(k,rot,sub,kgv,rsv,det)=>{const on=S.balX===k;
-  return `<tr class="bx${on?' on':''}" data-act="bal-x" data-k="${k}" title="${on?'Fechar':'Ver carne por carne'}"><td><span class="bxc">${on?'▾':'▸'}</span>${rot}<small>${sub}</small></td><td class="n">${kgv}</td><td class="n">${rsv}</td></tr>${on?det():''}`};
+  return `<tr class="bx${on?' on':''}" data-act="bal-x" data-k="${k}" title="${on?'Fechar':'Ver carne por carne'}"><td><span class="bxc">${on?'▾':'▸'}</span>${rot}<small>${sub}</small></td><td class="n">${kgv}</td><td class="n">${rsv}</td><td></td></tr>${on?det():''}`};
 function vBal(){
   const ids=S.loja?[S.loja]:lojaIds(), ds=contDatas(ids);
   if(!ds.includes(S.bal.a))S.bal.a=ds[0]; if(!ds.includes(S.bal.b))S.bal.b=ds[ds.length-1];
@@ -1571,6 +1622,7 @@ function vBal(){
       <div class="field"><label for="balA">Contagem inicial (EI)</label><select id="balA" class="in">${opt(a)}</select></div>
       <div class="field"><label for="balB">Contagem final (EF)</label><select id="balB" class="in">${opt(b)}</select></div>
       ${S.loja?`<label class="btn pri">Importar vendas do PDV (Excel)<input id="xls" type="file" accept=".xlsx,.xls,.csv" multiple class="vh"></label>`:''}
+      ${ds.length>=2&&S.bal.a<S.bal.b?'<button type="button" class="btn xl" data-act="bal-xls">⬇ Exportar Excel</button>':''}
     </div>
     <p class="hint">${imp?`Vendas do PDV importadas de <b>${esc(imp.nome)}</b> (${Object.keys(imp.dados).length} produtos). <button type="button" class="btn sm ghost" data-act="rmimp">Tirar importação</button>`
       :S.loja?`Importe o <b>Comparativo de Vendas por Produto</b> do período (pode marcar vários arquivos).`:'Escolha uma loja no topo para importar as vendas do PDV.'}</p>
@@ -1585,16 +1637,16 @@ function vBal(){
     <div class="kpi"><small>Vendas kg</small><b>${kg(T.vk)}</b></div>
     <div class="kpi hl"><small>% Perda</small><span class="pill ${perdaSt(T.perda)}">${pc(T.perda)}</span></div>
     <div class="kpi"><small>Lucro bruto</small><b>${rsK(T.lucro)}</b></div>
-    <div class="kpi hl"><small>Margem</small><b>${pc(T.margem)}</b></div>
+    <div class="kpi hl"><small>% Lucro (sobre vendas)</small><b>${pc(T.margem)}</b></div>
     <div class="kpi hl"><small>Markup</small><b>${pc(T.markup)}</b></div></div>`;
-  const tbl=`<div class="tw"><table class="t tbal"><thead><tr><th></th><th class="n">Kg</th><th class="n">R$</th></tr></thead><tbody>
+  const tbl=`<div class="tw"><table class="t tbal"><thead><tr><th></th><th class="n">Kg</th><th class="n">R$</th><th></th></tr></thead><tbody>
     ${balLinha('ei','Estoque inicial',dBR(a),kg(T.ei),rs(T.eiR),()=>balDet(ids,'ei',a,b))}
-    <tr><td>+ Compras<small>${B.nNotas} nota${B.nNotas===1?'':'s'}${B.nSem?` · ${B.nSem} sem conferência`:''}${B.nSemV?` · ${B.nSemV} sem R$`:''}</small></td><td class="n">${kg(T.c)}</td><td class="n">${rs(T.cR)}</td></tr>
+    ${balLinha('cp','+ Compras',`${B.nNotas} nota${B.nNotas===1?'':'s'}${B.nFora?` · ${B.nFora} fora da conta`:''}${B.nSem?` · ${B.nSem} sem conferência`:''}${B.nSemV?` · ${B.nSemV} sem R$`:''}`,kg(T.c),rs(T.cR),()=>balDetCompras(ids,a,b))}
     ${balLinha('ef','− Estoque final',dBR(b),kg(T.ef),rs(T.efR),()=>balDet(ids,'ef',a,b))}
-    <tr class="sub"><td>= CMV</td><td class="n">${kg(T.cmv)}</td><td class="n">${rs(T.cmvR)}</td></tr>
+    <tr class="sub"><td>= CMV</td><td class="n">${kg(T.cmv)}</td><td class="n">${rs(T.cmvR)}</td><td></td></tr>
     ${balLinha('vd','Vendas',`${imp?'PDV (planilha)':B.erp?`Brajan, automático · ${B.erp} dia${B.erp>1?'s':''}${B.ultErp?' · '+new Date(B.ultErp).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):''}`:DEMO?'exemplo':'sem vendas do Brajan nem planilha'}`,kg(T.vk),rs(T.vr),()=>balDet(ids,'vd',a,b))}
-    <tr class="sub"><td>Perda = CMV − Vendas</td><td class="n">${kg(T.perdaKg)}</td><td class="n"><span class="pill ${perdaSt(T.perda)}">${pc(T.perda)}</span></td></tr>
-    <tr class="tot"><td>Lucro bruto = Vendas − CMV</td><td class="n"></td><td class="n">${rs(T.lucro)}</td></tr></tbody></table></div>`;
+    <tr class="sub"><td>Perda = CMV − Vendas</td><td class="n">${kg(T.perdaKg)}</td><td class="n"><span class="pill ${perdaSt(T.perda)}">${pc(T.perda)}</span></td><td></td></tr>
+    <tr class="tot"><td>Lucro bruto = Vendas − CMV</td><td class="n"></td><td class="n">${rs(T.lucro)}</td><td class="n"><span class="pill lucro">${pc(T.margem)}</span></td></tr></tbody></table></div>`;
   let comp='';
   if(!S.loja){
     const L=S.lojas.map(l=>({l,T:balBov([l.id],a,b).T}));
@@ -2012,6 +2064,9 @@ const A={
   exemplo:el=>{const ex=EXEMPLOS[+el.dataset.i];if(!ex)return;const n=structuredClone(ex.nota);
     while(S.recs.some(r=>r.nf===n.numero&&r.loja===S.rf.loja))n.numero=String(+n.numero+1); /* dá para repetir o exemplo */
     S.rf=newRf(S.rf.loja);aplicarLeitura(n,'exemplo');S.rf.exemplo=true;save();render()},
+  'bal-nota':el=>{const {a,b}=S.bal,l=+el.dataset.l,k=el.dataset.k,sk=selKey(l,a,b),x=S.vimp[sk]||(S.vimp[sk]={fora:{},dentro:{}});
+    x.fora=x.fora||{};x.dentro=x.dentro||{};delete x.fora[k];delete x.dentro[k];if(el.dataset.v==='tirar')x.fora[k]=1;else x.dentro[k]=1;save();render()},
+  'bal-xls':()=>exportarBal(),
   'bal-x':el=>{S.balX=S.balX===el.dataset.k?null:el.dataset.k;render()},
   'pn-per':el=>{if(el.dataset.v==='livre'&&!(S.pn.a&&S.pn.b)){const x=pnPeriodo();S.pn.a=x.a;S.pn.b=x.b}S.pn.p=el.dataset.v;render()},
   'pn-loja':el=>{S.loja=+el.dataset.id;render();scrollTo(0,0)},
@@ -2254,6 +2309,7 @@ const C={
     }catch(e){toast('Não foi possível ler esse arquivo. Envie o XML da NF-e.')}
     render()},
   /* receber nota pelo XML: cria a nota (vale para o balanço) e a nota recebida (vai para Conferir) */
+  bxml2:t=>C.bxml(t),
   bxml:async t=>{const fs=[...t.files];if(!fs.length)return;let ok=0,dup=0,semLoja=0,ruim=0;
     for(const f of fs){try{const x=parseXML(await f.text()),F=FCNPJ[x.cnpj];
       const lj=S.lojas.find(l=>l.cnpj&&l.cnpj===x.dest),loja=lj?lj.id:S.loja;if(!loja){semLoja++;continue}
