@@ -384,6 +384,11 @@ details summary{cursor:pointer;font-weight:600;font-size:.9rem;padding:4px 0}
 .pn-t td{padding:6px 0;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}.pn-t td.n,.pn-t th.n{text-align:right}
 .pn-vazio{color:var(--muted);font-size:.86rem}
 .pn-row2{display:grid;grid-template-columns:1.4fr 1fr;gap:12px;align-items:start}
+.pn-row3{display:grid;grid-template-columns:2fr 1fr;gap:12px;align-items:start}
+.pn-notas{display:flex;flex-direction:column}
+.pn-nl{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:8px 4px;border:0;border-top:1px solid var(--line);background:none;font:inherit;color:inherit;text-align:left;width:100%}
+button.pn-nl{cursor:pointer}button.pn-nl:hover{background:var(--surface-2)}
+.pn-nk{color:var(--muted);font-size:.86rem;font-variant-numeric:tabular-nums}
 </style>
 
 <header class="top">
@@ -840,7 +845,14 @@ const allConfs=()=>[...G.confs.map(c=>S.mods[c.id]?{...c,...S.mods[c.id]}:c),...
 const getConf=id=>allConfs().find(c=>c.id===id);
 function setConf(id,patch){const a=S.apps.find(c=>c.id===id);if(a)Object.assign(a,patch);else S.mods[id]={...(S.mods[id]||{}),...patch};save()}
 const nkey=x=>`${x.loja}|${x.forn}|${+x.nf}`;
-function allNotas(){const m=new Map();[...G.notas,...S.notasApp].forEach(n=>m.set(nkey(n),n));return [...m.values()].sort((a,b)=>b.data.localeCompare(a.data)||(+b.nf)-(+a.nf))}
+/* NF-e de entrada vinda do Brajan (XML emitido para o CNPJ da loja): vale como nota XML, conferida ou não */
+function notaBrajan(x){const F=FCNPJ[x.cnpj];
+  const itens=(x.itens||[]).filter(i=>!i.unidade||/KG/.test(i.unidade)).map(i=>({desc:i.descricao,cod:i.cod_fornecedor,c:i.codigo&&PM[i.codigo]?i.codigo:matchProd(i.descricao),kg:r3(i.qtd||0),v:r2(i.valor||0)}));
+  return{loja:x.loja,forn:F?F.id:'c'+x.cnpj,...(F?{}:{fornNome:x.fornecedor}),nf:String(+x.numero||x.numero),chave:x.chave,data:x.emissao,itens,
+    kg:r3(itens.reduce((t,i)=>t+i.kg,0)),v:r2(itens.reduce((t,i)=>t+i.v,0)),fonte:'Brajan',brajan:true,caminho:x.situacao==='a_caminho'}}
+/* nota a caminho só conta depois que chega (lançada no Brajan ou recebida no app) */
+const entrou=n=>!n.caminho||S.recs.some(r=>nkey(r)===nkey(n));
+function allNotas(){const m=new Map();[...G.notas,...Object.values(S.comps||{}).filter(x=>x.emissao&&x.loja).map(notaBrajan),...S.notasApp].forEach(n=>m.set(nkey(n),n));return [...m.values()].sort((a,b)=>b.data.localeCompare(a.data)||(+b.nf)-(+a.nf))}
 let NIDX=null,CIDX=null;
 function notaDe(c){if(!NIDX)NIDX=new Map(allNotas().map(n=>[nkey(n),n]));return NIDX.get(nkey(c))||null}
 /* nota recebida pelo conferente (aba Nota Fiscal); os pesos digitados da DANFE valem só até o XML entrar */
@@ -1505,7 +1517,7 @@ function balBov(ids,a,b){
   for(const l of ids){
     const ea=contDe(l,a)||{},eb=contDe(l,b)||{};
     T.ei+=bovKg(ea);T.eiR+=bovRsL(ea,l);T.ef+=bovKg(eb);T.efR+=bovRsL(eb,l);
-    NB.filter(n=>n.loja===l&&noPeriodo(n,a,b)).forEach(n=>{
+    NB.filter(n=>n.loja===l&&entrou(n)&&noPeriodo(n,a,b)).forEach(n=>{
       const sv=n.itens.reduce((s,i)=>s+(i.v||0),0),sk=n.itens.reduce((s,i)=>s+i.kg,0);let tem=false;
       n.itens.forEach(it=>{if(grupoItem(it)!=='Bovino')return;tem=true;T.c+=it.kg;T.cR+=n.v*(sv?it.v/sv:(sk?it.kg/sk:1))});
       if(tem){nNotas++;if(!confDe(n))nSem++;if(n.foto)nFoto++;if(!(n.v>0))nSemV++}
@@ -1577,8 +1589,8 @@ function vNotasPeriodo(ids,a,b,doMes){
   const tk=list.reduce((t,n)=>t+n.kg,0), tv=list.reduce((t,n)=>t+(n.v||0),0);
   const sit=n=>{const c=confDe(n),r=n.rec?S.recs.find(x=>x.id===n.rec):S.recs.find(x=>nkey(x)===nkey(n)),dv=c&&!n.foto?divergencias(c).length:0;
     return [!c?'<span class="pill warn">sem conferência</span>':dv?'<span class="pill warn">foto × XML diferente</span>':'<span class="pill ok">conferida</span>',
-      n.foto?`<span class="pill sem">${n.fonte==='foto'?'pela foto':'digitada'}</span>`:'<span class="pill ok">XML</span>',
-      n.v>0?'':'<span class="pill sem">sem R$</span>',!c&&!r&&!n.foto?'<span class="pill crit">não recebida na doca</span>':''].join('')};
+      n.foto?`<span class="pill sem">${n.fonte==='foto'?'pela foto':'digitada'}</span>`:n.brajan?`<span class="pill ok">Brajan</span>${n.caminho&&!entrou(n)?'<span class="pill sem">a caminho</span>':''}`:'<span class="pill ok">XML</span>',
+      n.v>0?'':'<span class="pill sem">sem R$</span>',!c&&!r&&!n.foto&&entrou(n)?'<span class="pill crit">não recebida na doca</span>':''].join('')};
   return `<section class="card"><div class="card-h"><h2>Notas do período</h2><span class="tag">${doMes?mesNome(b.slice(0,7)):`${dBR(a)} a ${dBR(b)}`}</span></div>
     <div class="ctrls"><div class="field"><label for="balForn">Fornecedor</label><select id="balForn" class="in"><option value="">Todos</option>${FORN.map(f=>`<option value="${f.id}"${fsel===f.id?' selected':''}>${esc(f.nome)}</option>`).join('')}</select></div>
       <label class="btn">Importar XML (pode marcar vários)<input id="bxml" type="file" accept=".xml,text/xml,application/xml" multiple class="vh"></label></div>
@@ -1705,7 +1717,7 @@ function pnPeriodo(){const h=todayISO(),p=S.pn.p;let a,b,pa,pb;
 function pnLoja(l,a,b){const r={vk:0,vr:0,cv:0,ck:0,cr:0,nn:0,nf:0,conf:0,forn:{},crit:[],peca:{}};
   Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||v.data<a||v.data>b)return;
     Object.entries(v.itens||{}).forEach(([c,x])=>{if(!PM[c]?.bov)return;r.vk+=x.kg;r.vr+=x.rs;r.cv+=x.kg*custoDe(l,c)})});
-  notasBal().forEach(n=>{if(n.loja!==l||n.data<a||n.data>b)return;
+  notasBal().forEach(n=>{if(n.loja!==l||n.data<a||n.data>b||!entrou(n))return;
     const sv=n.itens.reduce((t,i)=>t+(i.v||0),0),sk=n.itens.reduce((t,i)=>t+i.kg,0);let tem=false;
     n.itens.forEach(it=>{if(grupoItem(it)!=='Bovino')return;tem=true;const v=n.v*(sv?(it.v||0)/sv:(sk?it.kg/sk:1));r.ck+=it.kg;r.cr+=v;
       const g=classNF(it);if(['traseiro','dianteiro','caixaria'].includes(g)&&v>0){const q=r.peca[g]||(r.peca[g]={kg:0,v:0});q.kg+=it.kg;q.v+=v}
@@ -1747,29 +1759,35 @@ function vPainelLoja(l,a,b,pa,pb){const lj=S.lojas.find(x=>x.id===l),h=todayISO(
   /* carnes mais vendidas */
   const m={};Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||v.data<a||v.data>b)return;Object.entries(v.itens||{}).forEach(([c,x])=>{if(!PM[c]?.bov)return;const q=m[c]||(m[c]={c,kg:0,rs:0,cv:0});q.kg+=x.kg;q.rs+=x.rs;q.cv+=x.kg*custoDe(l,c)})});
   const top=Object.values(m).sort((x,y)=>y.rs-x.rs).slice(0,12);
-  const confs=allConfs().filter(c=>c.loja===l&&c.data>=a&&c.data<=b);
-  const semPes=S.recs.filter(x=>x.loja===l&&!confDoRec(x)).sort((x,y)=>(y.data+y.hora).localeCompare(x.data+x.hora));
   const est=uc?contDe(l,uc):null;
   const kp=`<div class="pn-k">
     <div class="kpi"><small>Vendas</small><b>${r.vr?rsK(r.vr):'—'}</b>${pnVar(r.vr,ant.vr)}</div>
     <div class="kpi"><small>Kg vendidos</small><b>${r.vk?kgI(r.vk)+' kg':'—'}</b>${pnVar(r.vk,ant.vk)}</div>
     <div class="kpi"><small>Margem bruta</small><b>${pc(r.margem)}</b>${pnVar(r.margem,ant.margem,true)}</div>
     <div class="kpi"><small>Compras (notas)</small><b>${r.cr?rsK(r.cr):'—'}</b><i>${kgI(r.ck)} kg · ${r.nn} nota${r.nn===1?'':'s'}</i></div>
-    <div class="kpi"><small>Perda na desossa</small><b>${r.perda==null?'—':`<span class="pill ${perdaSt(r.perda)}">${pc(r.perda)}</span>`}</b><i>${confs.length} conferência${confs.length===1?'':'s'}</i></div></div>`;
+    <div class="kpi"><small>Perda na desossa</small><b>${r.perda==null?'—':`<span class="pill ${perdaSt(r.perda)}">${pc(r.perda)}</span>`}</b><i>conferências do período</i></div></div>`;
   const graf=`<section class="card"><h3>Vendas por dia (R$ mil)</h3>${vd.some(v=>v>0)?pnBarras(ds.map(d=>dBR(d).slice(0,5)),vd,'Vendas por dia'):`<p class="pn-vazio">${uv?'Sem vendas do Brajan neste período.':'Esta loja ainda não manda vendas pelo Brajan.'}</p>`}</section>`;
   const tops=`<section class="card"><h3>Carnes mais vendidas</h3>${top.length?`<table class="pn-t"><tr><th>Carne</th><th class="n">Kg</th><th class="n">R$</th><th class="n">Margem</th></tr>
     ${top.map(q=>`<tr><td>${esc(PM[q.c]?.n||S.custos?.[l]?.itens?.[q.c]?.n||q.c)}</td><td class="n">${kgI(q.kg)}</td><td class="n">${rs(q.rs)}</td><td class="n">${pc(q.rs?(q.rs-q.cv)/q.rs:null)}</td></tr>`).join('')}</table>`:'<p class="pn-vazio">Sem vendas no período.</p>'}</section>`;
-  const cfs=`<section class="card"><h3>Conferências do período</h3>${confs.length?`<ul class="pn-pend">${confs.map(c=>{const x=analise(c);return `<li class="${x.st==='crit'?'crit':x.st==='ok'?'info':''}"><button type="button" data-act="open-conf" data-id="${c.id}">NF ${esc(c.nf)} · ${esc(fnome(c))} · ${dBR(c.data).slice(0,5)}</button> ${x.st==='sem'?'<span class="pill sem">sem nota</span>':`<span class="pill ${perdaSt(x.perda)}">${pc(x.perda)}</span>`}</li>`}).join('')}</ul>`:'<p class="pn-vazio">Nenhuma conferência no período.</p>'}</section>`;
-  const pend=`<section class="card"><h3>Pendências</h3><ul class="pn-pend">
-    ${semPes.map(x=>`<li>Sem pesagem: <button type="button" data-act="startrec" data-id="${x.id}">NF ${esc(x.nf)} · ${esc(fnome(x))} · ${dBR(x.data).slice(0,5)}</button></li>`).join('')}
-    ${!uc?'<li>Nenhuma contagem de estoque feita</li>':dias(uc,h)>7?`<li>Última contagem há ${dias(uc,h)} dias (${dBR(uc).slice(0,5)})</li>`:''}
-    ${!uv?'<li>Sem vendas do Brajan</li>':dias(uv,h)>3?`<li class="crit">Brajan parado desde ${dBR(uv)}</li>`:''}
-    ${lj.cnpj?'':'<li>CNPJ da loja faltando (Ajustes → Lojas)</li>'}
-    ${Object.values(S.comps||{}).filter(c=>c.loja===l&&c.situacao==='a_caminho').map(c=>`<li class="info">${esc(c.fornecedor)} NF ${esc(c.numero)} a caminho</li>`).join('')}
-    </ul>${semPes.length||!uc||dias(uc,h)>7||!uv||dias(uv,h)>3||!lj.cnpj?'':'<p class="pn-vazio">Nada pendente.</p>'}</section>`;
+  /* notas de entrada: todas as notas emitidas para a loja no período (Brajan/XML, ou foto enquanto o XML não chega) e as recebidas ainda sem pesagem */
+  const nm=new Map();notasBal().filter(n=>n.loja===l&&n.data>=a&&n.data<=b).forEach(n=>nm.set(nkey(n),n));
+  S.recs.filter(x=>x.loja===l&&!confDoRec(x)&&!nm.has(nkey(x))).forEach(x=>nm.set(nkey(x),notaFoto(x)||{loja:l,forn:x.forn,fornNome:x.fornNome,nf:x.nf,data:x.data,itens:[],kg:0,v:0,foto:true}));
+  const notas=[...nm.values()].sort((x,y)=>(y.data||'').localeCompare(x.data||'')||(+y.nf)-(+x.nf));
+  const sitN=n=>{const c=confDe(n);if(c){const x=analise(c);return{act:'open-conf',id:c.id,st:x.st==='sem'?'ok':perdaSt(x.perda),t:x.st==='sem'?'Conferida':`Conferida · perda ${pc(x.perda)}`}}
+    const r=S.recs.find(y=>nkey(y)===nkey(n));if(r)return{act:'startrec',id:r.id,st:'warn',t:'Recebida, sem pesagem'};
+    if(!entrou(n))return{st:'sem',t:'A caminho'};return{st:'crit',t:'Não conferida'}};
+  const L=notas.map(n=>({n,x:sitN(n)})),nao=L.filter(o=>o.x.st==='crit'&&o.x.t==='Não conferida').length,semp=L.filter(o=>o.x.act==='startrec').length;
+  const tk=notas.filter(entrou).reduce((t,n)=>t+(n.kg||0),0),tv=notas.filter(entrou).reduce((t,n)=>t+(n.v||0),0);
+  const notasH=`<section class="card"><div class="card-h"><h3>Notas de entrada</h3><span class="tag">${notas.length} nota${notas.length===1?'':'s'} · ${kgI(tk)} kg · ${rsK(tv)}</span></div>
+    ${nao||semp?`<p class="hint">${[nao?`<b>${nao}</b> não conferida${nao>1?'s':''}`:'',semp?`<b>${semp}</b> recebida${semp>1?'s':''} sem pesagem`:''].filter(Boolean).join(' · ')}. Todas entram no balanço.</p>`:''}
+    ${notas.length?`<div class="pn-notas">${L.map(({n,x})=>{const t=`<span class="pn-nf"><b>NF ${esc(n.nf)}</b> · ${esc(fnome(n))} · ${dBR(n.data).slice(0,5)}</span><span class="pn-nk">${n.kg?kgI(n.kg)+' kg':''}${n.v?' · '+rs(n.v):''}</span><span class="pill ${x.st}">${x.t}</span>`;
+      return x.act?`<button type="button" class="pn-nl" data-act="${x.act}" data-id="${x.id}">${t}</button>`:`<div class="pn-nl">${t}</div>`}).join('')}</div>`:'<p class="pn-vazio">Nenhuma nota no período.</p>'}
+    ${Object.values(S.comps||{}).some(c=>c.loja===l)?'':'<p class="hint">As notas emitidas para a loja chegam pelo Brajan. Enquanto isso, aparecem só as recebidas no app.</p>'}</section>`;
+  const av=[!uc?'Nenhuma contagem feita':dias(uc,h)>7?`Contagem atrasada (${dias(uc,h)} dias)`:'',!uv?'Sem vendas do Brajan':dias(uv,h)>3?`Brajan parado desde ${dBR(uv).slice(0,5)}`:'',lj.cnpj?'':'CNPJ da loja faltando'].filter(Boolean);
   const estq=`<section class="card"><h3>Estoque</h3>${est?`<table class="pn-t"><tr><td>Última contagem</td><td class="n">${dBR(uc)}</td></tr><tr><td>Carne bovina</td><td class="n">${kgI(bovKg(est))} kg</td></tr><tr><td>Valor (custo atual)</td><td class="n">${rs(bovRsL(est,l))}</td></tr></table>`:'<p class="pn-vazio">Sem contagem.</p>'}
+    ${av.length?`<div class="pn-tags">${av.map(t=>`<span class="pill warn">${t}</span>`).join('')}</div>`:''}
     <button type="button" class="btn" data-act="pn-bal" data-id="${l}">Abrir balanço da loja</button></section>`;
-  return kp+`<div class="pn-row2">${graf}${tops}</div><div class="pn-row">${cfs}${pend}${estq}</div>`}
+  return kp+`<div class="pn-row2">${graf}${tops}</div><div class="pn-row3">${notasH}${estq}</div>`}
 function vPainel(){
   const {a,b,pa,pb}=pnPeriodo(),h=todayISO();
   const L=S.lojas.map(l=>({l,r:pnLoja(l.id,a,b),ant:pnLoja(l.id,pa,pb),uc:ultCont(l.id),uv:ultVend(l.id)}));
