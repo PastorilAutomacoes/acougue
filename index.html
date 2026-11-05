@@ -752,7 +752,7 @@ function loadDrafts(){try{const d=JSON.parse(localStorage.getItem(KEY+':rasc:'+S
 /* aba aberta: sobrevive ao "puxar para atualizar", mas o app aberto de novo começa em Nota Fiscal */
 const guardaAba=()=>{try{sessionStorage.setItem(KEY+':aba',JSON.stringify({tab:S.tab,openId:S.openId}))}catch(e){}};
 function lerAba(){try{const a=JSON.parse(sessionStorage.getItem(KEY+':aba')||'null');if(a?.tab){S.tab=a.tab;S.openId=a.openId||null}}catch(e){}}
-function save(){saveDrafts();guardaAba();if(TREINO){guardarTreino();return}if(SY.on){guardarCache();agendarEnvio()}}
+function save(){resetIdx();saveDrafts();guardaAba();if(TREINO){guardarTreino();return}if(SY.on){guardarCache();agendarEnvio()}}
 
 /* ---------- fotos da nota: vão para o Storage; no documento fica só a referência "sb:caminho" ---------- */
 const FURL=new Map();
@@ -858,8 +858,8 @@ function notaBrajan(x){const F=FCNPJ[x.cnpj];
 const entrou=n=>!n.caminho||S.recs.some(r=>nkey(r)===nkey(n));
 /* só notas com carne bovina aparecem nas listas (o Brajan manda também frango e suíno) */
 const temBov=n=>!n.itens?.length||n.itens.some(it=>grupoItem(it)==='Bovino');
-function allNotas(){const m=new Map();[...G.notas,...Object.values(S.comps||{}).filter(x=>x.emissao&&x.loja).map(notaBrajan),...S.notasApp].forEach(n=>m.set(nkey(n),n));return [...m.values()].sort((a,b)=>b.data.localeCompare(a.data)||(+b.nf)-(+a.nf))}
-let NIDX=null,CIDX=null;
+function allNotas(){if(NOTAS_C)return NOTAS_C;const m=new Map();[...G.notas,...Object.values(S.comps||{}).filter(x=>x.emissao&&x.loja).map(notaBrajan),...S.notasApp].forEach(n=>m.set(nkey(n),n));return NOTAS_C=[...m.values()].sort((a,b)=>b.data.localeCompare(a.data)||(+b.nf)-(+a.nf))}
+let NIDX=null,CIDX=null,NOTAS_C=null,NBAL_C=null;
 function notaDe(c){if(!NIDX)NIDX=new Map(allNotas().map(n=>[nkey(n),n]));return NIDX.get(nkey(c))||null}
 /* nota recebida pelo conferente (aba Nota Fiscal); os pesos digitados da DANFE valem só até o XML entrar */
 const recDe=c=>c?.rec?S.recs.find(r=>r.id===c.rec)||null:null;
@@ -877,7 +877,7 @@ function notaFoto(r){if(!r?.dig?.length)return null;
   return{loja:r.loja,forn:r.forn,fornNome:r.fornNome,nf:r.nf,data:r.data,itens,kg:r3(itens.reduce((t,i)=>t+i.kg,0)),v:r.lida?.vt||sv,fonte:r.lida?'foto':'digitada',foto:true,rec:r.id}}
 /* loja que já manda as notas pelo Brajan: a nota lida pela foto não entra mais na conta (evita contar duas vezes uma nota com número digitado errado) */
 const brajanLoja=l=>Object.values(S.comps||{}).some(c=>c.loja===l);
-function notasBal(){const m=new Map(allNotas().map(n=>[nkey(n),n]));S.recs.forEach(r=>{const k=nkey(r);if(!m.has(k)&&!brajanLoja(r.loja)){const n=notaFoto(r);if(n)m.set(k,n)}});return [...m.values()]}
+function notasBal(){if(NBAL_C)return NBAL_C;const m=new Map(allNotas().map(n=>[nkey(n),n]));S.recs.forEach(r=>{const k=nkey(r);if(!m.has(k)&&!brajanLoja(r.loja)){const n=notaFoto(r);if(n)m.set(k,n)}});return NBAL_C=[...m.values()]}
 /* excluir nota recebida: antes da pesagem, quem recebeu ou gerente/gestor; com pesagem iniciada, só gerente/gestor; conferida, ninguém */
 const podeExcluirRec=r=>S.role!=='conferente'||(!confDoRec(r)&&!r.lock&&r.uid===S.user); /* gerente/gestor apagam qualquer nota recebida (com a conferência junto) */
 /* compara o que foi digitado da DANFE com o XML: por peça e, na caixaria/outros, por carne */
@@ -890,7 +890,7 @@ function divergencias(c){
   return out;
 }
 function confDe(n){if(!CIDX){CIDX=new Map();allConfs().forEach(c=>{if(!CIDX.has(nkey(c)))CIDX.set(nkey(c),c)})}return CIDX.get(nkey(n))||null}
-const resetIdx=()=>{NIDX=null;CIDX=null};
+const resetIdx=()=>{NIDX=null;CIDX=null;NOTAS_C=null;NBAL_C=null;MP_C.clear();MP_L=null};
 const fnome=x=>FM[x.forn]?.nome||x.fornNome||S.recs.find(r=>r.forn===x.forn&&r.fornNome)?.fornNome||'—';
 const quemSou=()=>curUser()?.nome||PERFIS[S.role];
 function mesSel(id,val,isos){
@@ -907,7 +907,13 @@ const totalKg=c=>r3(c.pes.reduce((s,p)=>s+p.b-p.t,0));
 const limpa=s=>' '+norm(s).replace(/[^a-z0-9]+/g,' ').trim()+' ';
 const descLimpa=d=>String(d??'').split(/\n|TRIB\.? APROX|\sST: ?MVA/i)[0].trim(); /* só o nome: sem as linhas de tributos que o frigorífico põe na descrição */
 const chaveApel=desc=>limpa(descLimpa(desc).replace(/\s*-\s*\d+[,.]\d+\s*$/,'')).trim().slice(0,120); /* sem o nº de peças do fim ("- 3,00"), que muda a cada nota */
-function matchProd(desc){const a=S.apel?.[chaveApel(desc)]?.c;if(a&&PM[a])return a;const d=limpa(desc);return prodList().filter(p=>!p.sistema).filter(p=>p.n.length>3&&!p.inteira&&!/^PC/.test(p.c)).sort((a,b)=>b.n.length-a.n.length).find(p=>d.includes(limpa(p.n)))?.c||null}
+/* nome do item na nota → produto; guardado por tela (as notas do Brajan têm centenas de itens) */
+let MP_C=new Map(),MP_L=null;
+function matchProd(desc){const k=String(desc??'');if(MP_C.has(k))return MP_C.get(k);
+  const a=S.apel?.[chaveApel(desc)]?.c;let r=null;if(a&&PM[a])r=a;
+  else{if(!MP_L)MP_L=prodList().filter(p=>!p.sistema&&p.n.length>3&&!p.inteira&&!/^PC/.test(p.c)).sort((a,b)=>b.n.length-a.n.length).map(p=>[p.c,limpa(p.n)]);
+    const d=limpa(desc);r=MP_L.find(([,n])=>d.includes(n))?.[0]||null}
+  MP_C.set(k,r);return r}
 function prodsDoGrupo(g){const ps=prodList().filter(p=>!p.feito);
   if(g==='caixaria')return ps.filter(p=>p.cx);
   if(g==='miudos'&&ps.some(p=>p.miudo))return ps.filter(p=>p.miudo);
