@@ -249,6 +249,10 @@ table.t{border-collapse:collapse;width:100%;font-size:.88rem}
 .t td.n,.t th.n{text-align:right}
 .t tr:last-child td{border-bottom:0}
 .t tr.sub td{background:var(--surface-2);font-weight:600}
+.t tr.bx{cursor:pointer}.t tr.bx:hover td{background:var(--accent-soft)}.t tr.bx.on td{background:var(--accent-soft);font-weight:600}
+.bxc{display:inline-block;width:1.1em;color:var(--accent)}
+.t tr.bdet td{font-size:.86rem;padding:5px 10px 5px 30px;color:var(--fg);background:var(--surface)}.t tr.bdet td.n{padding-left:10px}
+.t tr.bdet small{display:inline;margin-left:6px;color:var(--muted)}
 .t tr.tot td{background:var(--fg);color:var(--bg);font-weight:600}
 .t tr.tot .pill{background:var(--bg)}
 .t td:first-child,.t th:first-child{position:sticky;left:0;background:var(--surface);z-index:1}
@@ -1538,6 +1542,18 @@ function balBov(ids,a,b){
 const rsK=v=>Math.abs(v)>=1e4?`${v<0?'-':''}R$ ${F1.format(Math.abs(v)/1000)} mil`:rs(v); /* valor curto para os quadros pequenos */
 const perdaSt=p=>p==null?'sem':p*100>=S.set.perdaCrit?'crit':p*100>=S.set.perdaAt?'warn':'ok';
 const term=(l,v,res)=>`<span class="term${res?' res':''}"><small>${l}</small>${v}</span>`, op=o=>`<span class="op">${o}</span>`;
+/* detalhe das linhas do balanço: tocar em Estoque inicial, Estoque final ou Vendas mostra carne por carne */
+function balDet(ids,k,a,b){const m={};const add=(c,kgv,rsv)=>{const q=m[c]||(m[c]={c,kg:0,rs:0});q.kg+=kgv;q.rs+=rsv};
+  if(k==='ei'||k==='ef'){const iso=k==='ei'?a:b;ids.forEach(l=>Object.entries(contDe(l,iso)||{}).forEach(([c,x])=>{if(PM[c]?.bov)add(c,x,x*custoDe(l,c))}))}
+  else ids.forEach(l=>{const imp=ids.length===1&&S.vimp[`${l}|${a}|${b}`],vd=vendDias(l,a,b);
+    if(imp)Object.entries(imp.dados).forEach(([c,v])=>{if(PM[c]?.bov)add(c,v.kg,v.rs)});
+    else if(vd.length)vd.forEach(v=>Object.entries(v.itens||{}).forEach(([c,x])=>{if(PM[c]?.bov)add(c,x.kg,x.rs)}));
+    else Object.entries(G.vend[l]||{}).forEach(([iso,dd])=>{if(iso>a&&iso<=b)Object.entries(dd).forEach(([c,v])=>{if(PM[c]?.bov)add(c,v.kg,v.rs)})})});
+  const L=Object.values(m).filter(q=>Math.abs(q.kg)>.0005).sort((x,y)=>y.kg-x.kg);
+  if(!L.length)return `<tr class="bdet"><td colspan="3">${k==='vd'?'Sem vendas neste período.':'Sem contagem.'}</td></tr>`;
+  return L.map(q=>`<tr class="bdet"><td>${esc(PM[q.c]?.n||q.c)}${k==='vd'&&q.kg?`<small>${rs(q.rs/q.kg)}/kg</small>`:''}</td><td class="n">${kg(q.kg)}</td><td class="n">${rs(q.rs)}</td></tr>`).join('')}
+const balLinha=(k,rot,sub,kgv,rsv,det)=>{const on=S.balX===k;
+  return `<tr class="bx${on?' on':''}" data-act="bal-x" data-k="${k}" title="${on?'Fechar':'Ver carne por carne'}"><td><span class="bxc">${on?'▾':'▸'}</span>${rot}<small>${sub}</small></td><td class="n">${kgv}</td><td class="n">${rsv}</td></tr>${on?det():''}`};
 function vBal(){
   const ids=S.loja?[S.loja]:lojaIds(), ds=contDatas(ids);
   if(!ds.includes(S.bal.a))S.bal.a=ds[0]; if(!ds.includes(S.bal.b))S.bal.b=ds[ds.length-1];
@@ -1566,11 +1582,11 @@ function vBal(){
     <div class="kpi hl"><small>Margem</small><b>${pc(T.margem)}</b></div>
     <div class="kpi hl"><small>Markup</small><b>${pc(T.markup)}</b></div></div>`;
   const tbl=`<div class="tw"><table class="t tbal"><thead><tr><th></th><th class="n">Kg</th><th class="n">R$</th></tr></thead><tbody>
-    <tr><td>Estoque inicial<small>${dBR(a)}</small></td><td class="n">${kg(T.ei)}</td><td class="n">${rs(T.eiR)}</td></tr>
+    ${balLinha('ei','Estoque inicial',dBR(a),kg(T.ei),rs(T.eiR),()=>balDet(ids,'ei',a,b))}
     <tr><td>+ Compras<small>${B.nNotas} nota${B.nNotas===1?'':'s'}${B.nSem?` · ${B.nSem} sem conferência`:''}${B.nSemV?` · ${B.nSemV} sem R$`:''}</small></td><td class="n">${kg(T.c)}</td><td class="n">${rs(T.cR)}</td></tr>
-    <tr><td>− Estoque final<small>${dBR(b)}</small></td><td class="n">${kg(T.ef)}</td><td class="n">${rs(T.efR)}</td></tr>
+    ${balLinha('ef','− Estoque final',dBR(b),kg(T.ef),rs(T.efR),()=>balDet(ids,'ef',a,b))}
     <tr class="sub"><td>= CMV</td><td class="n">${kg(T.cmv)}</td><td class="n">${rs(T.cmvR)}</td></tr>
-    <tr><td>Vendas<small>${imp?'PDV (planilha)':B.erp?`Brajan, automático · ${B.erp} dia${B.erp>1?'s':''}${B.ultErp?' · '+new Date(B.ultErp).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):''}`:DEMO?'exemplo':'sem vendas do Brajan nem planilha'}</small></td><td class="n">${kg(T.vk)}</td><td class="n">${rs(T.vr)}</td></tr>
+    ${balLinha('vd','Vendas',`${imp?'PDV (planilha)':B.erp?`Brajan, automático · ${B.erp} dia${B.erp>1?'s':''}${B.ultErp?' · '+new Date(B.ultErp).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):''}`:DEMO?'exemplo':'sem vendas do Brajan nem planilha'}`,kg(T.vk),rs(T.vr),()=>balDet(ids,'vd',a,b))}
     <tr class="sub"><td>Perda = CMV − Vendas</td><td class="n">${kg(T.perdaKg)}</td><td class="n"><span class="pill ${perdaSt(T.perda)}">${pc(T.perda)}</span></td></tr>
     <tr class="tot"><td>Lucro bruto = Vendas − CMV</td><td class="n"></td><td class="n">${rs(T.lucro)}</td></tr></tbody></table></div>`;
   let comp='';
@@ -1990,6 +2006,7 @@ const A={
   exemplo:el=>{const ex=EXEMPLOS[+el.dataset.i];if(!ex)return;const n=structuredClone(ex.nota);
     while(S.recs.some(r=>r.nf===n.numero&&r.loja===S.rf.loja))n.numero=String(+n.numero+1); /* dá para repetir o exemplo */
     S.rf=newRf(S.rf.loja);aplicarLeitura(n,'exemplo');S.rf.exemplo=true;save();render()},
+  'bal-x':el=>{S.balX=S.balX===el.dataset.k?null:el.dataset.k;render()},
   'pn-per':el=>{if(el.dataset.v==='livre'&&!(S.pn.a&&S.pn.b)){const x=pnPeriodo();S.pn.a=x.a;S.pn.b=x.b}S.pn.p=el.dataset.v;render()},
   'pn-loja':el=>{S.loja=+el.dataset.id;render();scrollTo(0,0)},
   'pn-todas':()=>{S.loja=0;render();scrollTo(0,0)},
