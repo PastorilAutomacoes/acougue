@@ -383,6 +383,7 @@ details summary{cursor:pointer;font-weight:600;font-size:.9rem;padding:4px 0}
 .pn-t{width:100%;border-collapse:collapse;font-size:.88rem}.pn-t th{text-align:left;color:var(--muted);font-size:.74rem;font-weight:600;padding:4px 0}
 .pn-t td{padding:6px 0;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}.pn-t td.n,.pn-t th.n{text-align:right}
 .pn-vazio{color:var(--muted);font-size:.86rem}
+.pn-row2{display:grid;grid-template-columns:1.4fr 1fr;gap:12px;align-items:start}
 </style>
 
 <header class="top">
@@ -1732,12 +1733,50 @@ function pnGrafico(){const fim=segunda(todayISO()),sem=[...Array(8)].map((_,i)=>
   return `<section class="card"><h3>Vendas por semana (R$ mil)</h3>${vazio?'<p class="pn-vazio">Ainda sem vendas do Brajan nestas semanas.</p>':''}
     <svg viewBox="0 0 640 215" width="100%" font-size="11" role="img" aria-label="Vendas de carne bovina por semana e por loja">${g}</svg>
     <div class="pn-leg">${S.lojas.map((l,j)=>`<span style="--c:${CORES_LJ[j%6]}">${esc(l.nome)}</span>`).join('')}</div></section>`}
+
+/* painel de uma loja: abre ao clicar no cartão da loja (ou ao escolher a loja no topo) */
+function pnBarras(rot,val,tit){const mx=Math.max(1,...val),H=150,y0=170,w=Math.min(46,560/val.length-6),k=H/mx;let g='';
+  [0,.5,1].forEach(f=>{const y=y0-H*f;g+=`<line x1="40" y1="${y}" x2="630" y2="${y}" stroke="var(--line)"/><text x="34" y="${y+4}" text-anchor="end" fill="var(--muted)">${F1.format(mx*f/1000)}</text>`});
+  val.forEach((v,i)=>{const x=46+i*(580/val.length),h=v*k;if(h>0)g+=`<rect x="${x.toFixed(1)}" y="${(y0-h).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="var(--accent)"><title>${rot[i]}: ${rs(v)}</title></rect>`;
+    if(val.length<=16||i%2===0)g+=`<text x="${(x+w/2).toFixed(1)}" y="${y0+15}" text-anchor="middle" fill="var(--muted)">${rot[i]}</text>`});
+  return `<svg viewBox="0 0 640 190" width="100%" font-size="11" role="img" aria-label="${tit}">${g}</svg>`}
+function vPainelLoja(l,a,b,pa,pb){const lj=S.lojas.find(x=>x.id===l),h=todayISO(),r=pnLoja(l,a,b),ant=pnLoja(l,pa,pb),uc=ultCont(l),uv=ultVend(l);
+  /* vendas por dia (no "Hoje", os últimos 7 dias) */
+  const d0=a===b?diaMais(a,-6):a,d1=b>h?h:b,ds=[];for(let d=d0;d<=d1&&ds.length<62;d=diaMais(d,1))ds.push(d);
+  const vd=ds.map(d=>{const v=S.vend?.[l+'|'+d];return v?Object.entries(v.itens||{}).reduce((t,[c,x])=>t+(PM[c]?.bov?x.rs:0),0):0});
+  /* carnes mais vendidas */
+  const m={};Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||v.data<a||v.data>b)return;Object.entries(v.itens||{}).forEach(([c,x])=>{if(!PM[c]?.bov)return;const q=m[c]||(m[c]={c,kg:0,rs:0,cv:0});q.kg+=x.kg;q.rs+=x.rs;q.cv+=x.kg*custoDe(l,c)})});
+  const top=Object.values(m).sort((x,y)=>y.rs-x.rs).slice(0,12);
+  const confs=allConfs().filter(c=>c.loja===l&&c.data>=a&&c.data<=b);
+  const semPes=S.recs.filter(x=>x.loja===l&&!confDoRec(x)).sort((x,y)=>(y.data+y.hora).localeCompare(x.data+x.hora));
+  const est=uc?contDe(l,uc):null;
+  const kp=`<div class="pn-k">
+    <div class="kpi"><small>Vendas</small><b>${r.vr?rsK(r.vr):'—'}</b>${pnVar(r.vr,ant.vr)}</div>
+    <div class="kpi"><small>Kg vendidos</small><b>${r.vk?kgI(r.vk)+' kg':'—'}</b>${pnVar(r.vk,ant.vk)}</div>
+    <div class="kpi"><small>Margem bruta</small><b>${pc(r.margem)}</b>${pnVar(r.margem,ant.margem,true)}</div>
+    <div class="kpi"><small>Compras (notas)</small><b>${r.cr?rsK(r.cr):'—'}</b><i>${kgI(r.ck)} kg · ${r.nn} nota${r.nn===1?'':'s'}</i></div>
+    <div class="kpi"><small>Perda na desossa</small><b>${r.perda==null?'—':`<span class="pill ${perdaSt(r.perda)}">${pc(r.perda)}</span>`}</b><i>${confs.length} conferência${confs.length===1?'':'s'}</i></div></div>`;
+  const graf=`<section class="card"><h3>Vendas por dia (R$ mil)</h3>${vd.some(v=>v>0)?pnBarras(ds.map(d=>dBR(d).slice(0,5)),vd,'Vendas por dia'):`<p class="pn-vazio">${uv?'Sem vendas do Brajan neste período.':'Esta loja ainda não manda vendas pelo Brajan.'}</p>`}</section>`;
+  const tops=`<section class="card"><h3>Carnes mais vendidas</h3>${top.length?`<table class="pn-t"><tr><th>Carne</th><th class="n">Kg</th><th class="n">R$</th><th class="n">Margem</th></tr>
+    ${top.map(q=>`<tr><td>${esc(PM[q.c]?.n||S.custos?.[l]?.itens?.[q.c]?.n||q.c)}</td><td class="n">${kgI(q.kg)}</td><td class="n">${rs(q.rs)}</td><td class="n">${pc(q.rs?(q.rs-q.cv)/q.rs:null)}</td></tr>`).join('')}</table>`:'<p class="pn-vazio">Sem vendas no período.</p>'}</section>`;
+  const cfs=`<section class="card"><h3>Conferências do período</h3>${confs.length?`<ul class="pn-pend">${confs.map(c=>{const x=analise(c);return `<li class="${x.st==='crit'?'crit':x.st==='ok'?'info':''}"><button type="button" data-act="open-conf" data-id="${c.id}">NF ${esc(c.nf)} · ${esc(fnome(c))} · ${dBR(c.data).slice(0,5)}</button> ${x.st==='sem'?'<span class="pill sem">sem nota</span>':`<span class="pill ${perdaSt(x.perda)}">${pc(x.perda)}</span>`}</li>`}).join('')}</ul>`:'<p class="pn-vazio">Nenhuma conferência no período.</p>'}</section>`;
+  const pend=`<section class="card"><h3>Pendências</h3><ul class="pn-pend">
+    ${semPes.map(x=>`<li>Sem pesagem: <button type="button" data-act="startrec" data-id="${x.id}">NF ${esc(x.nf)} · ${esc(fnome(x))} · ${dBR(x.data).slice(0,5)}</button></li>`).join('')}
+    ${!uc?'<li>Nenhuma contagem de estoque feita</li>':dias(uc,h)>7?`<li>Última contagem há ${dias(uc,h)} dias (${dBR(uc).slice(0,5)})</li>`:''}
+    ${!uv?'<li>Sem vendas do Brajan</li>':dias(uv,h)>3?`<li class="crit">Brajan parado desde ${dBR(uv)}</li>`:''}
+    ${lj.cnpj?'':'<li>CNPJ da loja faltando (Ajustes → Lojas)</li>'}
+    ${Object.values(S.comps||{}).filter(c=>c.loja===l&&c.situacao==='a_caminho').map(c=>`<li class="info">${esc(c.fornecedor)} NF ${esc(c.numero)} a caminho</li>`).join('')}
+    </ul>${semPes.length||!uc||dias(uc,h)>7||!uv||dias(uv,h)>3||!lj.cnpj?'':'<p class="pn-vazio">Nada pendente.</p>'}</section>`;
+  const estq=`<section class="card"><h3>Estoque</h3>${est?`<table class="pn-t"><tr><td>Última contagem</td><td class="n">${dBR(uc)}</td></tr><tr><td>Carne bovina</td><td class="n">${kgI(bovKg(est))} kg</td></tr><tr><td>Valor (custo atual)</td><td class="n">${rs(bovRsL(est,l))}</td></tr></table>`:'<p class="pn-vazio">Sem contagem.</p>'}
+    <button type="button" class="btn" data-act="pn-bal" data-id="${l}">Abrir balanço da loja</button></section>`;
+  return kp+`<div class="pn-row2">${graf}${tops}</div><div class="pn-row">${cfs}${pend}${estq}</div>`}
 function vPainel(){
   const {a,b,pa,pb}=pnPeriodo(),h=todayISO();
   const L=S.lojas.map(l=>({l,r:pnLoja(l.id,a,b),ant:pnLoja(l.id,pa,pb),uc:ultCont(l.id),uv:ultVend(l.id)}));
   const T=pnSoma(L.map(x=>x.r)),A=pnSoma(L.map(x=>x.ant));
   const bt=(k,t)=>`<button type="button" class="${S.pn.p===k?'on':''}" data-act="pn-per" data-v="${k}">${t}</button>`;
-  const per=`<section class="card"><div class="pn-top"><h2>Painel do gestor · ${a===b?dBR(a):`${dBR(a)} a ${dBR(b)}`}</h2>
+  const lj=S.loja?S.lojas.find(x=>x.id===S.loja):null;
+  const per=`<section class="card"><div class="pn-top">${lj?'<button type="button" class="btn sm" data-act="pn-todas">← Todas as lojas</button>':''}<h2>${lj?esc(lj.nome):'Painel do gestor'} · ${a===b?dBR(a):`${dBR(a)} a ${dBR(b)}`}</h2>
     <div class="pn-per">${bt('hoje','Hoje')}${bt('semana','Semana')}${bt('mes','Mês')}${bt('livre','Escolher período')}
     ${S.pn.p==='livre'?`<input type="date" id="pnA" value="${S.pn.a||a}" aria-label="De"><input type="date" id="pnB" value="${S.pn.b||b}" aria-label="Até">`:''}</div></div>
     <p class="hint">Carne bovina. Vendas e custo: Brajan${L.some(x=>x.uv)?` (último dia recebido: ${dBR(L.map(x=>x.uv).sort().pop())})`:', ainda sem dados'}. Compras: notas recebidas. Perda: conferências de peso.</p></section>`;
@@ -1754,7 +1793,7 @@ function vPainel(){
     const sp=S.recs.filter(x=>x.loja===l.id&&!confDoRec(x)).length;if(sp){tags.push(['warn',`${sp} nota${sp>1?'s':''} sem pesagem`]);if(st==='ok')st='warn';pend.push(['',`${esc(l.nome)}: ${sp} nota${sp>1?'s recebidas':' recebida'} sem pesagem`])}
     tags.push(uv&&dias(uv,h)<=3?['ok','Brajan ok']:uv?['warn','Brajan parado desde '+dBR(uv).slice(0,5)]:['sem','Sem Brajan']);
     r.crit.forEach(({c,perda})=>pend.push(['crit',`${esc(l.nome)}: perda de ${pc(perda)} na NF ${esc(c.nf)} (${esc(fnome(c))})`,c.id]));
-    return `<button type="button" class="pn-lj ${st}" data-act="pn-loja" data-id="${l.id}" title="Abrir o balanço da loja"><h3>${esc(l.nome)}</h3><span class="c">${esc(l.cidade||'')}</span>
+    return `<button type="button" class="pn-lj ${st}" data-act="pn-loja" data-id="${l.id}" title="Abrir o painel da loja"><h3>${esc(l.nome)}</h3><span class="c">${esc(l.cidade||'')}</span>
       <table><tr><td>Vendas</td><td>${r.vr?rsK(r.vr):'—'}</td></tr><tr><td>Kg vendidos</td><td>${r.vk?kgI(r.vk):'—'}</td></tr>
       <tr><td>Margem</td><td>${pc(r.margem)}</td></tr><tr><td>Perda desossa</td><td>${r.perda==null?'—':`<span class="pill ${perdaSt(r.perda)}">${pc(r.perda)}</span>`}</td></tr>
       <tr><td>Compras</td><td>${r.ck?kgI(r.ck)+' kg':'—'}</td></tr><tr><td>Última contagem</td><td>${uc?dBR(uc).slice(0,5):'—'}</td></tr></table>
@@ -1773,6 +1812,7 @@ function vPainel(){
     ${Object.values(F).sort((x,y)=>y.kg-x.kg).map(f=>{const p=f.nf?1-f.conf/f.nf:null;return `<tr><td>${esc(f.nome)}</td><td class="n">${kgI(f.kg)}</td><td class="n">${p==null?'—':`<span class="pill ${perdaSt(p)}">${pc(p)}</span>`}</td></tr>`}).join('')}</table>`:'<p class="pn-vazio">Nenhuma nota no período.</p>'}
     <h3>Custo médio do kg</h3><table class="pn-t">${['traseiro','dianteiro','caixaria'].map(g=>{const v=cm(g),w=cma(g),d=v&&w?(v/w-1)*100:null;
       return `<tr><td>${GRN[g]||g}</td><td class="n">${v?rs(v):'—'}</td><td class="n">${d==null?'':Math.abs(d)<.5?'=':`<span class="${d>0?'pn-dn':'pn-up'}">${d>0?'▲':'▼'} ${F1.format(Math.abs(d))}%</span>`}</td></tr>`}).join('')}</table></section>`;
+  if(lj)return per+vPainelLoja(lj.id,a,b,pa,pb);
   return per+kp+`<h3 style="margin:4px 0 -4px">Lojas</h3>`+lojas+`<div class="pn-row">${pnGrafico()}${pendH}${fr}</div>`}
 
 function render(){refazForn();
@@ -1925,7 +1965,9 @@ const A={
     while(S.recs.some(r=>r.nf===n.numero&&r.loja===S.rf.loja))n.numero=String(+n.numero+1); /* dá para repetir o exemplo */
     S.rf=newRf(S.rf.loja);aplicarLeitura(n,'exemplo');S.rf.exemplo=true;save();render()},
   'pn-per':el=>{if(el.dataset.v==='livre'&&!(S.pn.a&&S.pn.b)){const x=pnPeriodo();S.pn.a=x.a;S.pn.b=x.b}S.pn.p=el.dataset.v;render()},
-  'pn-loja':el=>{S.loja=+el.dataset.id;S.tab='balanco';guardaAba();render();scrollTo(0,0)},
+  'pn-loja':el=>{S.loja=+el.dataset.id;render();scrollTo(0,0)},
+  'pn-todas':()=>{S.loja=0;render();scrollTo(0,0)},
+  'pn-bal':el=>{S.loja=+el.dataset.id;S.tab='balanco';guardaAba();render();scrollTo(0,0)},
   tab:el=>{S.tab=el.dataset.v;S.openId=null;S.cxOutra=false;S.confirm=false;S.cconfirm=false;if(el.dataset.v==='conferir')S.done=null;guardaAba();render();scrollTo(0,0);sincronizar()},
   grupo:el=>{const d=S.draft;if(d.grupo!==el.dataset.v){d.grupo=el.dataset.v;d.sel=[];d.prod=null}save();render()},
   csel:el=>{const d=S.draft,c=el.dataset.c,s=d.sel||[];d.sel=s.includes(c)?s.filter(x=>x!==c):[...s,c];save();
