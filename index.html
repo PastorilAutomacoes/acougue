@@ -1463,7 +1463,7 @@ function vNF(){
   const campos=()=>`<div class="grid2">
       <div class="field"><label for="rnf">Nº da nota</label><input id="rnf" inputmode="numeric" value="${esc(f.nf)}"></div>
       <div class="field"><label for="rforn">Fornecedor</label><select id="rforn" class="in"><option value="">Selecione</option>${f.fornNome&&!FM[f.forn]?`<option value="${esc(f.forn)}" selected>${esc(f.fornNome)} (da nota)</option>`:''}${FORN.map(x=>`<option value="${x.id}"${f.forn===x.id?' selected':''}>${esc(x.nome)}</option>`).join('')}</select></div>
-      <div class="field"><label for="rdata">Data de entrega</label><input id="rdata" type="date" value="${f.data}"></div>
+      <div class="field"><label for="rdata">Data de entrega</label><input id="rdata" type="date" value="${f.edit||f.dataMan?f.data:todayISO()}"></div>
     </div>${vp?pesos:''}`;
   let recCorpo;
   if(est==='vazio')recCorpo=`<label class="cambig">${inFoto}${ICON.cam}<span>Tirar foto da nota</span></label>
@@ -2134,7 +2134,7 @@ const A={
       Object.assign(r,{chave:f.chave,nf:f.nf,forn:f.forn,data:f.data,fotos:f.fotos,dig:dig.length?dig:null});
       if(cc)setConf(cc.id,{log:[...cc.log,`Nota corrigida por ${quemSou()} em ${nowBR()}`]});toast('Nota corrigida.')}
     else{if(f.link)S.used.push(f.link);
-      S.recs.push({id:'r'+Date.now(),loja:f.loja,chave:f.chave,nf:String(+f.nf),forn:f.forn,...(f.fornNome&&!FM[f.forn]?{fornNome:f.fornNome}:{}),data:f.data,hora:nowHM(),fotos:f.fotos,dig:dig.length?dig:null,via:f.ia?'foto-ia':f.fotos.length?'foto':'manual',...(f.ia?{lida:{soma:f.ia.soma,pl:f.ia.pl,vt:f.ia.vt||0,modelo:f.ia.modelo}}:{}),por:quemSou(),uid:S.user});
+      S.recs.push({id:'r'+Date.now(),loja:f.loja,chave:f.chave,nf:String(+f.nf),forn:f.forn,...(f.fornNome&&!FM[f.forn]?{fornNome:f.fornNome}:{}),data:f.edit||f.dataMan?f.data:todayISO(),hora:nowHM(),fotos:f.fotos,dig:dig.length?dig:null,via:f.ia?'foto-ia':f.fotos.length?'foto':'manual',...(f.ia?{lida:{soma:f.ia.soma,pl:f.ia.pl,vt:f.ia.vt||0,modelo:f.ia.modelo}}:{}),por:quemSou(),uid:S.user});
       toast(dig.length?`Nota recebida com ${dig.length} peso(s) digitado(s). Toque em Conferir quando for pesar.`:'Nota recebida. Toque em Conferir quando for pesar.')}
     if(!f.edit&&f.fila?.length){const prox=f.fila[0],nf=newRf(f.loja);
       Object.assign(nf,{fotosTodas:f.fotosTodas,fila:f.fila.slice(1),nTotal:f.nTotal,nAtual:(f.nAtual||1)+1,modelo:f.modelo});
@@ -2314,7 +2314,7 @@ const C={
   mesC:t=>{S.mesC=t.value;render()},
   mesN:t=>{S.mesN=t.value;render()},
   rforn:t=>{S.rf.forn=t.value;save();render()},
-  rdata:t=>{S.rf.data=t.value;save()},
+  rdata:t=>{S.rf.data=t.value;S.rf.dataMan=true;save()},
   rnf:t=>{S.rf.nf=t.value.replace(/\D/g,'').replace(/^0+/,'');save();render()},
   rchave:t=>{const v=t.value.replace(/\D/g,'');if(v!==S.rf.chave){applyChave(v);render()}},
   rfotos:async t=>{const fs=[...t.files];if(!fs.length)return;const f=S.rf;SUBINDO++;render();
