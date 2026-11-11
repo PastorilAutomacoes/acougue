@@ -251,6 +251,17 @@ table.t{border-collapse:collapse;width:100%;font-size:.88rem}
 .t tr.sub td{background:var(--surface-2);font-weight:600}
 .t tr.bx{cursor:pointer}.t tr.bx:hover td{background:var(--accent-soft)}.t tr.bx.on td{background:var(--accent-soft);font-weight:600}
 .bxc{display:inline-block;width:1.1em;color:var(--accent)}
+.ced{display:flex;flex-direction:column}
+.ci{display:grid;grid-template-columns:1fr 110px 34px;gap:8px;align-items:center;padding:7px 4px;border-bottom:1px solid var(--line)}
+.ci small{display:block;color:var(--muted);font-size:.75rem}
+.ci input{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:7px;padding:8px;font-family:'IBM Plex Mono',monospace;text-align:right;font-size:.95rem;color:var(--fg)}
+.ci .x{border:0;background:none;color:var(--crit);font-size:1.2rem;font-weight:700;cursor:pointer;padding:4px}.ci .x.back{color:var(--accent)}
+.ci.mud input{border-color:var(--cta);background:#FFF4EC}.ci.new{background:var(--ok-soft);border-radius:6px}
+.ci.off b{text-decoration:line-through;color:#9aa4bb}.ci.off input{opacity:.5}
+.ceadd{border:1px dashed var(--accent);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px;background:var(--accent-soft)}
+.cetot{display:flex;justify-content:space-between;font-weight:700}
+.row-main .pill.warn{white-space:normal}
+.btn.sm.blue{background:var(--accent-soft);color:var(--accent)}
 .btn.xl{background:#1D6F42;border-color:#1D6F42;color:#fff}
 .t tr.nota.off td{color:#9aa4bb;background:#f6f7fa}.t tr.nota.off .nf{text-decoration:line-through}
 .bnf{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
@@ -1321,6 +1332,27 @@ function cresHTML(){
     ${ks.map(c=>`<tr><td>${esc(PM[c]?.n||c)}</td><td class="n">${kg(it[c])}</td>${g?`<td class="n">${rs(it[c]*(PM[c]?.custo||0))}</td>`:''}</tr>`).join('')}
     <tr class="tot"><td>Total</td><td class="n">${kg(tot)}</td>${g?`<td class="n">${rs(bovRs(it))}</td>`:''}</tr></tbody></table></div>`;
 }
+/* correção da contagem salva (só gestor): muda o kg, tira ou inclui a carne esquecida.
+   Guarda os números de antes (orig) e quem corrigiu; o balanço usa os itens corrigidos. */
+const nomeC=c=>PM[c]?.n||c, ordC=(a,b)=>nomeC(a).localeCompare(nomeC(b),'pt-BR');
+function abrirCorr(l,d){const c=S.conts.find(x=>x.loja===l&&x.data===d);if(!c)return;
+  S.cEd={loja:l,data:d,L:Object.keys(c.itens).sort(ordC).map(k=>({c:k,kg:kg(c.itens[k]),v0:c.itens[k],off:false,novo:false})),np:'',nkg:''}}
+const corrTot=e=>e.L.reduce((t,x)=>t+(x.off?0:(num(x.kg)||0)),0);
+function corrHTML(){const e=S.cEd,c=S.conts.find(x=>x.loja===e.loja&&x.data===e.data);if(!c)return '';
+  const tem=new Set(e.L.map(x=>x.c)),ops=Object.values(PM).filter(p=>p.bov&&!p.sistema&&!tem.has(p.c)).sort((a,b)=>a.n.localeCompare(b.n,'pt-BR'));
+  const t0=Object.values(c.itens).reduce((t,k)=>t+k,0);
+  return `<section class="card" id="ced"><div class="card-h"><h3>Corrigir contagem · ${dBR(e.data)}${S.loja?'':' · '+esc(lojaNome(e.loja))}</h3></div>
+    <p class="hint">Mude o kg, tire a carne ou inclua a que esqueceram de pesar. Vale para o balanço.</p>
+    <div class="ced">${e.L.map((x,i)=>{const v=num(x.kg),mud=!x.novo&&!x.off&&isFinite(v)&&Math.abs(v-x.v0)>.0005;
+      return `<div class="ci${x.off?' off':''}${x.novo?' new':''}${mud?' mud':''}"><span><b>${esc(nomeC(x.c))}</b><small>${x.off?'tirada':x.novo?'incluída agora':mud?'era '+kg(x.v0)+' kg':c.pecas?.[x.c]?c.pecas[x.c]+(c.pecas[x.c]>1?' peças':' peça'):''}</small></span>
+        <input id="ce-kg-${i}" inputmode="decimal" autocomplete="off" value="${x.off?'0,000':esc(x.kg)}"${x.off?' disabled':''} aria-label="Kg de ${esc(nomeC(x.c))}">
+        <button type="button" class="x${x.off?' back':''}" data-act="ce-rm" data-i="${i}" aria-label="${x.off?'Voltar':'Tirar'} ${esc(nomeC(x.c))}">${x.off?'↺':'×'}</button></div>`}).join('')}</div>
+    <div class="ceadd"><b>+ Incluir carne esquecida</b>
+      <select id="ce-np" class="in"><option value="">Escolha a carne</option>${ops.map(p=>`<option value="${p.c}"${e.np===p.c?' selected':''}>${esc(p.n)}</option>`).join('')}</select>
+      <div class="inrow"><input id="ce-nkg" class="in" inputmode="decimal" autocomplete="off" placeholder="kg" value="${esc(e.nkg)}" style="flex:1"><button type="button" class="btn" data-act="ce-add">Incluir</button></div></div>
+    <div class="cetot"><span>Total</span><span class="num" id="ce-tot">${kg(t0)} → ${kg(corrTot(e))} kg</span></div>
+    <button type="button" class="btn pri wide" data-act="ce-ok">Salvar correção</button>
+    <button type="button" class="btn wide" data-act="ce-cancel">Cancelar</button></section>`}
 function vContagem(){
   const d=S.cd,g=S.role!=='conferente';
   const lojaSel=S.loja===0?`<select id="cloja" class="in" style="width:auto">${lojaOpts(d.loja)}</select>`:`<span class="tag">${esc(lojaNome(d.loja))}</span>`;
@@ -1349,9 +1381,10 @@ function vContagem(){
         <div class="inrow"><button type="button" class="btn" data-act="cfin-cancel">Voltar</button><button type="button" class="btn pri" data-act="cfin-ok"${Object.keys(it).length?'':' disabled'}>Finalizar contagem</button></div></div>`
       :`<button type="button" class="btn pri wide" data-act="cfin">Finalizar contagem</button>${d.pes.length?zapCont({loja:d.loja,data:d.data,itens:it,pecas:d.pes.reduce((m,p)=>(m[p.c]=(m[p.c]||0)+1,m),{}),por:quemSou()}):''}`}
     </section>
+    ${S.cEd&&S.role==='gestor'?corrHTML():''}
     <section class="card"><div class="card-h"><h3>Contagens salvas</h3><span class="tag">${salvas.length}</span></div>
-      <div class="rows">${salvas.map(c=>`<div class="row static"><div class="row-main"><b>${dBR(c.data)}${S.loja?'':' · '+esc(lojaNome(c.loja))}</b><span>${c.modo==='exemplo'?'Contagem de exemplo':c.modo==='app'?'Pesada no app':'Lançada do papel'}${c.por!=='—'?' · '+esc(c.por):''}</span></div>
-        <div class="row-side"><span class="num">${kg(bovKg(c.itens))} kg</span>${g?`<span class="hint num">${rs(bovRs(c.itens))}</span>`:''}${c.modo==='exemplo'?'':`<button type="button" class="btn sm" data-act="zap" data-txt="${esc(msgCont(c))}" data-n="${esc(S.set.zap[c.loja]||S.set.zap.dir||'')}">WhatsApp</button>`}</div></div>`).join('')}</div>
+      <div class="rows">${salvas.map(c=>`<div class="row static"><div class="row-main"><b>${dBR(c.data)}${S.loja?'':' · '+esc(lojaNome(c.loja))}</b><span>${c.modo==='exemplo'?'Contagem de exemplo':c.modo==='app'?'Pesada no app':'Lançada do papel'}${c.por!=='—'?' · '+esc(c.por):''}</span>${c.corr?`<span><span class="pill warn">Corrigida por ${esc(c.corr.por)}</span></span>`:''}</div>
+        <div class="row-side"><span class="num">${kg(bovKg(c.itens))} kg</span>${g?`<span class="hint num">${rs(bovRs(c.itens))}</span>`:''}${c.modo==='exemplo'?'':`<div class="inrow"><button type="button" class="btn sm" data-act="zap" data-txt="${esc(msgCont(c))}" data-n="${esc(S.set.zap[c.loja]||S.set.zap.dir||'')}">WhatsApp</button>${S.role==='gestor'?`<button type="button" class="btn sm blue" data-act="ce-abre" data-l="${c.loja}" data-d="${c.data}">Corrigir</button>`:''}</div>`}</div></div>`).join('')}</div>
     </section>
   </div></div>`;
 }
@@ -2206,6 +2239,18 @@ const A={
   'cl-add':()=>{S.cd.linhas.push({c:'',kg:''});save();render()},
   'cl-rm':el=>{S.cd.linhas.splice(+el.dataset.i,1);save();render()},
   cfin:()=>{S.cconfirm=true;render()},
+  'ce-abre':el=>{abrirCorr(+el.dataset.l,el.dataset.d);render();document.getElementById('ced')?.scrollIntoView({behavior:'smooth',block:'start'})},
+  'ce-cancel':()=>{S.cEd=null;render()},
+  'ce-rm':el=>{const e=S.cEd,x=e?.L[+el.dataset.i];if(!x)return;if(x.novo)e.L.splice(+el.dataset.i,1);else x.off=!x.off;render()},
+  'ce-add':()=>{const e=S.cEd;if(!e)return;e.np=document.getElementById('ce-np')?.value||e.np;e.nkg=document.getElementById('ce-nkg')?.value??e.nkg;
+    const v=num(e.nkg);if(!e.np){toast('Escolha a carne.');return}if(!(v>0)){toast('Digite o kg da carne.');focusId('ce-nkg');return}
+    e.L.push({c:e.np,kg:kg(v),v0:0,off:false,novo:true});e.np='';e.nkg='';render()},
+  'ce-ok':()=>{const e=S.cEd;if(!e)return;const c=S.conts.find(x=>x.loja===e.loja&&x.data===e.data);if(!c){S.cEd=null;render();return}
+    const it={};for(const x of e.L){if(x.off)continue;const v=num(x.kg);if(!isFinite(v)||v<0){toast(`Kg inválido em ${nomeC(x.c)}.`);return}if(v>0)it[x.c]=r3((it[x.c]||0)+v)}
+    if(!Object.keys(it).length){toast('A contagem não pode ficar vazia.');return}
+    if(!c.orig)c.orig={itens:{...c.itens},pecas:c.pecas?{...c.pecas}:null,por:c.por,quando:c.quando};
+    const pc={};Object.keys(it).forEach(k=>{if(c.pecas?.[k]&&!e.L.find(x=>x.c===k)?.novo)pc[k]=c.pecas[k]});
+    c.itens=it;c.pecas=pc;c.corr={por:quemSou(),quando:nowBR()};S.cEd=null;resetIdx();save();render();toast(`Contagem de ${dBR(e.data)} corrigida.`)},
   'cfin-cancel':()=>{S.cconfirm=false;render()},
   'cfin-ok':()=>{const d=S.cd,it=cdItens(d);if(!Object.keys(it).length)return;
     S.conts=S.conts.filter(c=>!(c.loja===d.loja&&c.data===d.data));
@@ -2383,6 +2428,8 @@ const C={
 document.addEventListener('change',e=>{const t=e.target,id=t.id||'';
   if(C[id])return C[id](t);
   let m;
+  if((m=id.match(/^ce-kg-(\d+)$/))){const x=S.cEd?.L[+m[1]];if(x){x.kg=t.value;render()}return}
+  if(id==='ce-np'||id==='ce-nkg'){if(S.cEd)S.cEd[id.slice(3)]=t.value;return}
   if((m=id.match(/^lj-(nome|cidade|cnpj|cert|modo)-(\d+)$/))){const l=S.lojas.find(x=>x.id===+m[2]);if(!l)return;
     l[m[1]]=m[1]==='cert'?t.value==='1':m[1]==='cnpj'?t.value.replace(/\D/g,''):t.value.trim();save();if(m[1]!=='cidade')render();return}
   if((m=id.match(/^pg-(traseiro|dianteiro|costela)-(.+)$/))){const p=PM[m[2]];if(!p)return;
@@ -2412,6 +2459,7 @@ document.addEventListener('change',e=>{const t=e.target,id=t.id||'';
   else if(id.startsWith('zap-')){S.set.zap[id.slice(4)]=t.value.trim();save()}
 });
 document.addEventListener('input',e=>{const t=e.target;let m;
+  if((m=t.id.match(/^ce-kg-(\d+)$/))){const x=S.cEd?.L[+m[1]];if(x){x.kg=t.value;const o=document.getElementById('ce-tot'),c=S.conts.find(y=>y.loja===S.cEd.loja&&y.data===S.cEd.data);if(o&&c)o.textContent=`${kg(Object.values(c.itens).reduce((s,k)=>s+k,0))} → ${kg(corrTot(S.cEd))} kg`}return}
   if((m=t.id.match(/^ro-kg-(\d+)$/))){const o=S.rf.out[+m[1]];if(o){o.kg=t.value;const b=document.getElementById('somabox');if(b)b.innerHTML=somaBox(S.rf,S.rf.edit?S.recs.find(r=>r.id===S.rf.edit):null);saveDrafts()}return}
   if(t.id==='u-nome'||t.id==='u-usuario'){S.uForm[t.id.slice(2)]=t.value;return}
   if(/^n-(nf|kg|v)$/.test(t.id)){S.nForm[t.id.slice(2)]=t.value;return}
