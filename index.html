@@ -879,7 +879,10 @@ function notaBrajan(x){const F=FCNPJ[x.cnpj];
   /* o código do Brajan é o produto da loja: se não é carne cadastrada (frango, suíno, linguiça), o item não é bovino,
      mesmo que o nome pareça (ex.: "PEITO ... FGO" é peito de frango). Sem código, ou com "bovino" no nome, vale a leitura do nome. */
   const itens=(x.itens||[]).filter(i=>!i.unidade||/KG/.test(i.unidade)).map(i=>{const pm=i.codigo&&PM[i.codigo],nb=!pm&&!!i.codigo&&!/bovin|\bbov\b/i.test(i.descricao||'');
-    return{desc:i.descricao,cod:i.cod_fornecedor,c:pm?i.codigo:nb?null:matchProd(i.descricao),...(nb?{nb:true}:{}),kg:r3(i.qtd||0),v:r2(i.valor||0)}});
+    return{desc:i.descricao,cod:i.cod_fornecedor,c:pm?i.codigo:nb?null:matchProd(i.descricao),...(nb?{nb:true}:{}),kg:r3(i.qtd||0),vp:r2(i.valor||0),st:i.st||0}});
+  /* custo do item = produto + S.T. do item (do XML); sem S.T. por item, reparte (total da nota ÷ total dos produtos) */
+  const porItem=itens.some(i=>i.st>0),fat=!porItem&&x.total>0&&x.total_produtos>0?x.total/x.total_produtos:1;
+  itens.forEach(i=>{i.v=r2(porItem?i.vp+i.st:i.vp*fat)});
   return{loja:x.loja,forn:F?F.id:'c'+x.cnpj,...(F?{}:{fornNome:x.fornecedor}),nf:String(+x.numero||x.numero),chave:x.chave,data:x.emissao,itens,
     kg:r3(itens.reduce((t,i)=>t+i.kg,0)),v:r2(itens.reduce((t,i)=>t+i.v,0)),fonte:'Brajan',brajan:true,caminho:x.situacao==='a_caminho'}}
 /* nota a caminho só conta depois que chega (lançada no Brajan ou recebida no app) */
