@@ -1135,7 +1135,7 @@ const ICON={
 
 /* ---------- cabeçalho, abas, login ---------- */
 function tabsFor(){
-  const t=[['nf','Nota Fiscal'],['conferir','Conferir'],['contagem','Contagem'],['lista','Conferências']];
+  const t=[['nf','Nota Fiscal'],['conferir','Conferir'],['lista','Conferências'],['contagem','Estoque']];
   if(S.role==='gestor'&&LARGO.matches)t.unshift(['painel','Painel']);
   if(S.role!=='conferente')t.push(['balanco','Balanço']);
   if(S.role==='gestor')t.push(['ajustes','Ajustes']);
@@ -1677,7 +1677,7 @@ function vBal(){
   </section>`;
   const hoje=todayISO(), pa=ds.length>=2&&a&&b&&a<b?a:hoje.slice(0,8)+'00', pb=ds.length>=2&&a&&b&&a<b?b:hoje;
   const notasCard=vNotasPeriodo(ids,pa,pb,!(ds.length>=2&&a&&b&&a<b));
-  if(ds.length<2)return ctrls+notasCard+`<div class="empty">O balanço precisa de duas contagens de estoque${S.loja?'':' feitas na mesma data em todas as lojas'}: a inicial e a final. Faça as contagens na aba <b>Contagem</b>.</div>`;
+  if(ds.length<2)return ctrls+notasCard+`<div class="empty">O balanço precisa de duas contagens de estoque${S.loja?'':' feitas na mesma data em todas as lojas'}: a inicial e a final. Faça as contagens na aba <b>Estoque</b>.</div>`;
   if(!a||!b||a>=b)return ctrls+notasCard+`<p><span class="pill warn">Escolha uma contagem final depois da contagem inicial.</span></p>`;
   const B=balBov(ids,a,b), T=B.T;
   const kp=`<div class="kpis kbal">
