@@ -413,9 +413,14 @@ details summary{cursor:pointer;font-weight:600;font-size:.9rem;padding:4px 0}
 .pn-t td{padding:6px 0;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}.pn-t td.n,.pn-t th.n{text-align:right}
 .pn-vazio{color:var(--muted);font-size:.86rem}
 .pn-row2{display:grid;grid-template-columns:1.4fr 1fr;gap:12px;align-items:start}
-.pn-row3{display:grid;grid-template-columns:2fr 1fr;gap:12px;align-items:start}
+.pn-row2.pn-row3{grid-template-columns:1.4fr 1fr}
+.pn-row2>.card{height:100%}
+.pn-est{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.pn-est div{background:var(--bg);border-radius:8px;padding:9px 10px}
+.pn-est small{display:block;font-size:.74rem;color:var(--muted)}.pn-est b{font-family:'IBM Plex Mono',monospace;font-size:1.05rem}
+.pn-p{font-family:'IBM Plex Mono',monospace}.pn-p.ok{color:var(--ok)}.pn-p.warn{color:var(--warn)}.pn-p.crit{color:var(--crit)}
+.pn-nh{font-size:.74rem;color:var(--muted);font-weight:600;border-top:0!important}.pn-nl .n{text-align:right}
 .pn-notas{display:flex;flex-direction:column}
-.pn-nl{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:8px 4px;border:0;border-top:1px solid var(--line);background:none;font:inherit;color:inherit;text-align:left;width:100%}
+.pn-nl{display:grid;grid-template-columns:1fr 46px 56px 96px 150px;gap:12px;align-items:center;padding:8px 4px;border:0;border-top:1px solid var(--line);background:none;font:inherit;color:inherit;text-align:left;width:100%}
 button.pn-nl{cursor:pointer}button.pn-nl:hover{background:var(--surface-2)}
 .pn-nk{color:var(--muted);font-size:.86rem;font-variant-numeric:tabular-nums}
 </style>
@@ -1836,28 +1841,38 @@ const ROLA='#view .pes,#view #plist,#view #csug,#view .optlist';
 /* ---------- painel do gestor (tela de computador) ---------- */
 const LARGO=matchMedia('(min-width:1000px)');
 const kgI=n=>new Intl.NumberFormat('pt-BR',{maximumFractionDigits:0}).format(n||0); /* kg inteiro nos quadros do painel */
+const rsI=v=>'R$ '+kgI(v); /* real sem centavos nas tabelas do painel */
 const diaMais=(iso,n)=>{const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
 const segunda=iso=>{const d=new Date(iso+'T12:00:00');return diaMais(iso,-((d.getDay()+6)%7))};
 const CORES_LJ=['#1846C4','#16A39E','#E0A21B','#8E5BD0','#D0453A','#55627F'];
 /* período escolhido (a e b inclusive) e o período anterior do mesmo tamanho, para comparar */
-function pnPeriodo(){const h=todayISO(),p=S.pn.p;let a,b,pa,pb;
+/* comparação justa: mês fechado (do dia 1 ao último dia, 28, 29, 30 ou 31) compara com o mês anterior inteiro;
+   mês ou semana em andamento compara só com os mesmos dias do período anterior (01–11/10 contra 01–11/11). */
+const fimMes=iso=>{const y=+iso.slice(0,4),m=+iso.slice(5,7);return `${iso.slice(0,8)}${pad(new Date(y,m,0).getDate())}`};
+const mesAntes=(iso,k)=>{const d=new Date(+iso.slice(0,4),+iso.slice(5,7)-1-k,1);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-01`};
+function pnPeriodo(){const h=todayISO(),p=S.pn.p,livre=p==='livre'&&S.pn.a&&S.pn.b&&S.pn.a<=S.pn.b;let a,b,pa,pb;
   if(p==='hoje'){a=b=h;pa=pb=diaMais(h,-1)}
-  else if(p==='mes'){a=h.slice(0,8)+'01';const f=new Date(+h.slice(0,4),+h.slice(5,7),0).getDate();b=h.slice(0,8)+pad(f);pb=diaMais(a,-1);pa=pb.slice(0,8)+'01'}
-  else if(p==='livre'&&S.pn.a&&S.pn.b&&S.pn.a<=S.pn.b){a=S.pn.a;b=S.pn.b;const n=Math.round((new Date(b)-new Date(a))/864e5)+1;pb=diaMais(a,-1);pa=diaMais(a,-n)}
-  else{a=segunda(h);b=diaMais(a,6);pa=diaMais(a,-7);pb=diaMais(a,-1)}
+  else if(p==='mes'||livre){if(livre){a=S.pn.a;b=S.pn.b}else{a=h.slice(0,8)+'01';b=fimMes(h)}
+    const e=b<h?b:h<a?a:h; /* até onde já tem venda */
+    if(a.slice(8)==='01'&&b===fimMes(b)&&b<h){ /* meses fechados: os meses anteriores inteiros, cada um com os dias que tem */
+      const n=(+b.slice(0,4)-+a.slice(0,4))*12+(+b.slice(5,7)-+a.slice(5,7))+1;pa=mesAntes(a,n);pb=diaMais(a,-1)}
+    else if(a.slice(8)==='01'&&a.slice(0,7)===e.slice(0,7)){ /* mês em andamento: os mesmos dias do mês anterior */
+      pa=mesAntes(a,1);const f=fimMes(pa),d=pa.slice(0,8)+e.slice(8);pb=d>f?f:d}
+    else{const n=Math.max(1,Math.round((new Date(e)-new Date(a))/864e5)+1);pb=diaMais(a,-1);pa=diaMais(a,-n)}}
+  else{a=segunda(h);b=diaMais(a,6);pa=diaMais(a,-7);pb=diaMais(b<h?b:h,-7)} /* semana: até o mesmo dia da semana passada */
+  S._pnCmp=pa===pb?dBR(pa).slice(0,5):`${dBR(pa).slice(0,5)} a ${dBR(pb).slice(0,5)}`;
   return{a,b,pa,pb}}
 /* números de uma loja num período: vendas do Brajan, compras pelas notas, perda da desossa pelas conferências */
 function pnLoja(l,a,b){const r={vk:0,vr:0,cv:0,ck:0,cr:0,nn:0,nf:0,conf:0,forn:{},crit:[],peca:{}};
   Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||v.data<a||v.data>b)return;
     Object.entries(v.itens||{}).forEach(([c,x])=>{if(!PM[c]?.bov)return;r.vk+=x.kg;r.vr+=x.rs;r.cv+=x.kg*custoDe(l,c)})});
-  notasBal().forEach(n=>{if(n.loja!==l||n.data<a||n.data>b||!entrou(n))return;
-    const sv=n.itens.reduce((t,i)=>t+(i.v||0),0),sk=n.itens.reduce((t,i)=>t+i.kg,0);let tem=false;
-    n.itens.forEach(it=>{if(grupoItem(it)!=='Bovino')return;tem=true;const v=n.v*(sv?(it.v||0)/sv:(sk?it.kg/sk:1));r.ck+=it.kg;r.cr+=v;
+  notasBal().forEach(n=>{if(n.loja!==l||n.data<a||n.data>b||!entrou(n))return;let tem=false;
+    n.itens.forEach((it,i)=>{if(!itemOn(n,i,it))return;tem=true;const v=valItem(n,it);r.ck+=it.kg;r.cr+=v;
       const g=classNF(it);if(['traseiro','dianteiro','caixaria'].includes(g)&&v>0){const q=r.peca[g]||(r.peca[g]={kg:0,v:0});q.kg+=it.kg;q.v+=v}
       const f=r.forn[n.forn]||(r.forn[n.forn]={nome:fnome(n),kg:0,nf:0,conf:0});f.kg+=it.kg});
     if(tem)r.nn++});
   allConfs().forEach(c=>{if(c.loja!==l||c.data<a||c.data>b)return;const x=analise(c);if(x.st==='sem')return;
-    r.nf+=x.nf;r.conf+=x.conf;const f=r.forn[c.forn]||(r.forn[c.forn]={nome:fnome(c),kg:0,nf:0,conf:0});f.nf+=x.nf;f.conf+=x.conf;
+    r.nf+=x.nf;r.conf+=x.conf;r.nConf=(r.nConf||0)+1;const f=r.forn[c.forn]||(r.forn[c.forn]={nome:fnome(c),kg:0,nf:0,conf:0});f.nf+=x.nf;f.conf+=x.conf;
     if(x.st==='crit')r.crit.push({c,perda:x.perda})});
   r.margem=r.vr?(r.vr-r.cv)/r.vr:null;r.perda=r.nf?1-r.conf/r.nf:null;return r}
 function pnSoma(rs_){const t={vk:0,vr:0,cv:0,ck:0,cr:0,nn:0,nf:0,conf:0};rs_.forEach(r=>Object.keys(t).forEach(k=>t[k]+=r[k]));
@@ -1866,8 +1881,8 @@ const ultCont=l=>[...S.conts.filter(c=>c.loja===l).map(c=>c.data),...Object.keys
 const ultVend=l=>Object.values(S.vend||{}).filter(v=>v.loja===l).map(v=>v.data).sort().pop()||'';
 const dias=(a,b)=>Math.round((new Date(b)-new Date(a))/864e5);
 function pnVar(x,y,pontos){if(x==null||y==null||!isFinite(x)||!isFinite(y)||(!pontos&&!y))return '';
-  const d=pontos?(x-y)*100:(x/y-1)*100;if(Math.abs(d)<.05)return '<i>= período anterior</i>';
-  return `<i class="${d>0?'pn-up':'pn-dn'}">${d>0?'▲':'▼'} ${F1.format(Math.abs(d))}${pontos?' ponto'+(Math.abs(d)>=2?'s':''):'%'} vs período anterior</i>`}
+  const d=pontos?(x-y)*100:(x/y-1)*100;if(Math.abs(d)<.05)return `<i>= ${S._pnCmp||'período anterior'}</i>`;
+  return `<i class="${d>0?'pn-up':'pn-dn'}">${d>0?'▲':'▼'} ${F1.format(Math.abs(d))}${pontos?' ponto'+(Math.abs(d)>=2?'s':''):'%'} vs ${S._pnCmp||'período anterior'}</i>`}
 function pnGrafico(){const fim=segunda(todayISO()),sem=[...Array(8)].map((_,i)=>diaMais(fim,-7*(7-i)));
   const val=sem.map(a=>S.lojas.map(l=>{let t=0;Object.values(S.vend||{}).forEach(v=>{if(v.loja===l.id&&v.data>=a&&v.data<=diaMais(a,6))Object.entries(v.itens||{}).forEach(([c,x])=>{if(PM[c]?.bov)t+=x.rs})});return t/1000}));
   const mx=Math.max(10,...val.map(w=>w.reduce((s,v)=>s+v,0))),top=Math.ceil(mx/50)*50,H=170,y0=190,k=H/top;
@@ -1880,9 +1895,9 @@ function pnGrafico(){const fim=segunda(todayISO()),sem=[...Array(8)].map((_,i)=>
     <div class="pn-leg">${S.lojas.map((l,j)=>`<span style="--c:${CORES_LJ[j%6]}">${esc(l.nome)}</span>`).join('')}</div></section>`}
 
 /* painel de uma loja: abre ao clicar no cartão da loja (ou ao escolher a loja no topo) */
-function pnBarras(rot,val,tit){const mx=Math.max(1,...val),H=150,y0=170,w=Math.min(46,560/val.length-6),k=H/mx;let g='';
+function pnBarras(rot,val,tit,claro){const mx=Math.max(1,...val),H=150,y0=170,w=Math.min(46,560/val.length-6),k=H/mx;let g='';
   [0,.5,1].forEach(f=>{const y=y0-H*f;g+=`<line x1="40" y1="${y}" x2="630" y2="${y}" stroke="var(--line)"/><text x="34" y="${y+4}" text-anchor="end" fill="var(--muted)">${F1.format(mx*f/1000)}</text>`});
-  val.forEach((v,i)=>{const x=46+i*(580/val.length),h=v*k;if(h>0)g+=`<rect x="${x.toFixed(1)}" y="${(y0-h).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="var(--accent)"><title>${rot[i]}: ${rs(v)}</title></rect>`;
+  val.forEach((v,i)=>{const x=46+i*(580/val.length),h=v*k;if(h>0)g+=`<rect x="${x.toFixed(1)}" y="${(y0-h).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${claro?.[i]?'#9db3ea':'var(--accent)'}"><title>${rot[i]}: ${rs(v)}</title></rect>`;
     if(val.length<=16||i%2===0)g+=`<text x="${(x+w/2).toFixed(1)}" y="${y0+15}" text-anchor="middle" fill="var(--muted)">${rot[i]}</text>`});
   return `<svg viewBox="0 0 640 190" width="100%" font-size="11" role="img" aria-label="${tit}">${g}</svg>`}
 function vPainelLoja(l,a,b,pa,pb){const lj=S.lojas.find(x=>x.id===l),h=todayISO(),r=pnLoja(l,a,b),ant=pnLoja(l,pa,pb),uc=ultCont(l),uv=ultVend(l);
@@ -1891,19 +1906,21 @@ function vPainelLoja(l,a,b,pa,pb){const lj=S.lojas.find(x=>x.id===l),h=todayISO(
   const vd=ds.map(d=>{const v=S.vend?.[l+'|'+d];return v?Object.entries(v.itens||{}).reduce((t,[c,x])=>t+(PM[c]?.bov?x.rs:0),0):0});
   /* carnes mais vendidas */
   const m={};Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||v.data<a||v.data>b)return;Object.entries(v.itens||{}).forEach(([c,x])=>{if(!PM[c]?.bov)return;const q=m[c]||(m[c]={c,kg:0,rs:0,cv:0});q.kg+=x.kg;q.rs+=x.rs;q.cv+=x.kg*custoDe(l,c)})});
-  const top=Object.values(m).sort((x,y)=>y.rs-x.rs).slice(0,12);
+  const top=Object.values(m).sort((x,y)=>y.rs-x.rs).slice(0,10);
   const est=uc?contDe(l,uc):null;
   const kp=`<div class="pn-k">
     <div class="kpi"><small>Vendas</small><b>${r.vr?rsK(r.vr):'—'}</b>${pnVar(r.vr,ant.vr)}</div>
     <div class="kpi"><small>Kg vendidos</small><b>${r.vk?kgI(r.vk)+' kg':'—'}</b>${pnVar(r.vk,ant.vk)}</div>
     <div class="kpi"><small>Margem bruta</small><b>${pc(r.margem)}</b>${pnVar(r.margem,ant.margem,true)}</div>
     <div class="kpi"><small>Compras (notas)</small><b>${r.cr?rsK(r.cr):'—'}</b><i>${kgI(r.ck)} kg · ${r.nn} nota${r.nn===1?'':'s'}</i></div>
-    <div class="kpi"><small>Perda na desossa</small><b>${r.perda==null?'—':`<span class="pill ${perdaSt(r.perda)}">${pc(r.perda)}</span>`}</b><i>conferências do período</i></div></div>`;
-  const graf=`<section class="card"><h3>Vendas por dia (R$ mil)</h3>${vd.some(v=>v>0)?pnBarras(ds.map(d=>dBR(d).slice(0,5)),vd,'Vendas por dia'):`<p class="pn-vazio">${uv?'Sem vendas do Brajan neste período.':'Esta loja ainda não manda vendas pelo Brajan.'}</p>`}</section>`;
-  const tops=`<section class="card"><h3>Carnes mais vendidas</h3>${top.length?`<table class="pn-t"><tr><th>Carne</th><th class="n">Kg</th><th class="n">R$</th><th class="n">Margem</th></tr>
-    ${top.map(q=>`<tr><td>${esc(PM[q.c]?.n||S.custos?.[l]?.itens?.[q.c]?.n||q.c)}</td><td class="n">${kgI(q.kg)}</td><td class="n">${rs(q.rs)}</td><td class="n">${pc(q.rs?(q.rs-q.cv)/q.rs:null)}</td></tr>`).join('')}</table>`:'<p class="pn-vazio">Sem vendas no período.</p>'}</section>`;
+    <div class="kpi"><small>Perda na desossa</small><b class="pn-p ${r.perda==null?'':perdaSt(r.perda)}">${pc(r.perda)}</b><i>${r.nConf?`${r.nConf} conferência${r.nConf>1?'s':''}`:'sem conferência no período'}</i></div></div>`;
+  const dCom=ds.filter((d,i)=>vd[i]>0&&d!==h),med=dCom.length?dCom.reduce((t,d)=>t+vd[ds.indexOf(d)],0)/dCom.length:0,semV=ds.filter((d,i)=>!vd[i]&&d<h);
+  const graf=`<section class="card"><div class="card-h"><h3>Vendas por dia (R$ mil)</h3>${med?`<span class="tag">média ${med>=1e4?rsK(med):rsI(med)}/dia</span>`:''}</div>${vd.some(v=>v>0)?pnBarras(ds.map(d=>dBR(d).slice(0,5)),vd,'Vendas por dia',ds.map(d=>d===h)):`<p class="pn-vazio">${uv?'Sem vendas do Brajan neste período.':'Esta loja ainda não manda vendas pelo Brajan.'}</p>`}
+    ${vd.some(v=>v>0)?`<p class="hint">${[semV.length?`Sem venda em ${semV.map(d=>dBR(d).slice(0,5)).join(', ')} (feriado ou loja fechada)`:'',ds.includes(h)?'Hoje em azul claro: o dia ainda não terminou':''].filter(Boolean).join(' · ')}</p>`:''}</section>`;
+  const tops=`<section class="card"><div class="card-h"><h3>Carnes mais vendidas</h3><span class="tag">top 10</span></div>${top.length?`<table class="pn-t"><tr><th>Carne</th><th class="n">Kg</th><th class="n">R$</th><th class="n">Margem</th></tr>
+    ${top.map(q=>{const mg=q.rs?(q.rs-q.cv)/q.rs:null;return `<tr><td>${esc(PM[q.c]?.n||S.custos?.[l]?.itens?.[q.c]?.n||q.c)}</td><td class="n">${kgI(q.kg)}</td><td class="n">${rsI(q.rs)}</td><td class="n"${mg<0?' style="color:var(--crit);font-weight:600"':''}>${pc(mg)}</td></tr>`}).join('')}</table>`:'<p class="pn-vazio">Sem vendas no período.</p>'}</section>`;
   /* notas de entrada: todas as notas emitidas para a loja no período (Brajan/XML, ou foto enquanto o XML não chega) e as recebidas ainda sem pesagem */
-  const nm=new Map();notasBal().filter(n=>n.loja===l&&n.data>=a&&n.data<=b&&temBov(n)).forEach(n=>nm.set(nkey(n),n));
+  const nm=new Map();notasBal().filter(n=>n.loja===l&&n.data>=a&&n.data<=b&&(!n.itens?.length||bovDaNota(n).kg>0)).forEach(n=>nm.set(nkey(n),n));
   const bl=brajanLoja(l);
   S.recs.filter(x=>x.loja===l&&!nm.has(nkey(x))&&(!confDoRec(x)||(bl&&x.data>=a&&x.data<=b))).forEach(x=>nm.set(nkey(x),{...(notaFoto(x)||{loja:l,forn:x.forn,fornNome:x.fornNome,nf:x.nf,data:x.data,itens:[],kg:0,v:0,foto:true}),fora:bl}));
   const notas=[...nm.values()].sort((x,y)=>(y.data||'').localeCompare(x.data||'')||(+y.nf)-(+x.nf));
@@ -1913,18 +1930,19 @@ function vPainelLoja(l,a,b,pa,pb){const lj=S.lojas.find(x=>x.id===l),h=todayISO(
     const r=S.recs.find(y=>nkey(y)===nkey(n));if(r)return{act:'startrec',id:r.id,st:'warn',t:'Recebida, sem pesagem'};
     if(!entrou(n))return{st:'sem',t:'A caminho'};return{st:'crit',t:'Não conferida'}};
   const L=notas.map(n=>({n,x:sitN(n)})),nao=L.filter(o=>o.x.st==='crit'&&o.x.t==='Não conferida').length,semp=L.filter(o=>o.x.act==='startrec').length;
-  const conta=n=>entrou(n)&&!n.fora,tk=notas.filter(conta).reduce((t,n)=>t+(n.kg||0),0),tv=notas.filter(conta).reduce((t,n)=>t+(n.v||0),0);
+  const bq=n=>n.itens?.length?bovDaNota(n):{kg:n.kg||0,rs:n.v||0};
+  const conta=n=>entrou(n)&&!n.fora,tk=notas.filter(conta).reduce((t,n)=>t+bq(n).kg,0),tv=notas.filter(conta).reduce((t,n)=>t+bq(n).rs,0);
   const notasH=`<section class="card"><div class="card-h"><h3>Notas de entrada</h3><span class="tag">${notas.length} nota${notas.length===1?'':'s'} · ${kgI(tk)} kg · ${rsK(tv)}</span></div>
-    ${nao||semp?`<p class="hint">${[nao?`<b>${nao}</b> não conferida${nao>1?'s':''}`:'',semp?`<b>${semp}</b> recebida${semp>1?'s':''} sem pesagem`:''].filter(Boolean).join(' · ')}. Todas entram no balanço.</p>`:''}
+    <p class="hint">${nao||semp?[nao?`<b>${nao}</b> não conferida${nao>1?'s':''}`:'',semp?`<b>${semp}</b> recebida${semp>1?'s':''} sem pesagem`:''].filter(Boolean).join(' · ')+'.':notas.length?'Todas conferidas.':''} Só carne bovina (kg e R$ com S.T., sem miúdos). Frango, suíno e nota só de miúdos não aparecem.</p>
     ${L.some(o=>o.n.fora)?'<p class="hint"><b>Nº não achado no Brajan:</b> a nota foi recebida no app com um número que não existe no Brajan (provável erro de digitação). Corrija o número na aba Nota Fiscal.</p>':''}
-    ${notas.length?`<div class="pn-notas">${L.map(({n,x})=>{const t=`<span class="pn-nf"><b>NF ${esc(n.nf)}</b> · ${esc(fnome(n))} · ${dBR(n.data).slice(0,5)}</span><span class="pn-nk">${n.kg?kgI(n.kg)+' kg':''}${n.v?' · '+rs(n.v):''}</span><span class="pill ${x.st}">${x.t}</span>`;
+    ${notas.length?`<div class="pn-notas"><div class="pn-nl pn-nh"><span>Nota · fornecedor</span><span>Data</span><span class="n">Kg</span><span class="n">R$</span><span></span></div>${L.map(({n,x})=>{const q=bq(n),t=`<span class="pn-nf"><b>${esc(n.nf)}</b> · ${esc(fnome(n))}</span><span class="pn-nk">${dBR(n.data).slice(0,5)}</span><span class="pn-nk n">${q.kg?kgI(q.kg):''}</span><span class="pn-nk n">${q.rs?rs(q.rs):''}</span><span class="pill ${x.st}">${x.t}</span>`;
       return x.act?`<button type="button" class="pn-nl" data-act="${x.act}" data-id="${x.id}">${t}</button>`:`<div class="pn-nl">${t}</div>`}).join('')}</div>`:'<p class="pn-vazio">Nenhuma nota no período.</p>'}
     ${Object.values(S.comps||{}).some(c=>c.loja===l)?'':'<p class="hint">As notas emitidas para a loja chegam pelo Brajan. Enquanto isso, aparecem só as recebidas no app.</p>'}</section>`;
   const av=[!uc?'Nenhuma contagem feita':dias(uc,h)>7?`Contagem atrasada (${dias(uc,h)} dias)`:'',!uv?'Sem vendas do Brajan':dias(uv,h)>3?`Brajan parado desde ${dBR(uv).slice(0,5)}`:'',lj.cnpj?'':'CNPJ da loja faltando'].filter(Boolean);
-  const estq=`<section class="card"><h3>Estoque</h3>${est?`<table class="pn-t"><tr><td>Última contagem</td><td class="n">${dBR(uc)}</td></tr><tr><td>Carne bovina</td><td class="n">${kgI(bovKg(est))} kg</td></tr><tr><td>Valor (custo atual)</td><td class="n">${rs(bovRsL(est,l))}</td></tr></table>`:'<p class="pn-vazio">Sem contagem.</p>'}
+  const estq=`<section class="card"><h3>Estoque</h3>${est?`<div class="pn-est"><div><small>Última contagem</small><b>${dBR(uc).slice(0,5)}</b></div><div><small>Carne bovina</small><b>${kgI(bovKg(est))} kg</b></div><div><small>Valor (custo)</small><b>${rsI(bovRsL(est,l))}</b></div></div>`:'<p class="pn-vazio">Sem contagem.</p>'}
     ${av.length?`<div class="pn-tags">${av.map(t=>`<span class="pill warn">${t}</span>`).join('')}</div>`:''}
     <button type="button" class="btn" data-act="pn-bal" data-id="${l}">Abrir balanço da loja</button></section>`;
-  return kp+`<div class="pn-row2">${graf}${tops}</div><div class="pn-row3">${notasH}${estq}</div>`}
+  return kp+`<div class="pn-row2">${graf}${estq}</div><div class="pn-row2 pn-row3">${notasH}${tops}</div>`}
 function vPainel(){
   const {a,b,pa,pb}=pnPeriodo(),h=todayISO();
   const L=S.lojas.map(l=>({l,r:pnLoja(l.id,a,b),ant:pnLoja(l.id,pa,pb),uc:ultCont(l.id),uv:ultVend(l.id)}));
@@ -1934,7 +1952,7 @@ function vPainel(){
   const per=`<section class="card"><div class="pn-top">${lj?'<button type="button" class="btn sm" data-act="pn-todas">← Todas as lojas</button>':''}<h2>${lj?esc(lj.nome):'Painel do gestor'} · ${a===b?dBR(a):`${dBR(a)} a ${dBR(b)}`}</h2>
     <div class="pn-per">${bt('hoje','Hoje')}${bt('semana','Semana')}${bt('mes','Mês')}${bt('livre','Escolher período')}
     ${S.pn.p==='livre'?`<input type="date" id="pnA" value="${S.pn.a||a}" aria-label="De"><input type="date" id="pnB" value="${S.pn.b||b}" aria-label="Até">`:''}</div></div>
-    <p class="hint">Carne bovina. Vendas e custo: Brajan${L.some(x=>x.uv)?` (último dia recebido: ${dBR(L.map(x=>x.uv).sort().pop())})`:', ainda sem dados'}. Compras: notas recebidas. Perda: conferências de peso.</p></section>`;
+    <p class="hint">Carne bovina. Vendas e custo: Brajan${L.some(x=>x.uv)?` (último dia recebido: ${dBR(L.map(x=>x.uv).sort().pop())})`:', ainda sem dados'}. Compras: notas de carne bovina com S.T., sem miúdos. Perda: conferências de peso.</p></section>`;
   const kp=`<div class="pn-k">
     <div class="kpi"><small>Vendas · todas as lojas</small><b>${T.vr?rsK(T.vr):'—'}</b>${pnVar(T.vr,A.vr)}</div>
     <div class="kpi"><small>Kg vendidos</small><b>${T.vk?kgI(T.vk)+' kg':'—'}</b>${pnVar(T.vk,A.vk)}</div>
