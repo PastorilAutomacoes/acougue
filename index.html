@@ -1089,7 +1089,7 @@ function linhasRes(a){
   a.grupos.forEach(g=>{
     if(g.k==='caixaria'){L.push(`*Caixaria*: nota ${kg(g.nf)} · conferido ${kg(g.conf)} ${IC[g.st]}`);
       g.cxItens.filter(r=>r.st!=='ok').forEach(r=>L.push(`   • ${r.nome}: nota ${kg(r.nf)}${r.volOk&&r.vol?` (${r.vol} cx)`:''} · conferido ${kg(r.conf)} (${r.cx} cx)${r.falta?` · falta ${r.falta} cx`:''}`))}
-    else L.push(`*${g.n}*: nota ${kg(g.nf)} · conferido ${kg(g.conf)} · perda ${pc(g.perda)} (esperado ${pc(g.esp)}) ${IC[g.st]}`)});
+    else L.push(`*${g.n}*: nota ${kg(g.nf)} · conferido ${kg(g.conf)} · perda ${pc(g.perda)} ${IC[g.st]}`)});
   L.push(`*GERAL*: nota ${kg(a.nf)} · conferido ${kg(a.conf)} · perda ${pc(a.perda)}`);
   return L;
 }
@@ -1098,9 +1098,7 @@ function msgRes(c,gestor,comp){
   const L=[comp?`➕ *COMPLEMENTO DA CONFERÊNCIA*`:`🥩 *CONFERÊNCIA DE CARNE – ENTRADA*`,`${lojaNome(c.loja)} · NF ${c.nf} · ${fnome(c)||''}`,`📅 ${dBR(c.data)} às ${c.hora} · ${c.conferente}`];
   if(comp){const cp=c.pes.filter(p=>p.comp===comp);L.push('',`Pesagens do complemento (${comp}):`);resumo({pes:cp}).forEach(r=>L.push(`• ${PM[r.c]?.n||r.c}: ${kg(r.kg)} kg`))}
   L.push('','*RESULTADO*',...linhasRes(a));
-  if(a.n?.dig)L.push('(Comparado com os pesos digitados da DANFE; o XML ainda não entrou.)');
   if(gestor){if(a.n?.v)L.push(`Valor da NF: ${rs(a.n.v)}`);
-    if(c.rec)L.push(recDe(c)?.dig?'Nota digitada antes da pesagem.':'Conferência às cegas.');
     divergencias(c).forEach(x=>L.push(`⚠️ ${x.nome}: digitado ${kg(x.dig)} · XML ${kg(x.xml)}`));const td=c.pes.filter(p=>p.td).length;if(td)L.push(`Tara digitada à mão em ${td} pesagem(ns).`)}
   if(c.fotos?.length)L.push(`📷 ${c.fotos.length} foto(s) da nota no app`);
   return L.join('\n');
