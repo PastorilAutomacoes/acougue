@@ -1902,7 +1902,7 @@ function pnBarras(rot,val,tit,claro){const mx=Math.max(1,...val),H=150,y0=170,w=
   return `<svg viewBox="0 0 640 190" width="100%" font-size="11" role="img" aria-label="${tit}">${g}</svg>`}
 function vPainelLoja(l,a,b,pa,pb){const lj=S.lojas.find(x=>x.id===l),h=todayISO(),r=pnLoja(l,a,b),ant=pnLoja(l,pa,pb),uc=ultCont(l),uv=ultVend(l);
   /* vendas por dia (no "Hoje", os últimos 7 dias) */
-  const d0=a===b?diaMais(a,-6):a,d1=b>h?h:b,ds=[];for(let d=d0;d<=d1&&ds.length<62;d=diaMais(d,1))ds.push(d);
+  const d0=a===b?diaMais(a,-6):a,d1=b,ds=[]; /* mostra todos os dias do período; os que ainda não chegaram ficam vazios */for(let d=d0;d<=d1&&ds.length<62;d=diaMais(d,1))ds.push(d);
   const vd=ds.map(d=>{const v=S.vend?.[l+'|'+d];return v?Object.entries(v.itens||{}).reduce((t,[c,x])=>t+(PM[c]?.bov?x.rs:0),0):0});
   /* carnes mais vendidas */
   const m={};Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||v.data<a||v.data>b)return;Object.entries(v.itens||{}).forEach(([c,x])=>{if(!PM[c]?.bov)return;const q=m[c]||(m[c]={c,kg:0,rs:0,cv:0});q.kg+=x.kg;q.rs+=x.rs;q.cv+=x.kg*custoDe(l,c)})});
