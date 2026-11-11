@@ -876,7 +876,10 @@ function setConf(id,patch){const a=S.apps.find(c=>c.id===id);if(a)Object.assign(
 const nkey=x=>`${x.loja}|${x.forn}|${+x.nf}`;
 /* NF-e de entrada vinda do Brajan (XML emitido para o CNPJ da loja): vale como nota XML, conferida ou não */
 function notaBrajan(x){const F=FCNPJ[x.cnpj];
-  const itens=(x.itens||[]).filter(i=>!i.unidade||/KG/.test(i.unidade)).map(i=>({desc:i.descricao,cod:i.cod_fornecedor,c:i.codigo&&PM[i.codigo]?i.codigo:matchProd(i.descricao),kg:r3(i.qtd||0),v:r2(i.valor||0)}));
+  /* o código do Brajan é o produto da loja: se não é carne cadastrada (frango, suíno, linguiça), o item não é bovino,
+     mesmo que o nome pareça (ex.: "PEITO ... FGO" é peito de frango). Sem código, ou com "bovino" no nome, vale a leitura do nome. */
+  const itens=(x.itens||[]).filter(i=>!i.unidade||/KG/.test(i.unidade)).map(i=>{const pm=i.codigo&&PM[i.codigo],nb=!pm&&!!i.codigo&&!/bovin|\bbov\b/i.test(i.descricao||'');
+    return{desc:i.descricao,cod:i.cod_fornecedor,c:pm?i.codigo:nb?null:matchProd(i.descricao),...(nb?{nb:true}:{}),kg:r3(i.qtd||0),v:r2(i.valor||0)}});
   return{loja:x.loja,forn:F?F.id:'c'+x.cnpj,...(F?{}:{fornNome:x.fornecedor}),nf:String(+x.numero||x.numero),chave:x.chave,data:x.emissao,itens,
     kg:r3(itens.reduce((t,i)=>t+i.kg,0)),v:r2(itens.reduce((t,i)=>t+i.v,0)),fonte:'Brajan',brajan:true,caminho:x.situacao==='a_caminho'}}
 /* nota a caminho só conta depois que chega (lançada no Brajan ou recebida no app) */
@@ -964,7 +967,8 @@ function classNF(it){
   return 'outros';
 }
 const volNF=it=>{const m=String(it.desc).match(/-\s*(\d+)[,.]0+\s*$/);return m?+m[1]:null};
-function grupoItem(it){const k=classNF(it);if(k!=='outros')return 'Bovino';const c=it.c||matchProd(it.desc);return c&&PM[c]?.bov?'Bovino':'Outros'}
+const NAO_BOV=/\b(fgo|frango|chicken|chiken|suin[oa]?|sui|porco|lingui[cç]a|ling|salsich[aã]o?|calabresa|toscana|salame|paio|mortadela|bandeja|bdj|sadia|seara|aurora|perdigao)\b/;
+function grupoItem(it){if(it.nb||NAO_BOV.test(norm(it.desc||'')))return 'Outros';const k=classNF(it);if(k!=='outros')return 'Bovino';const c=it.c||matchProd(it.desc);return c&&PM[c]?.bov?'Bovino':'Outros'}
 
 /* ---------- resultado da conferência (nota × pesado, por peça) ---------- */
 const RANK={ok:0,warn:1,crit:2};
@@ -1574,7 +1578,7 @@ function vNotas(){
 function calc(r){r.cmv=r.ei+r.c-r.ef;r.perdaKg=r.cmv-r.vk;r.perda=r.cmv>0?r.perdaKg/r.cmv:null;r.cmvR=r.eiR+r.cR-r.efR;r.lucro=r.vr-r.cmvR;r.margem=r.vr?r.lucro/r.vr:null;r.markup=r.cmvR?r.lucro/r.cmvR:null;return r}
 /* miúdos (fígado, coração, mocotó…) ficam fora do balanço: nas compras, nos estoques e nas vendas */
 const bovBal=c=>!!PM[c]?.bov&&!PM[c]?.miudo;
-const miudoIt=it=>{const c=it.c||matchProd(it.desc);return !!PM[c]?.miudo||(classNF(it)==='outros'&&/miud|figado|mocoto|bucho|rumen|coracao|rabo|lingua|tripa/.test(norm(it.desc)))};
+const miudoIt=it=>{if(it.nb||NAO_BOV.test(norm(it.desc||'')))return false;const c=it.c||matchProd(it.desc);return !!PM[c]?.miudo||(classNF(it)==='outros'&&/miud|figado|mocoto|bucho|rumen|coracao|rabo|lingua|tripa/.test(norm(it.desc)))};
 /* itens de cada nota que entram no balanço: o padrão é carne bovina sem miúdos; a escolha fica salva na nota (documento vimp "loja|itens|nota") */
 const itKey=n=>`${n.loja}|itens|${nkey(n)}`;
 function itemOn(n,i,it){const v=S.vimp[itKey(n)]?.x?.[i];if(v!=null)return !!v;return grupoItem(it)==='Bovino'&&!miudoIt(it)}
