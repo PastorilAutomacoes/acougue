@@ -1859,7 +1859,7 @@ function pnPeriodo(){const h=todayISO(),p=S.pn.p,livre=p==='livre'&&S.pn.a&&S.pn
     else if(a.slice(8)==='01'&&a.slice(0,7)===e.slice(0,7)){ /* mês em andamento: os mesmos dias do mês anterior */
       pa=mesAntes(a,1);const f=fimMes(pa),d=pa.slice(0,8)+e.slice(8);pb=d>f?f:d}
     else{const n=Math.max(1,Math.round((new Date(e)-new Date(a))/864e5)+1);pb=diaMais(a,-1);pa=diaMais(a,-n)}}
-  else{a=segunda(h);b=diaMais(a,6);pa=diaMais(a,-7);pb=diaMais(b<h?b:h,-7)} /* semana: até o mesmo dia da semana passada */
+  else{b=h;a=diaMais(h,-6);pa=diaMais(a,-7);pb=diaMais(b,-7)} /* semana: hoje e os 6 dias antes; compara com os 7 dias anteriores */
   S._pnCmp=pa===pb?dBR(pa).slice(0,5):`${dBR(pa).slice(0,5)} a ${dBR(pb).slice(0,5)}`;
   return{a,b,pa,pb}}
 /* números de uma loja num período: vendas do Brajan, compras pelas notas, perda da desossa pelas conferências */
