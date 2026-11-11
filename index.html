@@ -1914,12 +1914,15 @@ const mesRot=m=>`${MESES_C[+m.slice(5,7)-1]}/${m.slice(2,4)}`;
 const META_MG=.16;
 function vcpDados(l){const h=todayISO(),cps=Object.values(S.comps||{}).filter(c=>c.loja===l&&c.emissao);
   if(!cps.length)return null;
-  const c0=cps.map(c=>c.emissao).sort()[0],m0=+c0.slice(8)>5?diaMais(fimMes(c0),1).slice(0,7):c0.slice(0,7); /* começou depois do dia 5: mês incompleto, fica de fora */
+  /* começa no 1º mês completo de notas lançadas no Brajan e de vendas (começou depois do dia 5: o mês fica de fora) */
+  const ini=d=>+d.slice(8)>5?diaMais(fimMes(d),1).slice(0,7):d.slice(0,7),lc=cps.filter(c=>c.situacao==='lancada').map(c=>c.emissao).sort()[0],
+    v0=Object.values(S.vend||{}).filter(v=>v.loja===l).map(v=>v.data).sort()[0];
+  if(!lc)return null;const m0=[ini(lc),v0?ini(v0):''].sort().pop();
   const ms=[];for(let m=m0;m<=h.slice(0,7);m=diaMais(fimMes(m+'-01'),1).slice(0,7))ms.push(m);
   const L=ms.slice(-6).map(m=>{const a=m+'-01',b=fimMes(a),r={m,a,b,fechado:b<h,ck:0,cr:0,vk:0,vr:0,ne:0,pg:0};
     notasBal().forEach(n=>{if(n.loja!==l||n.data<a||n.data>b||!entrou(n))return;const q=bovDaNota(n);r.ck+=q.kg;r.cr+=q.rs});
     Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||v.data<a||v.data>b)return;Object.entries(v.itens||{}).forEach(([c,x])=>{if(bovBal(c)){r.vk+=x.kg;r.vr+=x.rs}})});
-    cps.forEach(c=>{if(c.emissao<a||c.emissao>b)return;const it=c.itens||[];r.ne+=c.total>0?c.total:it.reduce((t,i)=>t+(i.valor||0)+(i.st||0),0)});
+    cps.forEach(c=>{if(c.emissao<a||c.emissao>b||(c.situacao!=='lancada'&&!entrou(notaBrajan(c))))return; /* nota só a caminho ainda não conta */const it=c.itens||[];r.ne+=c.total>0?c.total:it.reduce((t,i)=>t+(i.valor||0)+(i.st||0),0)});
     Object.values(S.pags||{}).forEach(p=>{if(p.loja===l&&p.pagamento&&p.pagamento>=a&&p.pagamento<=b)r.pg+=p.valor_pago||0});
     return r});
   const ab=Object.values(S.pags||{}).filter(p=>p.loja===l&&p.situacao==='aberto'),sal=p=>Math.max(0,(p.valor||0)-(p.valor_pago||0));
