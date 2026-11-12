@@ -419,6 +419,8 @@ table.vx{width:100%;border-collapse:collapse;font-size:.84rem;font-family:'IBM P
 .vx th{background:#E9EEF8;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:.76rem;color:#33405e}
 .vx td:first-child,.vx th:first-child{text-align:left;font-family:'IBM Plex Sans',sans-serif;background:#F6F8FC;font-weight:600;color:#26324f}
 .vx tr.sec td{background:var(--accent)!important;color:#fff;font-family:Oswald,sans-serif;font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;text-align:left}
+.vx tr.sec2 td{background:#7a4a1c!important;color:#fff;font-family:Oswald,sans-serif;font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;text-align:left}
+.vx tr.sub td{background:#F3E9DF!important;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:.74rem;color:#5a3a20}
 .vx tr.key td{background:#FFF8D9;font-weight:700}.vx tr.key td:first-child{background:#FFF1B8}
 .vx td.m3,.vx th.m3{background:#EAF5EE;font-weight:700;border-left:2px solid var(--ok)}
 .vx .r{color:var(--crit)}.vx .g{color:var(--ok)}
@@ -1912,7 +1914,7 @@ function pnGrafico(){const fim=segunda(todayISO()),sem=[...Array(8)].map((_,i)=>
    Mês incompleto de compras (o Brajan começou a mandar no meio do mês) fica de fora. */
 const MESES_C=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 const mesRot=m=>`${MESES_C[+m.slice(5,7)-1]}/${m.slice(2,4)}`;
-const META_MG=.16;
+const META_MG=.16,MIUDO_OK=.9; /* miúdo não tem osso: abaixo de 90% vendido do que entrou é alerta */
 function vcpDados(l){const h=todayISO(),cps=Object.values(S.comps||{}).filter(c=>c.loja===l&&c.emissao);
   if(!cps.length)return null;
   /* começa no 1º mês completo de notas lançadas no Brajan e de vendas (começou depois do dia 5: o mês fica de fora) */
@@ -1920,16 +1922,22 @@ function vcpDados(l){const h=todayISO(),cps=Object.values(S.comps||{}).filter(c=
     v0=Object.values(S.vend||{}).filter(v=>v.loja===l).map(v=>v.data).sort()[0];
   if(!lc)return null;const m0=[ini(lc),v0?ini(v0):''].sort().pop();
   const ms=[];for(let m=m0;m<=h.slice(0,7);m=diaMais(fimMes(m+'-01'),1).slice(0,7))ms.push(m);
-  const L=ms.slice(-6).map(m=>{const a=m+'-01',b=fimMes(a),r={m,a,b,fechado:b<h,ck:0,cr:0,vk:0,vr:0,ne:0,pg:0};
-    notasBal().forEach(n=>{if(n.loja!==l||n.data<a||n.data>b||!entrou(n))return;const q=bovDaNota(n);r.ck+=q.kg;r.cr+=q.rs});
-    Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||v.data<a||v.data>b)return;Object.entries(v.itens||{}).forEach(([c,x])=>{if(bovBal(c)){r.vk+=x.kg;r.vr+=x.rs}})});
+  const L=ms.slice(-6).map(m=>{const a=m+'-01',b=fimMes(a),r={m,a,b,fechado:b<h,ck:0,cr:0,vk:0,vr:0,ne:0,pg:0,mck:0,mcr:0,mvk:0,mvr:0,mi:{}};
+    const mi=c=>r.mi[c]||(r.mi[c]={c,ck:0,cr:0,vk:0,vr:0});
+    notasBal().forEach(n=>{if(n.loja!==l||n.data<a||n.data>b||!entrou(n))return;const q=bovDaNota(n);r.ck+=q.kg;r.cr+=q.rs;
+      n.itens.forEach(it=>{if(!miudoIt(it))return;const v=valItem(n,it),o=mi(it.c||'?');o.ck+=it.kg;o.cr+=v;r.mck+=it.kg;r.mcr+=v})});
+    Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||v.data<a||v.data>b)return;Object.entries(v.itens||{}).forEach(([c,x])=>{if(bovBal(c)){r.vk+=x.kg;r.vr+=x.rs}
+      else if(PM[c]?.miudo){const o=mi(c);o.vk+=x.kg;o.vr+=x.rs;r.mvk+=x.kg;r.mvr+=x.rs}})});
     cps.forEach(c=>{if(c.emissao<a||c.emissao>b||(c.situacao!=='lancada'&&!entrou(notaBrajan(c))))return; /* nota só a caminho ainda não conta */const it=c.itens||[];r.ne+=c.total>0?c.total:it.reduce((t,i)=>t+(i.valor||0)+(i.st||0),0)});
     Object.values(S.pags||{}).forEach(p=>{if(p.loja===l&&p.pagamento&&p.pagamento>=a&&p.pagamento<=b)r.pg+=p.valor_pago||0});
     return r});
   const ab=Object.values(S.pags||{}).filter(p=>p.loja===l&&p.situacao==='aberto'),sal=p=>Math.max(0,(p.valor||0)-(p.valor_pago||0));
   const vencidos=ab.filter(p=>p.vencimento&&p.vencimento<h&&sal(p)>.005),aVencer=ab.filter(p=>!p.vencimento||p.vencimento>=h);
-  const F=L.filter(r=>r.fechado&&r.ck>0&&r.vk>0).slice(-3),med=F.length?F.reduce((t,r)=>{['ck','cr','vk','vr','ne','pg'].forEach(k=>t[k]+=r[k]);return t},{ck:0,cr:0,vk:0,vr:0,ne:0,pg:0,n:F.length,de:F[0].m,ate:F[F.length-1].m}):null;
-  if(med)['ck','cr','vk','vr','ne','pg'].forEach(k=>med[k]/=med.n); /* média por mês (as razões não mudam) */
+  const KS=['ck','cr','vk','vr','ne','pg','mck','mcr','mvk','mvr'];
+  const F=L.filter(r=>r.fechado&&r.ck>0&&r.vk>0).slice(-3),med=F.length?F.reduce((t,r)=>{KS.forEach(k=>t[k]+=r[k]);return t},{...Object.fromEntries(KS.map(k=>[k,0])),n:F.length,de:F[0].m,ate:F[F.length-1].m}):null;
+  /* miúdo por miúdo, somando os meses fechados da média */
+  const miS={};F.forEach(r=>Object.values(r.mi).forEach(o=>{const t=miS[o.c]||(miS[o.c]={c:o.c,ck:0,cr:0,vk:0,vr:0});['ck','cr','vk','vr'].forEach(k=>t[k]+=o[k])}));
+  if(med){med.miud=Object.values(miS).filter(o=>o.ck>.0005||o.vk>.0005).sort((x,y)=>y.vr-x.vr);KS.forEach(k=>med[k]/=med.n)} /* média por mês (as razões não mudam) */
   return{L,med,aVencer:aVencer.reduce((t,p)=>t+sal(p),0),venc:vencidos.reduce((t,p)=>t+sal(p),0),nVenc:vencidos.length,temPag:Object.values(S.pags||{}).some(p=>p.loja===l)}}
 const vcpCalc=r=>{const x={...r};x.rkg=r.ck?r.vk/r.ck:null;x.r100=r.cr?r.vr/r.cr*100:null;x.ckc=r.ck?r.cr/r.ck:null;x.ckv=r.vk?r.cr/r.vk:null;x.pm=r.vk?r.vr/r.vk:null;
   x.skg=x.pm!=null&&x.ckv!=null?x.pm-x.ckv:null;x.sb=r.vr-r.cr;x.sp=r.vr?x.sb/r.vr:null;x.dp=r.pg-r.ne;x.pp=r.ne?r.pg/r.ne:null;return x};
@@ -1948,6 +1956,11 @@ function vcpLinhas(D){const C=D.L.map(vcpCalc),M=D.med?vcpCalc(D.med):null,i0=v=
    ['sec','3 · O dinheiro bate? (nota inteira)'],
    ['','Notas emitidas R$',x=>i0(x.ne)],['','Pago R$',x=>D.temPag?i0(x.pg):'—'],
    ['key','Pago − Notas',x=>D.temPag&&x.ne?`${x.dp>=0?'+':''}${kgI(x.dp)} · ${pc(x.pp)}`:'—'],
+   ['sec2','4 · Miúdos (fígado, coração, mocotó, bucho, rabo)'],
+   ['','Compra kg',x=>i0(x.mck)],['','Venda kg',x=>i0(x.mvk)],
+   ['key','Vendido ÷ Comprado (kg)',x=>x.mck?pc(x.mvk/x.mck):'—',x=>x.mck&&x.mvk/x.mck<MIUDO_OK?' class="r"':''],
+   ['','Compra R$ (com S.T.)',x=>i0(x.mcr)],['','Venda R$',x=>i0(x.mvr)],
+   ['key','Sobra (Venda − Compra)',x=>x.mcr&&x.mvr?`${kgI(x.mvr-x.mcr)} · ${pc((x.mvr-x.mcr)/x.mvr)}`:'—',x=>x.mcr&&x.mvr?pos(x.mvr-x.mcr):''],
   ].map(r=>({...r,C,M}))}
 function vPainelVCP(l){if(S.role!=='gestor')return '';const D=vcpDados(l);
   const card=b=>`<section class="card vcp"><div class="card-h"><div><h3>Venda × Compra × Pagamento</h3><p class="hint">Carne bovina por mês. Compra pela emissão da nota (com S.T., sem miúdos), venda pelo cupom, pagamento pela data do boleto (Brajan). Só o gestor vê.</p></div>${D?'<button type="button" class="btn xl" data-act="vcp-xls" data-id="'+l+'">⬇ Exportar Excel</button>':''}</div>${b}</section>`;
@@ -1957,18 +1970,30 @@ function vPainelVCP(l){if(S.role!=='gestor')return '';const D=vcpDados(l);
     return `<div class="vcp-dec">💡 <b>Média ${D.med.n>1?`dos meses fechados (${per})`:`de ${per}`}:</b> para cada R$ 100 comprados, a loja vendeu <b>R$ ${kgI(M.r100)}</b>. Sobra de <b>${pc(M.sp)}</b>, ou R$ ${F2.format(M.skg)} por kg vendido. ${M.sp>=META_MG?`Está acima da meta de ${pc(META_MG)}.`:`Para chegar a ${pc(META_MG)}, o preço médio teria que ir de R$ ${F2.format(M.pm)} para <b>R$ ${F2.format(alvo)}</b> (+${pc(alvo/M.pm-1)}).`}</div>`})():'<div class="vcp-dec">Ainda não tem um mês fechado com compra e venda para tirar a média.</div>';
   const rows=vcpLinhas(D),C=rows[0].C;
   const th=`<tr><th>${esc(lojaNome(l))}</th>${D.L.map(r=>`<th>${mesRot(r.m)}${r.fechado?'':' *'}</th>`).join('')}<th class="m3">Média meses fechados</th></tr>`;
-  const tb=rows.map(r=>r[0]==='sec'?`<tr class="sec"><td colspan="${C.length+2}">${r[1]}</td></tr>`:
-    `<tr${r[0]?` class="${r[0]}"`:''}><td>${r[1]}</td>${C.map(x=>`<td${r[3]?r[3](x):''}>${r[2](x)}</td>`).join('')}<td class="m3">${M&&!/Pago|Notas emitidas/.test(r[1])?r[2](M):'—'}</td></tr>`).join('');
+  const i4=rows.findIndex(r=>r[0]==='sec2');
+  const tb0=rows.map(r=>r[0]==='sec'||r[0]==='sec2'?`<tr class="${r[0]}"><td colspan="${C.length+2}">${r[1]}</td></tr>`:
+    `<tr${r[0]?` class="${r[0]}"`:''}><td>${r[1]}</td>${C.map(x=>`<td${r[3]?r[3](x):''}>${r[2](x)}</td>`).join('')}<td class="m3">${M&&!/Pago|Notas emitidas/.test(r[1])?r[2](M):'—'}</td></tr>`);
+  const tb=tb0.slice(0,i4).join('')+'@@AB@@'+tb0.slice(i4).join('');
   const ab=D.temPag?`<tr><td>Em aberto a vencer (hoje)</td>${C.map((x,i)=>`<td>${i===C.length-1?kgI(D.aVencer):''}</td>`).join('')}<td class="m3">—</td></tr>
     <tr><td>Vencido sem baixa (hoje)</td>${C.map((x,i)=>`<td${i===C.length-1&&D.nVenc?' class="r"':''}>${i===C.length-1?(D.nVenc?`${D.nVenc} · ${kgI(D.venc)}`:'0'):''}</td>`).join('')}<td class="m3">—</td></tr>`:'';
-  return card(`${dec}<div class="tw"><table class="vx"><thead>${th}</thead><tbody>${tb}${ab}</tbody></table></div>
+  const MU=D.med?.miud||[],per=D.med?(D.med.n>1?`${mesRot(D.med.de)} a ${mesRot(D.med.ate)}`:mesRot(D.med.de)):'',ncol=C.length+2;
+  const mrow=(o,tot)=>{const r=o.ck?o.vk/o.ck:null,s=o.vr-o.cr;return `<tr${tot?' class="key"':''}><td>${tot?'Total miúdos':esc(PM[o.c]?.n||o.c)}</td><td>${kgI(o.ck)}</td><td>${kgI(o.vk)}</td>${C.length>3?`<td colspan="${C.length-3}"></td>`:''}<td${r!=null&&r<MIUDO_OK?' class="r"':''}>${r==null?'—':pc(r)}</td>
+    <td class="m3">${o.ck?F2.format(o.cr/o.ck):'—'} → ${o.vk?F2.format(o.vr/o.vk):'—'} · <span class="${s<0?'r':'g'}">${kgI(s)}</span></td></tr>`};
+  const mt=MU.length&&C.length>=3?`<tr class="sub"><td>Por miúdo · meses fechados (${per})</td><td>Comprou kg</td><td>Vendeu kg</td>${C.length>3?`<td colspan="${C.length-3}"></td>`:''}<td>Vendido ÷ Comprado</td><td class="m3">Custo kg → Preço kg · Sobra R$</td></tr>
+    ${MU.map(o=>mrow(o)).join('')}${mrow(MU.reduce((t,o)=>{['ck','cr','vk','vr'].forEach(k=>t[k]+=o[k]);return t},{ck:0,cr:0,vk:0,vr:0}),true)}`:'';
+  const ruins=MU.filter(o=>o.ck>0&&o.vk/o.ck<.75).map(o=>(PM[o.c]?.n||o.c).toLowerCase());
+  const decM=M&&M.mck?`<br>🦴 <b>Miúdos:</b> vendeu <b>${pc(M.mvk/M.mck)}</b> do que comprou (o normal é perto de 95%)${ruins.length?` · <span style="color:var(--crit);font-weight:700">${ruins.join(' e ')} abaixo de 75%</span>`:''}.`:'';
+  return card(`${dec.replace(/<\/div>$/,decM+'</div>')}<div class="tw"><table class="vx"><thead>${th}</thead><tbody>${tb.replace('@@AB@@',ab)}${mt}</tbody></table></div>
     <p class="hint">* Mês em andamento (até hoje). Média dos últimos 3 meses fechados. Linhas amarelas são as de decisão; vermelho = negativo.
-    Pago × Notas usa a nota inteira; diferença num mês é normal (nota do fim do mês paga no mês seguinte). "Vencido sem baixa" costuma ser boleto pago sem baixa no Brajan: confira com o financeiro.</p>`)}
+    Pago × Notas usa a nota inteira; diferença num mês é normal (nota do fim do mês paga no mês seguinte). "Vencido sem baixa" costuma ser boleto pago sem baixa no Brajan: confira com o financeiro.
+    Miúdos ficam fora da conta da carne; não têm osso, então o normal é vender perto de 95% do que entra (vermelho abaixo de 90%).</p>`)}
 function exportarVCP(l){if(typeof XLSX==='undefined'){toast('Sem a biblioteca do Excel. Verifique a internet e tente de novo.');return}
   const D=vcpDados(l);if(!D)return;const rows=vcpLinhas(D),C=rows[0].C,M=D.med?vcpCalc(D.med):null,tx=v=>String(v).replace(/<[^>]+>/g,'');
   const aoa=[[`Venda × Compra × Pagamento — ${lojaNome(l)}`],[`Gerado em ${nowBR()}`],[],['',...D.L.map(r=>mesRot(r.m)+(r.fechado?'':' *')),'Média meses fechados']];
-  rows.forEach(r=>{if(r[0]==='sec'){aoa.push([],[r[1]]);return}aoa.push([r[1],...C.map(x=>tx(r[2](x))),M&&!/Pago|Notas emitidas/.test(r[1])?tx(r[2](M)):''])});
+  rows.forEach(r=>{if(r[0]==='sec'||r[0]==='sec2'){aoa.push([],[r[1]]);return}aoa.push([r[1],...C.map(x=>tx(r[2](x))),M&&!/Pago|Notas emitidas/.test(r[1])?tx(r[2](M)):''])});
   if(D.temPag)aoa.push([],['Em aberto a vencer (hoje)',Math.round(D.aVencer)],['Vencido sem baixa (hoje)',`${D.nVenc} boletos`,Math.round(D.venc)]);
+  const MU=D.med?.miud||[];if(MU.length){aoa.push([],['Por miúdo · meses fechados','Comprou kg','Vendeu kg','Vendido ÷ Comprado','Custo do kg','Preço do kg','Sobra R$']);
+    MU.forEach(o=>aoa.push([PM[o.c]?.n||o.c,Math.round(o.ck),Math.round(o.vk),o.ck?Math.round(o.vk/o.ck*1000)/10+'%':'',o.ck?Math.round(o.cr/o.ck*100)/100:'',o.vk?Math.round(o.vr/o.vk*100)/100:'',Math.round(o.vr-o.cr)]))}
   const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:36},...D.L.map(()=>({wch:16})),{wch:22}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Venda x Compra x Pagto');
   XLSX.writeFile(wb,`Venda x Compra x Pagamento ${lojaNome(l)} ${todayISO()}.xlsx`.replace(/[\\/:*?"<>|]/g,''));toast('Planilha gerada.')}
 
