@@ -594,6 +594,11 @@ const PROD=[
  {c:'31400',n:'Carne moída',g:'Bovino',peca:'outros',feito:true,cx:false,custo:24,preco:29.99,d:0},
  {c:'33717',n:'Carne de segunda',g:'Bovino',peca:'outros',feito:true,cx:false,custo:25.26,preco:34.99,d:0},
  {c:'33720',n:'Carne de 2 paletinha',g:'Bovino',peca:'outros',feito:true,cx:false,custo:0,preco:0,d:0}, /* custo e preço vêm do Brajan */
+ {c:'31408',n:'Linguiça caseira',g:'Outros',peca:'outros',feito:true,cx:false,custo:0,preco:0,d:0}, /* só conta como bovina nas lojas de BOV_LOJA */
+ {c:'68773',n:'Gordura bovina',g:'Bovino',peca:'outros',feito:true,cx:false,custo:0,preco:0,d:0},
+ {c:'69045',n:'Capa do contra-filé',g:'Bovino',peca:'outros',feito:true,cx:false,custo:0,preco:0,d:0},
+ {c:'69228',n:'Acém com osso',g:'Bovino',peca:'outros',feito:true,cx:false,custo:0,preco:0,d:0},
+ {c:'69230',n:'Ponta de peito com osso',g:'Bovino',peca:'outros',feito:true,cx:false,custo:0,preco:0,d:0},
  {c:'60355',n:'Hambúrguer artesanal',g:'Bovino',peca:'outros',feito:true,cx:false,custo:26.42,preco:36.99,d:0},
  {c:'60360',n:'Almôndegas artesanais',g:'Bovino',peca:'outros',feito:true,cx:false,custo:22.85,preco:39.99,d:0},
  {c:'61311',n:'Espetinho',g:'Bovino',peca:'outros',feito:true,cx:false,custo:26.7,preco:59.99,d:0},
@@ -1121,7 +1126,7 @@ function cdItens(d){const m={};
 const bovKg=it=>Object.entries(it).reduce((s,[c,k])=>s+(bovBal(c)?k:0),0);
 /* custo atual: o do Brajan para a loja, quando chegou; senão o do cadastro */
 const custoDe=(l,c)=>{const x=S.custos?.[l]?.itens?.[c]?.custo;return x>0?x:(PM[c]?.custo||0)};
-const bovRsL=(it,l)=>Object.entries(it||{}).reduce((s,[c,k])=>s+(bovBal(c)?k*custoDe(l,c):0),0);
+const bovRsL=(it,l)=>Object.entries(it||{}).reduce((s,[c,k])=>s+(bovBal(c,l)?k*custoDe(l,c):0),0);
 /* vendas do Brajan entre as contagens: do dia da contagem inicial até a véspera da final (contagem feita de manhã) */
 const vendDias=(l,a,b)=>Object.values(S.vend||{}).filter(v=>v.loja===l&&v.data>=a&&v.data<b);
 const bovRs=it=>Object.entries(it).reduce((s,[c,k])=>s+(PM[c]?.bov?k*(PM[c].custo||0):0),0);
@@ -1607,7 +1612,9 @@ function vNotas(){
 /* ---------- BALANÇO CARNE BOVINA (compras pela NF-e: kg e R$) ---------- */
 function calc(r){r.cmv=r.ei+r.c-r.ef;r.perdaKg=r.cmv-r.vk;r.perda=r.cmv>0?r.perdaKg/r.cmv:null;r.cmvR=r.eiR+r.cR-r.efR;r.lucro=r.vr-r.cmvR;r.margem=r.vr?r.lucro/r.vr:null;r.markup=r.cmvR?r.lucro/r.cmvR:null;return r}
 /* miúdos (fígado, coração, mocotó…) ficam fora do balanço: nas compras, nos estoques e nas vendas */
-const bovBal=c=>!!PM[c]?.bov&&!PM[c]?.miudo;
+/* produto feito na loja que só conta como carne bovina em algumas lojas (ex.: linguiça caseira: Parecis e São Felipe fabricam; Santa Luzia compra pronta) */
+const BOV_LOJA={'31408':[3,4]};
+const bovBal=(c,l)=>(!!PM[c]?.bov&&!PM[c]?.miudo)||(l!=null&&!!BOV_LOJA[c]?.includes(l));
 const miudoIt=it=>{if(it.nb||NAO_BOV.test(norm(it.desc||'')))return false;const c=it.c||matchProd(it.desc);return !!PM[c]?.miudo||(classNF(it)==='outros'&&/miud|figado|mocoto|bucho|rumen|coracao|rabo|lingua|tripa/.test(norm(it.desc)))};
 /* itens de cada nota que entram no balanço: o padrão é carne bovina sem miúdos; a escolha fica salva na nota (documento vimp "loja|itens|nota") */
 const itKey=n=>`${n.loja}|itens|${nkey(n)}`;
@@ -1647,10 +1654,10 @@ function exportarBal(){if(typeof XLSX==='undefined'){toast('Sem a biblioteca do 
     ['% Perda',p1(T.perda)],['% Lucro (sobre vendas)',p1(T.margem)],['Markup (sobre o custo)',p1(T.markup)],[],
     ['Notas nas compras',B.nNotas],['Notas fora da conta',B.nFora],['Miúdos','fora do balanço (compras, estoques e vendas)'],['Vendas',B.imp?'Planilha do PDV':B.erp?'Brajan':'—'],['Gerado em',nowBR()]];
   const det=k=>{const m={};const add=(c,kgv,rsv)=>{const q=m[c]||(m[c]={c,kg:0,rs:0});q.kg+=kgv;q.rs+=rsv};
-    if(k!=='vd'){const iso=k==='ei'?a:b;ids.forEach(l=>Object.entries(contDe(l,iso)||{}).forEach(([c,x])=>{if(bovBal(c))add(c,x,x*custoDe(l,c))}))}
+    if(k!=='vd'){const iso=k==='ei'?a:b;ids.forEach(l=>Object.entries(contDe(l,iso)||{}).forEach(([c,x])=>{if(bovBal(c,l))add(c,x,x*custoDe(l,c))}))}
     else ids.forEach(l=>{const imp=ids.length===1&&S.vimp[`${l}|${a}|${b}`],vd=vendDias(l,a,b);
-      if(imp)Object.entries(imp.dados).forEach(([c,v])=>{if(bovBal(c))add(c,v.kg,v.rs)});
-      else vd.forEach(v=>Object.entries(v.itens||{}).forEach(([c,x])=>{if(bovBal(c))add(c,x.kg,x.rs)}))});
+      if(imp)Object.entries(imp.dados).forEach(([c,v])=>{if(bovBal(c,l))add(c,v.kg,v.rs)});
+      else vd.forEach(v=>Object.entries(v.itens||{}).forEach(([c,x])=>{if(bovBal(c,l))add(c,x.kg,x.rs)}))});
     const L=Object.values(m).filter(q=>Math.abs(q.kg)>.0005).sort((x,y)=>(PM[x.c]?.n||x.c).localeCompare(PM[y.c]?.n||y.c,'pt-BR'));
     return [['Código','Carne','Kg',k==='vd'?'Preço médio do kg':'Custo do kg','R$'],...L.map(q=>[q.c,PM[q.c]?.n||q.c,r3_(q.kg),q.kg?r2_(q.rs/q.kg):'',r2_(q.rs)]),[],['Total','',r3_(L.reduce((t,q)=>t+q.kg,0)),'',r2_(L.reduce((t,q)=>t+q.rs,0))]]};
   const cp=[['Loja','NF','Fornecedor','Emissão','Kg (carne bovina)','R$ (carne bovina)','Situação','No balanço'],
@@ -1671,10 +1678,10 @@ function balBov(ids,a,b){
     });
     const key=`${l}|${a}|${b}`;
     const vd=vendDias(l,a,b);
-    if(ids.length===1&&S.vimp[key]){imp=S.vimp[key];Object.entries(imp.dados).forEach(([c,v])=>{if(bovBal(c)){T.vk+=v.kg;T.vr+=v.rs}})}
-    else if(vd.length){erp=(erp||0)+vd.length;vd.forEach(v=>Object.entries(v.itens||{}).forEach(([c,x])=>{if(bovBal(c)){T.vk+=x.kg;T.vr+=x.rs}}));
+    if(ids.length===1&&S.vimp[key]){imp=S.vimp[key];Object.entries(imp.dados).forEach(([c,v])=>{if(bovBal(c,l)){T.vk+=v.kg;T.vr+=v.rs}})}
+    else if(vd.length){erp=(erp||0)+vd.length;vd.forEach(v=>Object.entries(v.itens||{}).forEach(([c,x])=>{if(bovBal(c,l)){T.vk+=x.kg;T.vr+=x.rs}}));
       vd.forEach(v=>{if(!ultErp||v.recebido>ultErp)ultErp=v.recebido})}
-    else Object.entries(G.vend[l]||{}).forEach(([iso,dd])=>{if(iso>a&&iso<=b)Object.entries(dd).forEach(([c,v])=>{if(bovBal(c)){T.vk+=v.kg;T.vr+=v.rs}})});
+    else Object.entries(G.vend[l]||{}).forEach(([iso,dd])=>{if(iso>a&&iso<=b)Object.entries(dd).forEach(([c,v])=>{if(bovBal(c,l)){T.vk+=v.kg;T.vr+=v.rs}})});
   }
   return{T:calc(T),nNotas,nSem,nFoto,nSemV,nFora,imp,erp,ultErp};
 }
@@ -1683,11 +1690,11 @@ const perdaSt=p=>p==null?'sem':p*100>=S.set.perdaCrit?'crit':p*100>=S.set.perdaA
 const term=(l,v,res)=>`<span class="term${res?' res':''}"><small>${l}</small>${v}</span>`, op=o=>`<span class="op">${o}</span>`;
 /* detalhe das linhas do balanço: tocar em Estoque inicial, Estoque final ou Vendas mostra carne por carne */
 function balDet(ids,k,a,b){const m={};const add=(c,kgv,rsv)=>{const q=m[c]||(m[c]={c,kg:0,rs:0});q.kg+=kgv;q.rs+=rsv};
-  if(k==='ei'||k==='ef'){const iso=k==='ei'?a:b;ids.forEach(l=>Object.entries(contDe(l,iso)||{}).forEach(([c,x])=>{if(bovBal(c))add(c,x,x*custoDe(l,c))}))}
+  if(k==='ei'||k==='ef'){const iso=k==='ei'?a:b;ids.forEach(l=>Object.entries(contDe(l,iso)||{}).forEach(([c,x])=>{if(bovBal(c,l))add(c,x,x*custoDe(l,c))}))}
   else ids.forEach(l=>{const imp=ids.length===1&&S.vimp[`${l}|${a}|${b}`],vd=vendDias(l,a,b);
-    if(imp)Object.entries(imp.dados).forEach(([c,v])=>{if(bovBal(c))add(c,v.kg,v.rs)});
-    else if(vd.length)vd.forEach(v=>Object.entries(v.itens||{}).forEach(([c,x])=>{if(bovBal(c))add(c,x.kg,x.rs)}));
-    else Object.entries(G.vend[l]||{}).forEach(([iso,dd])=>{if(iso>a&&iso<=b)Object.entries(dd).forEach(([c,v])=>{if(bovBal(c))add(c,v.kg,v.rs)})})});
+    if(imp)Object.entries(imp.dados).forEach(([c,v])=>{if(bovBal(c,l))add(c,v.kg,v.rs)});
+    else if(vd.length)vd.forEach(v=>Object.entries(v.itens||{}).forEach(([c,x])=>{if(bovBal(c,l))add(c,x.kg,x.rs)}));
+    else Object.entries(G.vend[l]||{}).forEach(([iso,dd])=>{if(iso>a&&iso<=b)Object.entries(dd).forEach(([c,v])=>{if(bovBal(c,l))add(c,v.kg,v.rs)})})});
   const L=Object.values(m).filter(q=>Math.abs(q.kg)>.0005).sort((x,y)=>(PM[x.c]?.n||x.c).localeCompare(PM[y.c]?.n||y.c,'pt-BR'));
   if(!L.length)return `<tr class="bdet"><td colspan="4">${k==='vd'?'Sem vendas neste período.':'Sem contagem.'}</td></tr>`;
   return L.map(q=>`<tr class="bdet"><td>${esc(PM[q.c]?.n||q.c)}${k==='vd'&&q.kg?`<small>${rs(q.rs/q.kg)}/kg</small>`:''}</td><td class="n">${kg(q.kg)}</td><td class="n">${rs(q.rs)}</td><td></td></tr>`).join('')}
@@ -1887,7 +1894,7 @@ function pnPeriodo(){const h=todayISO(),p=S.pn.p,livre=p==='livre'&&S.pn.a&&S.pn
 /* números de uma loja num período: vendas do Brajan, compras pelas notas, perda da desossa pelas conferências */
 function pnLoja(l,a,b){const r={vk:0,vr:0,cv:0,ck:0,cr:0,nn:0,nf:0,conf:0,forn:{},crit:[],peca:{}};
   Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||v.data<a||v.data>b)return;
-    Object.entries(v.itens||{}).forEach(([c,x])=>{if(!PM[c]?.bov)return;r.vk+=x.kg;r.vr+=x.rs;r.cv+=x.kg*custoDe(l,c)})});
+    Object.entries(v.itens||{}).forEach(([c,x])=>{if(!bovBal(c,l))return;r.vk+=x.kg;r.vr+=x.rs;r.cv+=x.kg*custoDe(l,c)})});
   notasBal().forEach(n=>{if(n.loja!==l||n.data<a||n.data>b||!entrou(n))return;let tem=false;
     n.itens.forEach((it,i)=>{if(!itemOn(n,i,it))return;tem=true;const v=valItem(n,it);r.ck+=it.kg;r.cr+=v;
       const g=classNF(it);if(['traseiro','dianteiro','caixaria'].includes(g)&&v>0){const q=r.peca[g]||(r.peca[g]={kg:0,v:0});q.kg+=it.kg;q.v+=v}
@@ -1939,7 +1946,7 @@ function vcpDados(l){const h=todayISO(),cps=Object.values(S.comps||{}).filter(c=
     const mi=c=>r.mi[c]||(r.mi[c]={c,ck:0,cr:0,vk:0,vr:0});
     notasBal().forEach(n=>{if(n.loja!==l||n.data<a||n.data>b||!entrou(n))return;const q=bovDaNota(n);r.ck+=q.kg;r.cr+=q.rs;
       n.itens.forEach(it=>{if(!miudoIt(it))return;const v=valItem(n,it),o=mi(it.c||'?');o.ck+=it.kg;o.cr+=v;r.mck+=it.kg;r.mcr+=v})});
-    Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||v.data<a||v.data>b)return;Object.entries(v.itens||{}).forEach(([c,x])=>{if(bovBal(c)){r.vk+=x.kg;r.vr+=x.rs}
+    Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||v.data<a||v.data>b)return;Object.entries(v.itens||{}).forEach(([c,x])=>{if(bovBal(c,l)){r.vk+=x.kg;r.vr+=x.rs}
       else if(PM[c]?.miudo){const o=mi(c);o.vk+=x.kg;o.vr+=x.rs;r.mvk+=x.kg;r.mvr+=x.rs}})});
     Object.values(S.pags||{}).forEach(p=>{if(p.loja!==l||!p.pagamento||p.pagamento<a||p.pagamento>b)return;const x=sh(p),v=p.valor_pago||0;r.pc+=v*x.c;r.pmi+=v*x.m});
     return r});
@@ -2025,7 +2032,7 @@ function vPainelLoja(l,a,b,pa,pb){const lj=S.lojas.find(x=>x.id===l),h=todayISO(
   const d0=a===b?diaMais(a,-6):a,d1=b,ds=[]; /* mostra todos os dias do período; os que ainda não chegaram ficam vazios */for(let d=d0;d<=d1&&ds.length<62;d=diaMais(d,1))ds.push(d);
   const vd=ds.map(d=>{const v=S.vend?.[l+'|'+d];return v?Object.entries(v.itens||{}).reduce((t,[c,x])=>t+(PM[c]?.bov?x.rs:0),0):0});
   /* carnes mais vendidas */
-  const m={};Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||v.data<a||v.data>b)return;Object.entries(v.itens||{}).forEach(([c,x])=>{if(!PM[c]?.bov)return;const q=m[c]||(m[c]={c,kg:0,rs:0,cv:0});q.kg+=x.kg;q.rs+=x.rs;q.cv+=x.kg*custoDe(l,c)})});
+  const m={};Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||v.data<a||v.data>b)return;Object.entries(v.itens||{}).forEach(([c,x])=>{if(!bovBal(c,l))return;const q=m[c]||(m[c]={c,kg:0,rs:0,cv:0});q.kg+=x.kg;q.rs+=x.rs;q.cv+=x.kg*custoDe(l,c)})});
   const top=Object.values(m).sort((x,y)=>y.rs-x.rs).slice(0,10);
   const est=uc?contDe(l,uc):null;
   const kp=`<div class="pn-k">
