@@ -425,6 +425,7 @@ table.vx{width:100%;border-collapse:collapse;font-size:.84rem;font-family:'IBM P
 .vx tr.sec2 td{background:#7a4a1c!important;color:#fff;font-family:Oswald,sans-serif;font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;text-align:left}
 .vx tr.sub td{background:#F3E9DF!important;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:.74rem;color:#5a3a20}
 .vx tr.key td{background:#FFF8D9;font-weight:700}.vx tr.key td:first-child{background:#FFF1B8}
+.vx tr.lg td{background:#F1EAFB!important;color:#4b2a85}.vx tr.lg td:first-child{background:#E4D7F6!important}.vx tr.lg td.g{color:#4b2a85!important}
 .vx td.m3,.vx th.m3{background:#EAF5EE;font-weight:700;border-left:2px solid var(--ok)}
 .vx .r{color:var(--crit)}.vx .g{color:var(--ok)}
 .pn-row2.pn-row3{grid-template-columns:1.4fr 1fr}
@@ -1981,8 +1982,8 @@ function vcpLinhas(D){const C=D.L.map(vcpCalc),M=D.med?vcpCalc(D.med):null,i0=v=
    ['','Custo do kg comprado',x=>r2_(x.ckc)],['','Custo do kg vendido',x=>r2_(x.ckv)],['','Preço médio de venda',x=>r2_(x.pm)],
    ['key','Sobra por kg vendido',x=>r2_(x.skg),x=>pos(x.skg)],
    ['key','Sobra (Venda − Compra)',x=>x.cr&&x.vr?`${kgI(x.sb)} · ${pc(x.sp)}`:'—',x=>x.cr&&x.vr?pos(x.sb):''],
-   ...(D.lingDe.length?[['','Linguiça caseira vendida em '+D.lingDe.join(' e ')+' (feita aqui)',x=>x.lgk?`${i0(x.lgk)} kg · ${i0(x.lgr)}`:'—'],
-     ['key','Sobra contando essa linguiça',x=>x.cr&&x.vr?`${kgI(x.vr+x.lgr-x.cr)} · ${pc((x.vr+x.lgr-x.cr)/(x.vr+x.lgr))}`:'—',x=>x.cr&&x.vr?pos(x.vr+x.lgr-x.cr):'']]:[]),
+   ...(D.lingDe.length?[['lg','🌭 Linguiça caseira vendida em '+D.lingDe.join(' e ')+' (feita aqui)',x=>x.lgk?`${i0(x.lgk)} kg · ${i0(x.lgr)}`:'—'],
+     ['lg key','🌭 Sobra contando essa linguiça',x=>x.cr&&x.vr?`${kgI(x.vr+x.lgr-x.cr)} · ${pc((x.vr+x.lgr-x.cr)/(x.vr+x.lgr))}`:'—',x=>x.cr&&x.vr?pos(x.vr+x.lgr-x.cr):'']]:[]),
    ['','Pago aos frigoríficos (parte da carne)',x=>D.temPag?i0(x.pc):'—'],
    ['key','Venda − Pago',x=>D.temPag&&x.vr?`${kgI(x.vr-x.pc)} · ${pc((x.vr-x.pc)/x.vr)}`:'—',x=>D.temPag&&x.vr?pos(x.vr-x.pc):''],
    ['sec2','4 · Miúdos (fígado, coração, mocotó, bucho, rabo)'],
@@ -2057,7 +2058,7 @@ function vPainelLoja(l,a,b,pa,pb){const lj=S.lojas.find(x=>x.id===l),h=todayISO(
   const tops=`<section class="card"><div class="card-h"><h3>Carnes mais vendidas</h3><span class="tag">top 10</span></div>${top.length?`<table class="pn-t"><tr><th>Carne</th><th class="n">Kg</th><th class="n">R$</th><th class="n">Margem</th></tr>
     ${top.map(q=>{const mg=q.rs?(q.rs-q.cv)/q.rs:null;return `<tr><td>${esc(PM[q.c]?.n||S.custos?.[l]?.itens?.[q.c]?.n||q.c)}</td><td class="n">${kgI(q.kg)}</td><td class="n">${rsI(q.rs)}</td><td class="n"${mg<0?' style="color:var(--crit);font-weight:600"':''}>${pc(mg)}</td></tr>`}).join('')}</table>`:'<p class="pn-vazio">Sem vendas no período.</p>'}</section>`;
   /* notas de entrada: todas as notas emitidas para a loja no período (Brajan/XML, ou foto enquanto o XML não chega) e as recebidas ainda sem pesagem */
-  const nm=new Map();notasBal().filter(n=>n.loja===l&&n.data>=a&&n.data<=b&&(!n.itens?.length||bovDaNota(n).kg>0)).forEach(n=>nm.set(nkey(n),n));
+  const nm=new Map();notasBal().filter(n=>n.loja===l&&n.data>=a&&n.data<=b&&(n.brajan?n.itens.length&&bovDaNota(n).kg>0:!n.itens?.length||bovDaNota(n).kg>0)).forEach(n=>nm.set(nkey(n),n));
   const bl=brajanLoja(l);
   S.recs.filter(x=>x.loja===l&&!nm.has(nkey(x))&&(!confDoRec(x)||(bl&&x.data>=a&&x.data<=b))).forEach(x=>nm.set(nkey(x),{...(notaFoto(x)||{loja:l,forn:x.forn,fornNome:x.fornNome,nf:x.nf,data:x.data,itens:[],kg:0,v:0,foto:true}),fora:bl}));
   const notas=[...nm.values()].sort((x,y)=>(y.data||'').localeCompare(x.data||'')||(+y.nf)-(+x.nf));
