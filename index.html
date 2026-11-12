@@ -1986,10 +1986,15 @@ function vcpLinhas(D){const C=D.L.map(vcpCalc),M=D.med?vcpCalc(D.med):null,i0=v=
      ['lg key','🌭 Sobra contando essa linguiça',x=>x.cr&&x.vr?`${kgI(x.vr+x.lgr-x.cr)} · ${pc((x.vr+x.lgr-x.cr)/(x.vr+x.lgr))}`:'—',x=>x.cr&&x.vr?pos(x.vr+x.lgr-x.cr):'']]:[]),
    ['','Pago aos frigoríficos (parte da carne)',x=>D.temPag?i0(x.pc):'—'],
    ['key','Venda − Pago',x=>D.temPag&&x.vr?`${kgI(x.vr-x.pc)} · ${pc((x.vr-x.pc)/x.vr)}`:'—',x=>D.temPag&&x.vr?pos(x.vr-x.pc):''],
-   ['sec2','4 · Miúdos (fígado, coração, mocotó, bucho, rabo)'],
+   /* miúdos: as mesmas linhas da carne */
+   ['sec2','1 · Tudo que compro vende?'],
    ['','Compra kg',x=>i0(x.mck)],['','Venda kg',x=>i0(x.mvk)],
-   ['key','Vendido ÷ Comprado (kg)',x=>x.mck?pc(x.mvk/x.mck):'—',x=>x.mck&&x.mvk/x.mck<MIUDO_OK?' class="r"':''],
+   ['key','Venda ÷ Compra (kg)',x=>x.mck?pc(x.mvk/x.mck):'—',x=>x.mck&&x.mvk/x.mck<MIUDO_OK?' class="r"':''],
    ['','Compra R$ (com S.T.)',x=>i0(x.mcr)],['','Venda R$',x=>i0(x.mvr)],
+   ['key','Venda ÷ Compra (R$ por 100)',x=>x.mcr?kgI(x.mvr/x.mcr*100):'—',x=>x.mcr&&x.mvr<x.mcr?' class="r"':''],
+   ['sec2','2 · Dá lucro? E o pagamento?'],
+   ['','Custo do kg comprado',x=>x.mck?r2_(x.mcr/x.mck):'—'],['','Custo do kg vendido',x=>x.mvk?r2_(x.mcr/x.mvk):'—'],['','Preço médio de venda',x=>x.mvk?r2_(x.mvr/x.mvk):'—'],
+   ['key','Sobra por kg vendido',x=>x.mvk&&x.mcr?r2_((x.mvr-x.mcr)/x.mvk):'—',x=>x.mvk&&x.mcr?pos(x.mvr-x.mcr):''],
    ['key','Sobra (Venda − Compra)',x=>x.mcr&&x.mvr?`${kgI(x.mvr-x.mcr)} · ${pc((x.mvr-x.mcr)/x.mvr)}`:'—',x=>x.mcr&&x.mvr?pos(x.mvr-x.mcr):''],
    ['','Pago aos frigoríficos (parte dos miúdos)',x=>D.temPag?i0(x.pmi):'—'],
    ['key','Venda − Pago',x=>D.temPag&&x.mvr?`${kgI(x.mvr-x.pmi)} · ${pc((x.mvr-x.pmi)/x.mvr)}`:'—',x=>D.temPag&&x.mvr?pos(x.mvr-x.pmi):''],
@@ -2005,7 +2010,7 @@ function vPainelVCP(l){if(S.role!=='gestor')return '';const D=vcpDados(l);
   const i4=rows.findIndex(r=>r[0]==='sec2');
   const tb0=rows.map(r=>r[0]==='sec'||r[0]==='sec2'?`<tr class="${r[0]}"><td colspan="${C.length+2}">${r[1]}</td></tr>`:
     `<tr${r[0]?` class="${r[0]}"`:''}><td>${r[1]}</td>${C.map(x=>`<td${r[3]?r[3](x):''}>${r[2](x)}</td>`).join('')}<td class="m3">${M?r[2](M):'—'}</td></tr>`);
-  const tbC=tb0.slice(0,i4).join(''),tbM=tb0.slice(i4+1).join(''); /* carne em cima; miúdos numa tabela separada */
+  const tbC=tb0.slice(0,i4).join(''),tbM=tb0.slice(i4).join(''); /* carne em cima; miúdos numa tabela separada */
   const abr=(a,v,n,q)=>D.temPag?`<tr><td>Em aberto a vencer (hoje, parte ${q})</td>${C.map((x,i)=>`<td>${i===C.length-1?kgI(a):''}</td>`).join('')}<td class="m3">—</td></tr>
     <tr><td>Vencido sem baixa (hoje, parte ${q})</td>${C.map((x,i)=>`<td${i===C.length-1&&v>.5?' class="r"':''}>${i===C.length-1?(v>.5?`${n} · ${kgI(v)}`:'0'):''}</td>`).join('')}<td class="m3">—</td></tr>`:'';
   const ab=abr(D.AB.aC,D.AB.vC,D.AB.nC,'da carne'),abM=abr(D.AB.aM,D.AB.vM,D.AB.nM,'dos miúdos');
@@ -2015,7 +2020,7 @@ function vPainelVCP(l){if(S.role!=='gestor')return '';const D=vcpDados(l);
   const mt=MU.length&&C.length>=3?`<tr class="sub"><td>Por miúdo · meses fechados (${per})</td><td>Comprou kg</td><td>Vendeu kg</td>${C.length>3?`<td colspan="${C.length-3}"></td>`:''}<td>Vendido ÷ Comprado</td><td class="m3">Custo kg → Preço kg · Sobra R$</td></tr>
     ${MU.map(o=>mrow(o)).join('')}${mrow(MU.reduce((t,o)=>{['ck','cr','vk','vr'].forEach(k=>t[k]+=o[k]);return t},{ck:0,cr:0,vk:0,vr:0}),true)}`:'';
   const ruins=MU.filter(o=>o.ck>0&&o.vk/o.ck<.75).map(o=>(PM[o.c]?.n||o.c).toLowerCase());
-  const decM=M&&M.mck?`🦴 <b>Miúdos (média ${per}):</b> vendeu <b>${pc(M.mvk/M.mck)}</b> do que comprou (o normal é perto de 95%)${ruins.length?` · <span style="color:var(--crit);font-weight:700">${ruins.join(' e ')} abaixo de 75%</span>`:''}.`:'';
+  const decM=M&&M.mck?`🦴 <b>Miúdos (média ${per}):</b> para cada R$ 100 comprados, vendeu <b>R$ ${M.mcr?kgI(M.mvr/M.mcr*100):'—'}</b>. Vendeu <b>${pc(M.mvk/M.mck)}</b> do kg que comprou (o normal é perto de 95%). Sobra de <b>${M.mvr?pc((M.mvr-M.mcr)/M.mvr):'—'}</b>${M.mvk?`, ou R$ ${F2.format((M.mvr-M.mcr)/M.mvk)} por kg vendido`:''}${ruins.length?` · <span style="color:var(--crit);font-weight:700">${ruins.join(' e ')} abaixo de 75%</span>`:''}.`:'';
   return card(`<h4 class="vcp-h">🥩 Carne bovina</h4>${dec}<div class="tw"><table class="vx"><thead>${th}</thead><tbody>${tbC}${ab}</tbody></table></div>
     <div class="vcp-mi"><h4 class="vcp-h">🦴 Miúdos <small>fígado, coração, mocotó, bucho, rabo · fora da conta da carne</small></h4>${decM?`<div class="vcp-dec mi">${decM}</div>`:''}
     <div class="tw"><table class="vx"><thead>${th}</thead><tbody>${tbM}${abM}${mt}</tbody></table></div></div>
