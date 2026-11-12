@@ -422,6 +422,8 @@ table.vx{width:100%;border-collapse:collapse;font-size:.84rem;font-family:'IBM P
 .vcp-h{font-family:Oswald,sans-serif;font-size:1rem;text-transform:uppercase;margin:6px 0 6px;display:flex;align-items:baseline;gap:10px}.vcp-h small{font-family:'IBM Plex Sans',sans-serif;text-transform:none;font-size:.78rem;color:var(--muted);font-weight:400}
 .vcp-mi{margin-top:26px;padding-top:18px;border-top:3px dashed #d9c3ad}
 .vcp-dec.mi{background:#F6EEE6;border-color:#d9c3ad}
+.vx tr.sec3 td{background:#9c2f5a!important;color:#fff;font-family:Oswald,sans-serif;font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;text-align:left}
+.vx tr.sub.su td{background:#F7E3EC!important;color:#6b2343}.vcp-su{border-top-color:#e5b3c7}.vcp-dec.su{background:#FBEFF4;border-color:#e5b3c7;color:#6b2343}
 .vx tr.sec2 td{background:#7a4a1c!important;color:#fff;font-family:Oswald,sans-serif;font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;text-align:left}
 .vx tr.sub td{background:#F3E9DF!important;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:.74rem;color:#5a3a20}
 .vx tr.key td{background:#FFF8D9;font-weight:700}.vx tr.key td:first-child{background:#FFF1B8}
@@ -916,7 +918,7 @@ function notaBrajan(x){const F=FCNPJ[x.cnpj];
   /* o código do Brajan é o produto da loja: se não é carne cadastrada (frango, suíno, linguiça), o item não é bovino,
      mesmo que o nome pareça (ex.: "PEITO ... FGO" é peito de frango). Sem código, ou com "bovino" no nome, vale a leitura do nome. */
   const itens=(x.itens||[]).filter(i=>!i.unidade||/KG/.test(i.unidade)).map(i=>{const pm=i.codigo&&PM[i.codigo],nb=!pm&&!!i.codigo&&!/bovin|\bbov\b/i.test(i.descricao||'');
-    return{desc:i.descricao,cod:i.cod_fornecedor,c:pm?i.codigo:nb?null:matchProd(i.descricao),...(nb?{nb:true}:{}),kg:r3(i.qtd||0),vp:r2(i.valor||0),st:i.st||0}});
+    return{desc:i.descricao,cod:i.cod_fornecedor,cod0:i.codigo||null,c:pm?i.codigo:nb?null:matchProd(i.descricao),...(nb?{nb:true}:{}),kg:r3(i.qtd||0),vp:r2(i.valor||0),st:i.st||0}});
   /* custo do item = produto + S.T. do item (do XML); sem S.T. por item, reparte (total da nota ÷ total dos produtos) */
   const porItem=itens.some(i=>i.st>0),fat=!porItem&&x.total>0&&x.total_produtos>0?x.total/x.total_produtos:1;
   itens.forEach(i=>{i.v=r2(porItem?i.vp+i.st:i.vp*fat)});
@@ -1938,6 +1940,9 @@ function pnGrafico(){const fim=segunda(todayISO()),sem=[...Array(8)].map((_,i)=>
 const MESES_C=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 const mesRot=m=>`${MESES_C[+m.slice(5,7)-1]}/${m.slice(2,4)}`;
 const META_MG=.16,MIUDO_OK=.9; /* miúdo não tem osso: abaixo de 90% vendido do que entrou é alerta */
+const NOME_BJ=c=>{for(const x of Object.values(S.custos||{})){const n=x?.itens?.[c]?.n;if(n)return n}return ''};
+const suiCod=c=>{if(!c)return false;const n=NOME_BJ(c);return /^CS /i.test(n)&&!/SALAME|LINGUI|PAIO|SALSICH|TEMPERAD/i.test(n)};
+const suiNome=c=>{const n=NOME_BJ(c).replace(/^CS\s+/i,'').replace(/\s+KG$/i,'');return n?n[0]+n.slice(1).toLowerCase():c};
 function vcpDados(l){const h=todayISO(),cps=Object.values(S.comps||{}).filter(c=>c.loja===l&&c.emissao);
   if(!cps.length)return null;
   /* começa no 1º mês completo de notas lançadas no Brajan e de vendas (começou depois do dia 5: o mês fica de fora) */
@@ -1946,26 +1951,29 @@ function vcpDados(l){const h=todayISO(),cps=Object.values(S.comps||{}).filter(c=
   if(!lc)return null;const m0=[ini(lc),v0?ini(v0):''].sort().pop();
   const ms=[];for(let m=m0;m<=h.slice(0,7);m=diaMais(fimMes(m+'-01'),1).slice(0,7))ms.push(m);
   /* boleto → parte da carne bovina e parte dos miúdos, pela nota que ele paga; sem nota, pela média das notas do mesmo fornecedor */
-  const SH={},porF={};cps.forEach(c=>{const n=notaBrajan(c);if(!(n.v>0))return;const q=bovDaNota(n).rs,mm=n.itens.reduce((t,it)=>t+(miudoIt(it)?valItem(n,it):0),0);
-    SH[c.chave]={c:q/n.v,m:mm/n.v};const f=porF[c.cnpj]||(porF[c.cnpj]={c:0,m:0,t:0});f.c+=q;f.m+=mm;f.t+=n.v});
-  const sh=p=>SH[p.chave]||(porF[p.cnpj]?.t?{c:porF[p.cnpj].c/porF[p.cnpj].t,m:porF[p.cnpj].m/porF[p.cnpj].t}:{c:0,m:0});
-  const L=ms.slice(-6).map(m=>{const a=m+'-01',b=fimMes(a),r={m,a,b,fechado:b<h,ck:0,cr:0,vk:0,vr:0,pc:0,pmi:0,mck:0,mcr:0,mvk:0,mvr:0,lgk:0,lgr:0,mi:{}};
-    const mi=c=>r.mi[c]||(r.mi[c]={c,ck:0,cr:0,vk:0,vr:0});
+  const SH={},porF={};cps.forEach(c=>{const n=notaBrajan(c);if(!(n.v>0))return;const q=bovDaNota(n).rs,mm=n.itens.reduce((t,it)=>t+(miudoIt(it)?valItem(n,it):0),0),ss=n.itens.reduce((t,it)=>t+(suiCod(it.cod0)?valItem(n,it):0),0);
+    SH[c.chave]={c:q/n.v,m:mm/n.v,s:ss/n.v};const f=porF[c.cnpj]||(porF[c.cnpj]={c:0,m:0,s:0,t:0});f.c+=q;f.m+=mm;f.s+=ss;f.t+=n.v});
+  const sh=p=>SH[p.chave]||(porF[p.cnpj]?.t?{c:porF[p.cnpj].c/porF[p.cnpj].t,m:porF[p.cnpj].m/porF[p.cnpj].t,s:porF[p.cnpj].s/porF[p.cnpj].t}:{c:0,m:0,s:0});
+  const L=ms.slice(-6).map(m=>{const a=m+'-01',b=fimMes(a),r={m,a,b,fechado:b<h,ck:0,cr:0,vk:0,vr:0,pc:0,pmi:0,mck:0,mcr:0,mvk:0,mvr:0,lgk:0,lgr:0,sck:0,scr:0,svk:0,svr:0,psu:0,mi:{},su:{}};
+    const mi=c=>r.mi[c]||(r.mi[c]={c,ck:0,cr:0,vk:0,vr:0}),su=c=>r.su[c]||(r.su[c]={c,ck:0,cr:0,vk:0,vr:0});
     notasBal().forEach(n=>{if(n.loja!==l||n.data<a||n.data>b||!entrou(n))return;const q=bovDaNota(n);r.ck+=q.kg;r.cr+=q.rs;
-      n.itens.forEach(it=>{if(!miudoIt(it))return;const v=valItem(n,it),o=mi(it.c||'?');o.ck+=it.kg;o.cr+=v;r.mck+=it.kg;r.mcr+=v})});
+      n.itens.forEach(it=>{if(suiCod(it.cod0)){const v=valItem(n,it),o=su(it.cod0);o.ck+=it.kg;o.cr+=v;r.sck+=it.kg;r.scr+=v;return}
+        if(!miudoIt(it))return;const v=valItem(n,it),o=mi(it.c||'?');o.ck+=it.kg;o.cr+=v;r.mck+=it.kg;r.mcr+=v})});
     Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||v.data<a||v.data>b)return;Object.entries(v.itens||{}).forEach(([c,x])=>{if(bovBal(c,l)){r.vk+=x.kg;r.vr+=x.rs}
-      else if(PM[c]?.miudo){const o=mi(c);o.vk+=x.kg;o.vr+=x.rs;r.mvk+=x.kg;r.mvr+=x.rs}})});
+      else if(PM[c]?.miudo){const o=mi(c);o.vk+=x.kg;o.vr+=x.rs;r.mvk+=x.kg;r.mvr+=x.rs}
+      else if(suiCod(c)){const o=su(c);o.vk+=x.kg;o.vr+=x.rs;r.svk+=x.kg;r.svr+=x.rs}})});
     Object.values(S.vend||{}).forEach(v=>{if(LING_DE[v.loja]!==l||v.data<a||v.data>b)return;const x=v.itens?.['31408'];if(x){r.lgk+=x.kg;r.lgr+=x.rs}});
-    Object.values(S.pags||{}).forEach(p=>{if(p.loja!==l||!p.pagamento||p.pagamento<a||p.pagamento>b)return;const x=sh(p),v=p.valor_pago||0;r.pc+=v*x.c;r.pmi+=v*x.m});
+    Object.values(S.pags||{}).forEach(p=>{if(p.loja!==l||!p.pagamento||p.pagamento<a||p.pagamento>b)return;const x=sh(p),v=p.valor_pago||0;r.pc+=v*x.c;r.pmi+=v*x.m;r.psu+=v*(x.s||0)});
     return r});
   const ab=Object.values(S.pags||{}).filter(p=>p.loja===l&&p.situacao==='aberto'),sal=p=>Math.max(0,(p.valor||0)-(p.valor_pago||0));
-  const AB={aC:0,aM:0,vC:0,vM:0,nC:0,nM:0};ab.forEach(p=>{const x=sh(p),v=sal(p);if(v<=.005||!(x.c+x.m))return;
-    if(p.vencimento&&p.vencimento<h){AB.vC+=v*x.c;AB.vM+=v*x.m;if(x.c)AB.nC++;if(x.m)AB.nM++}else{AB.aC+=v*x.c;AB.aM+=v*x.m}});
-  const KS=['ck','cr','vk','vr','pc','pmi','mck','mcr','mvk','mvr','lgk','lgr'];
+  const AB={aC:0,aM:0,aS:0,vC:0,vM:0,vS:0,nC:0,nM:0,nS:0};ab.forEach(p=>{const x=sh(p),v=sal(p),xs=x.s||0;if(v<=.005||!(x.c+x.m+xs))return;
+    if(p.vencimento&&p.vencimento<h){AB.vC+=v*x.c;AB.vM+=v*x.m;AB.vS+=v*xs;if(x.c)AB.nC++;if(x.m)AB.nM++;if(xs)AB.nS++}else{AB.aC+=v*x.c;AB.aM+=v*x.m;AB.aS+=v*xs}});
+  const KS=['ck','cr','vk','vr','pc','pmi','mck','mcr','mvk','mvr','lgk','lgr','sck','scr','svk','svr','psu'];
   const F=L.filter(r=>r.fechado&&r.ck>0&&r.vk>0).slice(-3),med=F.length?F.reduce((t,r)=>{KS.forEach(k=>t[k]+=r[k]);return t},{...Object.fromEntries(KS.map(k=>[k,0])),n:F.length,de:F[0].m,ate:F[F.length-1].m}):null;
   /* miúdo por miúdo, somando os meses fechados da média */
   const miS={};F.forEach(r=>Object.values(r.mi).forEach(o=>{const t=miS[o.c]||(miS[o.c]={c:o.c,ck:0,cr:0,vk:0,vr:0});['ck','cr','vk','vr'].forEach(k=>t[k]+=o[k])}));
-  if(med){med.miud=Object.values(miS).filter(o=>o.ck>.0005||o.vk>.0005).sort((x,y)=>y.vr-x.vr);KS.forEach(k=>med[k]/=med.n)} /* média por mês (as razões não mudam) */
+  const suS={};F.forEach(r=>Object.values(r.su).forEach(o=>{const t=suS[o.c]||(suS[o.c]={c:o.c,ck:0,cr:0,vk:0,vr:0});['ck','cr','vk','vr'].forEach(k=>t[k]+=o[k])}));
+  if(med){med.miud=Object.values(miS).filter(o=>o.ck>.0005||o.vk>.0005).sort((x,y)=>y.vr-x.vr);med.suin=Object.values(suS).filter(o=>o.ck>.0005||o.vk>.0005).sort((x,y)=>y.vr-x.vr);KS.forEach(k=>med[k]/=med.n)} /* média por mês (as razões não mudam) */
   const lingDe=Object.keys(LING_DE).filter(k=>LING_DE[k]===l).map(k=>lojaNome(+k));
   return{L,med,AB,lingDe,temPag:Object.values(S.pags||{}).some(p=>p.loja===l)}}
 const vcpCalc=r=>{const x={...r};x.rkg=r.ck?r.vk/r.ck:null;x.r100=r.cr?r.vr/r.cr*100:null;x.ckc=r.ck?r.cr/r.ck:null;x.ckv=r.vk?r.cr/r.vk:null;x.pm=r.vk?r.vr/r.vk:null;
@@ -1986,19 +1994,24 @@ function vcpLinhas(D){const C=D.L.map(vcpCalc),M=D.med?vcpCalc(D.med):null,i0=v=
      ['lg key','🌭 Sobra contando essa linguiça',x=>x.cr&&x.vr?`${kgI(x.vr+x.lgr-x.cr)} · ${pc((x.vr+x.lgr-x.cr)/(x.vr+x.lgr))}`:'—',x=>x.cr&&x.vr?pos(x.vr+x.lgr-x.cr):'']]:[]),
    ['','Pago aos frigoríficos (parte da carne)',x=>D.temPag?i0(x.pc):'—'],
    ['key','Venda − Pago',x=>D.temPag&&x.vr?`${kgI(x.vr-x.pc)} · ${pc((x.vr-x.pc)/x.vr)}`:'—',x=>D.temPag&&x.vr?pos(x.vr-x.pc):''],
-   /* miúdos: as mesmas linhas da carne */
-   ['sec2','1 · Tudo que compro vende?'],
-   ['','Compra kg',x=>i0(x.mck)],['','Venda kg',x=>i0(x.mvk)],
-   ['key','Venda ÷ Compra (kg)',x=>x.mck?pc(x.mvk/x.mck):'—',x=>x.mck&&x.mvk/x.mck<MIUDO_OK?' class="r"':''],
-   ['','Compra R$ (com S.T.)',x=>i0(x.mcr)],['','Venda R$',x=>i0(x.mvr)],
-   ['key','Venda ÷ Compra (R$ por 100)',x=>x.mcr?kgI(x.mvr/x.mcr*100):'—',x=>x.mcr&&x.mvr<x.mcr?' class="r"':''],
-   ['sec2','2 · Dá lucro? E o pagamento?'],
-   ['','Custo do kg comprado',x=>x.mck?r2_(x.mcr/x.mck):'—'],['','Custo do kg vendido',x=>x.mvk?r2_(x.mcr/x.mvk):'—'],['','Preço médio de venda',x=>x.mvk?r2_(x.mvr/x.mvk):'—'],
-   ['key','Sobra por kg vendido',x=>x.mvk&&x.mcr?r2_((x.mvr-x.mcr)/x.mvk):'—',x=>x.mvk&&x.mcr?pos(x.mvr-x.mcr):''],
-   ['key','Sobra (Venda − Compra)',x=>x.mcr&&x.mvr?`${kgI(x.mvr-x.mcr)} · ${pc((x.mvr-x.mcr)/x.mvr)}`:'—',x=>x.mcr&&x.mvr?pos(x.mvr-x.mcr):''],
-   ['','Pago aos frigoríficos (parte dos miúdos)',x=>D.temPag?i0(x.pmi):'—'],
-   ['key','Venda − Pago',x=>D.temPag&&x.mvr?`${kgI(x.mvr-x.pmi)} · ${pc((x.mvr-x.pmi)/x.mvr)}`:'—',x=>D.temPag&&x.mvr?pos(x.mvr-x.pmi):''],
-  ].map(r=>({...r,C,M}))}
+   /* miúdos e suínos: as mesmas linhas da carne */
+   ...grpRows('sec2','m','mi','dos miúdos','aos frigoríficos'),
+   ...grpRows('sec3','s','su','do suíno','aos fornecedores'),
+  ].map(r=>({...r,C,M}));
+  function grpRows(sec,p,pg,parte,quem){const K=k=>p+k,ck=x=>x[K('ck')],cr=x=>x[K('cr')],vk=x=>x[K('vk')],vr=x=>x[K('vr')],pa=x=>x[pg==='mi'?'pmi':'psu'],ok=p==='m'?MIUDO_OK:.85;
+   return[
+   [sec,'1 · Tudo que compro vende?'],
+   ['','Compra kg',x=>i0(ck(x))],['','Venda kg',x=>i0(vk(x))],
+   ['key','Venda ÷ Compra (kg)',x=>ck(x)?pc(vk(x)/ck(x)):'—',x=>ck(x)&&vk(x)/ck(x)<ok?' class=\"r\"':''],
+   ['','Compra R$ (com S.T.)',x=>i0(cr(x))],['','Venda R$',x=>i0(vr(x))],
+   ['key','Venda ÷ Compra (R$ por 100)',x=>cr(x)?kgI(vr(x)/cr(x)*100):'—',x=>cr(x)&&vr(x)<cr(x)?' class=\"r\"':''],
+   [sec,'2 · Dá lucro? E o pagamento?'],
+   ['','Custo do kg comprado',x=>ck(x)?r2_(cr(x)/ck(x)):'—'],['','Custo do kg vendido',x=>vk(x)?r2_(cr(x)/vk(x)):'—'],['','Preço médio de venda',x=>vk(x)?r2_(vr(x)/vk(x)):'—'],
+   ['key','Sobra por kg vendido',x=>vk(x)&&cr(x)?r2_((vr(x)-cr(x))/vk(x)):'—',x=>vk(x)&&cr(x)?pos(vr(x)-cr(x)):''],
+   ['key','Sobra (Venda − Compra)',x=>cr(x)&&vr(x)?`${kgI(vr(x)-cr(x))} · ${pc((vr(x)-cr(x))/vr(x))}`:'—',x=>cr(x)&&vr(x)?pos(vr(x)-cr(x)):''],
+   ['','Pago '+quem+' (parte '+parte+')',x=>D.temPag?i0(pa(x)):'—'],
+   ['key','Venda − Pago',x=>D.temPag&&vr(x)?`${kgI(vr(x)-pa(x))} · ${pc((vr(x)-pa(x))/vr(x))}`:'—',x=>D.temPag&&vr(x)?pos(vr(x)-pa(x)):''],
+  ]}}
 function vPainelVCP(l){if(S.role!=='gestor')return '';const D=vcpDados(l);
   const card=b=>`<section class="card vcp"><div class="card-h"><div><h3>Venda × Compra × Pagamento</h3><p class="hint">Carne bovina por mês. Compra pela emissão da nota (com S.T., sem miúdos), venda pelo cupom, pagamento pela data do boleto (Brajan). Só o gestor vê.</p></div>${D?'<button type="button" class="btn xl" data-act="vcp-xls" data-id="'+l+'">⬇ Exportar Excel</button>':''}</div>${b}</section>`;
   if(!D)return card('<p class="pn-vazio">As notas de compra desta loja ainda não chegam pelo Brajan.</p>');
@@ -2007,30 +2020,40 @@ function vPainelVCP(l){if(S.role!=='gestor')return '';const D=vcpDados(l);
     return `<div class="vcp-dec">💡 <b>Média ${D.med.n>1?`dos meses fechados (${per})`:`de ${per}`}:</b> para cada R$ 100 comprados, a loja vendeu <b>R$ ${kgI(M.r100)}</b>. Sobra de <b>${pc(M.sp)}</b>, ou R$ ${F2.format(M.skg)} por kg vendido. ${M.sp>=META_MG?`Está acima da meta de ${pc(META_MG)}.`:`Para chegar a ${pc(META_MG)}, o preço médio teria que ir de R$ ${F2.format(M.pm)} para <b>R$ ${F2.format(alvo)}</b> (+${pc(alvo/M.pm-1)}).`}</div>`})():'<div class="vcp-dec">Ainda não tem um mês fechado com compra e venda para tirar a média.</div>';
   const rows=vcpLinhas(D),C=rows[0].C;
   const th=`<tr><th>${esc(lojaNome(l))}</th>${D.L.map(r=>`<th>${mesRot(r.m)}${r.fechado?'':' *'}</th>`).join('')}<th class="m3">Média meses fechados</th></tr>`;
-  const i4=rows.findIndex(r=>r[0]==='sec2');
-  const tb0=rows.map(r=>r[0]==='sec'||r[0]==='sec2'?`<tr class="${r[0]}"><td colspan="${C.length+2}">${r[1]}</td></tr>`:
+  const i4=rows.findIndex(r=>r[0]==='sec2'),i5=rows.findIndex(r=>r[0]==='sec3');
+  const tb0=rows.map(r=>r[0]==='sec'||r[0]==='sec2'||r[0]==='sec3'?`<tr class="${r[0]}"><td colspan="${C.length+2}">${r[1]}</td></tr>`:
     `<tr${r[0]?` class="${r[0]}"`:''}><td>${r[1]}</td>${C.map(x=>`<td${r[3]?r[3](x):''}>${r[2](x)}</td>`).join('')}<td class="m3">${M?r[2](M):'—'}</td></tr>`);
-  const tbC=tb0.slice(0,i4).join(''),tbM=tb0.slice(i4).join(''); /* carne em cima; miúdos numa tabela separada */
+  const tbC=tb0.slice(0,i4).join(''),tbM=tb0.slice(i4,i5).join(''),tbS=tb0.slice(i5).join(''); /* carne em cima; miúdos numa tabela separada */
   const abr=(a,v,n,q)=>D.temPag?`<tr><td>Em aberto a vencer (hoje, parte ${q})</td>${C.map((x,i)=>`<td>${i===C.length-1?kgI(a):''}</td>`).join('')}<td class="m3">—</td></tr>
     <tr><td>Vencido sem baixa (hoje, parte ${q})</td>${C.map((x,i)=>`<td${i===C.length-1&&v>.5?' class="r"':''}>${i===C.length-1?(v>.5?`${n} · ${kgI(v)}`:'0'):''}</td>`).join('')}<td class="m3">—</td></tr>`:'';
-  const ab=abr(D.AB.aC,D.AB.vC,D.AB.nC,'da carne'),abM=abr(D.AB.aM,D.AB.vM,D.AB.nM,'dos miúdos');
+  const ab=abr(D.AB.aC,D.AB.vC,D.AB.nC,'da carne'),abM=abr(D.AB.aM,D.AB.vM,D.AB.nM,'dos miúdos'),abS=abr(D.AB.aS,D.AB.vS,D.AB.nS,'do suíno');
   const MU=D.med?.miud||[],per=D.med?(D.med.n>1?`${mesRot(D.med.de)} a ${mesRot(D.med.ate)}`:mesRot(D.med.de)):'',ncol=C.length+2;
   const mrow=(o,tot)=>{const r=o.ck?o.vk/o.ck:null,s=o.vr-o.cr;return `<tr${tot?' class="key"':''}><td>${tot?'Total miúdos':esc(PM[o.c]?.n||o.c)}</td><td>${kgI(o.ck)}</td><td>${kgI(o.vk)}</td>${C.length>3?`<td colspan="${C.length-3}"></td>`:''}<td${r!=null&&r<MIUDO_OK?' class="r"':''}>${r==null?'—':pc(r)}</td>
     <td class="m3">${o.ck?F2.format(o.cr/o.ck):'—'} → ${o.vk?F2.format(o.vr/o.vk):'—'} · <span class="${s<0?'r':'g'}">${kgI(s)}</span></td></tr>`};
   const mt=MU.length&&C.length>=3?`<tr class="sub"><td>Por miúdo · meses fechados (${per})</td><td>Comprou kg</td><td>Vendeu kg</td>${C.length>3?`<td colspan="${C.length-3}"></td>`:''}<td>Vendido ÷ Comprado</td><td class="m3">Custo kg → Preço kg · Sobra R$</td></tr>
     ${MU.map(o=>mrow(o)).join('')}${mrow(MU.reduce((t,o)=>{['ck','cr','vk','vr'].forEach(k=>t[k]+=o[k]);return t},{ck:0,cr:0,vk:0,vr:0}),true)}`:'';
+  const SU=D.med?.suin||[];
+  const srow=(o,tot)=>{const r=o.ck?o.vk/o.ck:null,sb=o.vr-o.cr;return `<tr${tot?' class="key"':''}><td>${tot?'Total suínos':esc(suiNome(o.c))}</td><td>${kgI(o.ck)}</td><td>${kgI(o.vk)}</td>${C.length>3?`<td colspan="${C.length-3}"></td>`:''}<td${r!=null&&r<.85?' class="r"':''}>${r==null?'—':pc(r)}</td>
+    <td class="m3">${o.ck?F2.format(o.cr/o.ck):'—'} → ${o.vk?F2.format(o.vr/o.vk):'—'} · <span class="${sb<0?'r':'g'}">${kgI(sb)}</span></td></tr>`};
+  const st=SU.length&&C.length>=3?`<tr class="sub su"><td>Por produto · meses fechados (${per})</td><td>Comprou kg</td><td>Vendeu kg</td>${C.length>3?`<td colspan="${C.length-3}"></td>`:''}<td>Vendido ÷ Comprado</td><td class="m3">Custo kg → Preço kg · Sobra R$</td></tr>
+    ${SU.map(o=>srow(o)).join('')}${srow(SU.reduce((t,o)=>{['ck','cr','vk','vr'].forEach(k=>t[k]+=o[k]);return t},{ck:0,cr:0,vk:0,vr:0}),true)}`:'';
+  const decS=M&&M.sck?`🐖 <b>Suínos (média ${per}):</b> para cada R$ 100 comprados, vendeu <b>R$ ${M.scr?kgI(M.svr/M.scr*100):'—'}</b>. Vendeu <b>${pc(M.svk/M.sck)}</b> do kg que comprou. Sobra de <b>${M.svr?pc((M.svr-M.scr)/M.svr):'—'}</b>${M.svk?`, ou R$ ${F2.format((M.svr-M.scr)/M.svk)} por kg vendido`:''}. O suíno é comprado em lotes: decida pela média.`:'';
+  const temS=D.L.some(r=>r.sck||r.svk);
   const ruins=MU.filter(o=>o.ck>0&&o.vk/o.ck<.75).map(o=>(PM[o.c]?.n||o.c).toLowerCase());
   const decM=M&&M.mck?`🦴 <b>Miúdos (média ${per}):</b> para cada R$ 100 comprados, vendeu <b>R$ ${M.mcr?kgI(M.mvr/M.mcr*100):'—'}</b>. Vendeu <b>${pc(M.mvk/M.mck)}</b> do kg que comprou (o normal é perto de 95%). Sobra de <b>${M.mvr?pc((M.mvr-M.mcr)/M.mvr):'—'}</b>${M.mvk?`, ou R$ ${F2.format((M.mvr-M.mcr)/M.mvk)} por kg vendido`:''}${ruins.length?` · <span style="color:var(--crit);font-weight:700">${ruins.join(' e ')} abaixo de 75%</span>`:''}.`:'';
   return card(`<h4 class="vcp-h">🥩 Carne bovina</h4>${dec}<div class="tw"><table class="vx"><thead>${th}</thead><tbody>${tbC}${ab}</tbody></table></div>
     <div class="vcp-mi"><h4 class="vcp-h">🦴 Miúdos <small>fígado, coração, mocotó, bucho, rabo · fora da conta da carne</small></h4>${decM?`<div class="vcp-dec mi">${decM}</div>`:''}
     <div class="tw"><table class="vx"><thead>${th}</thead><tbody>${tbM}${abM}${mt}</tbody></table></div></div>
+    ${temS?`<div class="vcp-mi vcp-su"><h4 class="vcp-h">🐖 Suínos <small>só suíno de corte · embutidos (linguiça, salsicha, salame, paio) ficam fora</small></h4>${decS?`<div class="vcp-dec su">${decS}</div>`:''}
+    <div class="tw"><table class="vx"><thead>${th}</thead><tbody>${tbS}${abS}${st}</tbody></table></div></div>`:''}
     <p class="hint">* Mês em andamento (até hoje). Média dos últimos 3 meses fechados. Linhas amarelas são as de decisão; vermelho = negativo.
     Pago: cada boleto é dividido entre carne e miúdos pela nota que ele paga (frango, suíno e embutidos ficam de fora). Diferença num mês é normal (nota do fim do mês paga no mês seguinte). "Vencido sem baixa" costuma ser boleto pago sem baixa no Brajan: confira com o financeiro.
     Miúdos ficam fora da conta da carne; não têm osso, então o normal é vender perto de 95% do que entra (vermelho abaixo de 90%).</p>`)}
 function exportarVCP(l){if(typeof XLSX==='undefined'){toast('Sem a biblioteca do Excel. Verifique a internet e tente de novo.');return}
   const D=vcpDados(l);if(!D)return;const rows=vcpLinhas(D),C=rows[0].C,M=D.med?vcpCalc(D.med):null,tx=v=>String(v).replace(/<[^>]+>/g,'');
   const aoa=[[`Venda × Compra × Pagamento — ${lojaNome(l)}`],[`Gerado em ${nowBR()}`],[],['',...D.L.map(r=>mesRot(r.m)+(r.fechado?'':' *')),'Média meses fechados']];
-  rows.forEach(r=>{if(r[0]==='sec'||r[0]==='sec2'){aoa.push([],[r[1]]);return}aoa.push([r[1],...C.map(x=>tx(r[2](x))),M?tx(r[2](M)):''])});
+  rows.forEach((r,i)=>{if(r[0]==='sec2'&&rows.findIndex(x=>x[0]==='sec2')===i)aoa.push([],['MIÚDOS']);if(r[0]==='sec3'&&rows.findIndex(x=>x[0]==='sec3')===i)aoa.push([],['SUÍNOS (só suíno de corte)']);
+    if(r[0]==='sec'||r[0]==='sec2'||r[0]==='sec3'){aoa.push([],[r[1]]);return}aoa.push([r[1],...C.map(x=>tx(r[2](x))),M?tx(r[2](M)):''])});
   if(D.temPag)aoa.push([],['Em aberto a vencer (hoje) · carne',Math.round(D.AB.aC),'miúdos',Math.round(D.AB.aM)],['Vencido sem baixa (hoje) · carne',Math.round(D.AB.vC),'miúdos',Math.round(D.AB.vM)]);
   const MU=D.med?.miud||[];if(MU.length){aoa.push([],['Por miúdo · meses fechados','Comprou kg','Vendeu kg','Vendido ÷ Comprado','Custo do kg','Preço do kg','Sobra R$']);
     MU.forEach(o=>aoa.push([PM[o.c]?.n||o.c,Math.round(o.ck),Math.round(o.vk),o.ck?Math.round(o.vk/o.ck*1000)/10+'%':'',o.ck?Math.round(o.cr/o.ck*100)/100:'',o.vk?Math.round(o.vr/o.vk*100)/100:'',Math.round(o.vr-o.cr)]))}
