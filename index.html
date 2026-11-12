@@ -1618,6 +1618,8 @@ function calc(r){r.cmv=r.ei+r.c-r.ef;r.perdaKg=r.cmv-r.vk;r.perda=r.cmv>0?r.perd
 /* miúdos (fígado, coração, mocotó…) ficam fora do balanço: nas compras, nos estoques e nas vendas */
 /* produto feito na loja que só conta como carne bovina em algumas lojas (ex.: linguiça caseira: Parecis e São Felipe fabricam; Santa Luzia compra pronta) */
 const BOV_LOJA={'31408':[3,4]};
+/* linguiça caseira que uma loja vende mas outra fabrica: aparece (à parte) no painel de quem fabrica. Alto Alegre e Santa Luzia recebem de São Felipe */
+const LING_DE={1:4,2:4};
 const bovBal=(c,l)=>(!!PM[c]?.bov&&!PM[c]?.miudo)||(l!=null&&!!BOV_LOJA[c]?.includes(l));
 const miudoIt=it=>{if(it.nb||NAO_BOV.test(norm(it.desc||'')))return false;const c=it.c||matchProd(it.desc);return !!PM[c]?.miudo||(classNF(it)==='outros'&&/miud|figado|mocoto|bucho|rumen|coracao|rabo|lingua|tripa/.test(norm(it.desc)))};
 /* itens de cada nota que entram no balanço: o padrão é carne bovina sem miúdos; a escolha fica salva na nota (documento vimp "loja|itens|nota") */
@@ -1946,23 +1948,25 @@ function vcpDados(l){const h=todayISO(),cps=Object.values(S.comps||{}).filter(c=
   const SH={},porF={};cps.forEach(c=>{const n=notaBrajan(c);if(!(n.v>0))return;const q=bovDaNota(n).rs,mm=n.itens.reduce((t,it)=>t+(miudoIt(it)?valItem(n,it):0),0);
     SH[c.chave]={c:q/n.v,m:mm/n.v};const f=porF[c.cnpj]||(porF[c.cnpj]={c:0,m:0,t:0});f.c+=q;f.m+=mm;f.t+=n.v});
   const sh=p=>SH[p.chave]||(porF[p.cnpj]?.t?{c:porF[p.cnpj].c/porF[p.cnpj].t,m:porF[p.cnpj].m/porF[p.cnpj].t}:{c:0,m:0});
-  const L=ms.slice(-6).map(m=>{const a=m+'-01',b=fimMes(a),r={m,a,b,fechado:b<h,ck:0,cr:0,vk:0,vr:0,pc:0,pmi:0,mck:0,mcr:0,mvk:0,mvr:0,mi:{}};
+  const L=ms.slice(-6).map(m=>{const a=m+'-01',b=fimMes(a),r={m,a,b,fechado:b<h,ck:0,cr:0,vk:0,vr:0,pc:0,pmi:0,mck:0,mcr:0,mvk:0,mvr:0,lgk:0,lgr:0,mi:{}};
     const mi=c=>r.mi[c]||(r.mi[c]={c,ck:0,cr:0,vk:0,vr:0});
     notasBal().forEach(n=>{if(n.loja!==l||n.data<a||n.data>b||!entrou(n))return;const q=bovDaNota(n);r.ck+=q.kg;r.cr+=q.rs;
       n.itens.forEach(it=>{if(!miudoIt(it))return;const v=valItem(n,it),o=mi(it.c||'?');o.ck+=it.kg;o.cr+=v;r.mck+=it.kg;r.mcr+=v})});
     Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||v.data<a||v.data>b)return;Object.entries(v.itens||{}).forEach(([c,x])=>{if(bovBal(c,l)){r.vk+=x.kg;r.vr+=x.rs}
       else if(PM[c]?.miudo){const o=mi(c);o.vk+=x.kg;o.vr+=x.rs;r.mvk+=x.kg;r.mvr+=x.rs}})});
+    Object.values(S.vend||{}).forEach(v=>{if(LING_DE[v.loja]!==l||v.data<a||v.data>b)return;const x=v.itens?.['31408'];if(x){r.lgk+=x.kg;r.lgr+=x.rs}});
     Object.values(S.pags||{}).forEach(p=>{if(p.loja!==l||!p.pagamento||p.pagamento<a||p.pagamento>b)return;const x=sh(p),v=p.valor_pago||0;r.pc+=v*x.c;r.pmi+=v*x.m});
     return r});
   const ab=Object.values(S.pags||{}).filter(p=>p.loja===l&&p.situacao==='aberto'),sal=p=>Math.max(0,(p.valor||0)-(p.valor_pago||0));
   const AB={aC:0,aM:0,vC:0,vM:0,nC:0,nM:0};ab.forEach(p=>{const x=sh(p),v=sal(p);if(v<=.005||!(x.c+x.m))return;
     if(p.vencimento&&p.vencimento<h){AB.vC+=v*x.c;AB.vM+=v*x.m;if(x.c)AB.nC++;if(x.m)AB.nM++}else{AB.aC+=v*x.c;AB.aM+=v*x.m}});
-  const KS=['ck','cr','vk','vr','pc','pmi','mck','mcr','mvk','mvr'];
+  const KS=['ck','cr','vk','vr','pc','pmi','mck','mcr','mvk','mvr','lgk','lgr'];
   const F=L.filter(r=>r.fechado&&r.ck>0&&r.vk>0).slice(-3),med=F.length?F.reduce((t,r)=>{KS.forEach(k=>t[k]+=r[k]);return t},{...Object.fromEntries(KS.map(k=>[k,0])),n:F.length,de:F[0].m,ate:F[F.length-1].m}):null;
   /* miúdo por miúdo, somando os meses fechados da média */
   const miS={};F.forEach(r=>Object.values(r.mi).forEach(o=>{const t=miS[o.c]||(miS[o.c]={c:o.c,ck:0,cr:0,vk:0,vr:0});['ck','cr','vk','vr'].forEach(k=>t[k]+=o[k])}));
   if(med){med.miud=Object.values(miS).filter(o=>o.ck>.0005||o.vk>.0005).sort((x,y)=>y.vr-x.vr);KS.forEach(k=>med[k]/=med.n)} /* média por mês (as razões não mudam) */
-  return{L,med,AB,temPag:Object.values(S.pags||{}).some(p=>p.loja===l)}}
+  const lingDe=Object.keys(LING_DE).filter(k=>LING_DE[k]===l).map(k=>lojaNome(+k));
+  return{L,med,AB,lingDe,temPag:Object.values(S.pags||{}).some(p=>p.loja===l)}}
 const vcpCalc=r=>{const x={...r};x.rkg=r.ck?r.vk/r.ck:null;x.r100=r.cr?r.vr/r.cr*100:null;x.ckc=r.ck?r.cr/r.ck:null;x.ckv=r.vk?r.cr/r.vk:null;x.pm=r.vk?r.vr/r.vk:null;
   x.skg=x.pm!=null&&x.ckv!=null?x.pm-x.ckv:null;x.sb=r.vr-r.cr;x.sp=r.vr?x.sb/r.vr:null;return x};
 function vcpLinhas(D){const C=D.L.map(vcpCalc),M=D.med?vcpCalc(D.med):null,i0=v=>v==null?'—':kgI(v),r2_=v=>v==null||!isFinite(v)?'—':F2.format(v);
@@ -1977,6 +1981,8 @@ function vcpLinhas(D){const C=D.L.map(vcpCalc),M=D.med?vcpCalc(D.med):null,i0=v=
    ['','Custo do kg comprado',x=>r2_(x.ckc)],['','Custo do kg vendido',x=>r2_(x.ckv)],['','Preço médio de venda',x=>r2_(x.pm)],
    ['key','Sobra por kg vendido',x=>r2_(x.skg),x=>pos(x.skg)],
    ['key','Sobra (Venda − Compra)',x=>x.cr&&x.vr?`${kgI(x.sb)} · ${pc(x.sp)}`:'—',x=>x.cr&&x.vr?pos(x.sb):''],
+   ...(D.lingDe.length?[['','Linguiça caseira vendida em '+D.lingDe.join(' e ')+' (feita aqui)',x=>x.lgk?`${i0(x.lgk)} kg · ${i0(x.lgr)}`:'—'],
+     ['key','Sobra contando essa linguiça',x=>x.cr&&x.vr?`${kgI(x.vr+x.lgr-x.cr)} · ${pc((x.vr+x.lgr-x.cr)/(x.vr+x.lgr))}`:'—',x=>x.cr&&x.vr?pos(x.vr+x.lgr-x.cr):'']]:[]),
    ['','Pago aos frigoríficos (parte da carne)',x=>D.temPag?i0(x.pc):'—'],
    ['key','Venda − Pago',x=>D.temPag&&x.vr?`${kgI(x.vr-x.pc)} · ${pc((x.vr-x.pc)/x.vr)}`:'—',x=>D.temPag&&x.vr?pos(x.vr-x.pc):''],
    ['sec2','4 · Miúdos (fígado, coração, mocotó, bucho, rabo)'],
