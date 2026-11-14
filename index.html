@@ -2081,7 +2081,7 @@ function vPainelLoja(l,a,b,pa,pb){const lj=S.lojas.find(x=>x.id===l),h=todayISO(
   const kp=`<div class="pn-k">
     <div class="kpi"><small>Vendas</small><b>${r.vr?rsK(r.vr):'—'}</b>${pnVar(r.vr,ant.vr)}</div>
     <div class="kpi"><small>Kg vendidos</small><b>${r.vk?kgI(r.vk)+' kg':'—'}</b>${pnVar(r.vk,ant.vk)}</div>
-    <div class="kpi"><small>Margem bruta</small><b>${pc(r.margem)}</b>${pnVar(r.margem,ant.margem,true)}</div>
+    ${kpiSobra(sobraReal(l),r.margem)}
     <div class="kpi"><small>Compras (notas)</small><b>${r.cr?rsK(r.cr):'—'}</b><i>${kgI(r.ck)} kg · ${r.nn} nota${r.nn===1?'':'s'}</i></div>
     <div class="kpi"><small>Perda na desossa</small><b class="pn-p ${r.perda==null?'':perdaSt(r.perda)}">${pc(r.perda)}</b><i>${r.nConf?`${r.nConf} conferência${r.nConf>1?'s':''}`:'sem conferência no período'}</i></div></div>`;
   const dCom=ds.filter((d,i)=>vd[i]>0&&d!==h),med=dCom.length?dCom.reduce((t,d)=>t+vd[ds.indexOf(d)],0)/dCom.length:0,semV=ds.filter((d,i)=>!vd[i]&&d<h);
@@ -2169,6 +2169,10 @@ function exportarCmp(){if(typeof XLSX==='undefined'){toast('Sem a biblioteca do 
     const tv=C.T?r[2](C.T):null;aoa.push([r[1],...C.LJ.map(x=>{const v=x.t?r[2](x.t):null;return v==null||!isFinite(v)?(x.D?'':'sem Brajan'):r[3](v)}),tv==null||!isFinite(tv)?'':r[3](r[1]==='Venda por mês'?tv/com.length:tv)])});
   const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:34},...C.LJ.map(()=>({wch:16})),{wch:18}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Comparativo');
   XLSX.writeFile(wb,`Comparativo das lojas ${todayISO()}.xlsx`);toast('Planilha gerada.')}
+/* sobra real da carne bovina (venda − compra) na média dos meses fechados: o número que vale, no lugar da margem do cadastro */
+function sobraReal(l){const D=vcpDados(l),M=D?.med;if(!M||!M.vr)return null;return{v:(M.vr-M.cr)/M.vr,per:M.n>1?`${mesRot(M.de)} a ${mesRot(M.ate)}`:mesRot(M.de)}}
+function sobraRealTodas(){const C=cmpDados();if(!C.T||!C.T.vr)return null;return{v:(C.T.vr-C.T.cr)/C.T.vr,per:C.sel.length>1?`${mesRot(C.sel[0])} a ${mesRot(C.sel[C.sel.length-1])}`:mesRot(C.sel[0])}}
+const kpiSobra=(x,sist)=>`<div class="kpi"><small>Sobra real (venda − compra)</small><b class="pn-p ${x?(x.v<.08?'crit':x.v<.16?'warn':'ok'):''}">${x?pc(x.v):'—'}</b><i>${x?`média ${x.per}`:'sem mês fechado do Brajan'}${sist!=null?` · sistema mostra ${pc(sist)}`:''}</i></div>`;
 function vPainel(){
   const {a,b,pa,pb}=pnPeriodo(),h=todayISO();
   const L=S.lojas.map(l=>({l,r:pnLoja(l.id,a,b),ant:pnLoja(l.id,pa,pb),uc:ultCont(l.id),uv:ultVend(l.id)}));
@@ -2183,7 +2187,7 @@ function vPainel(){
     <div class="kpi"><small>Vendas · todas as lojas</small><b>${T.vr?rsK(T.vr):'—'}</b>${pnVar(T.vr,A.vr)}</div>
     <div class="kpi"><small>Kg vendidos</small><b>${T.vk?kgI(T.vk)+' kg':'—'}</b>${pnVar(T.vk,A.vk)}</div>
     <div class="kpi"><small>Compras (notas)</small><b>${T.cr?rsK(T.cr):'—'}</b><i>${kgI(T.ck)} kg · ${T.nn} nota${T.nn===1?'':'s'}</i></div>
-    <div class="kpi"><small>Margem bruta</small><b>${pc(T.margem)}</b>${pnVar(T.margem,A.margem,true)}</div>
+    ${kpiSobra(sobraRealTodas(),T.margem)}
     <div class="kpi"><small>Perda na desossa</small><b>${pc(T.perda)}</b><i>limite de atenção ${S.set.perdaAt}%</i></div></div>`;
   const pend=[];
   const lojas=`<div class="pn-lojas">${L.map(({l,r,uc,uv})=>{const tags=[];let st='ok';
@@ -2194,12 +2198,12 @@ function vPainel(){
     r.crit.forEach(({c,perda})=>pend.push(['crit',`${esc(l.nome)}: perda de ${pc(perda)} na NF ${esc(c.nf)} (${esc(fnome(c))})`,c.id]));
     return `<button type="button" class="pn-lj ${st}" data-act="pn-loja" data-id="${l.id}" title="Abrir o painel da loja"><h3>${esc(l.nome)}</h3><span class="c">${esc(l.cidade||'')}</span>
       <table><tr><td>Vendas</td><td>${r.vr?rsK(r.vr):'—'}</td></tr><tr><td>Kg vendidos</td><td>${r.vk?kgI(r.vk):'—'}</td></tr>
-      <tr><td>Margem</td><td>${pc(r.margem)}</td></tr><tr><td>Perda desossa</td><td>${r.perda==null?'—':`<span class="pill ${perdaSt(r.perda)}">${pc(r.perda)}</span>`}</td></tr>
+      <tr><td>Sobra real</td><td>${(x=>x?`<b class="pn-p ${x.v<.08?'crit':x.v<.16?'warn':'ok'}">${pc(x.v)}</b>`:'—')(sobraReal(l.id))}</td></tr><tr><td>Perda desossa</td><td>${r.perda==null?'—':`<span class="pill ${perdaSt(r.perda)}">${pc(r.perda)}</span>`}</td></tr>
       <tr><td>Compras</td><td>${r.ck?kgI(r.ck)+' kg':'—'}</td></tr><tr><td>Última contagem</td><td>${uc?dBR(uc).slice(0,5):'—'}</td></tr></table>
       <div class="pn-tags">${tags.map(([c,t])=>`<span class="pill ${c}">${t}</span>`).join('')}</div></button>`}).join('')}</div>`;
   const atras=L.filter(x=>!x.uc||dias(x.uc,h)>7).map(x=>x.l.nome);
   if(atras.length)pend.push(['',`Sem contagem há mais de 7 dias: ${esc(atras.join(', '))}`]);
-  Object.values(S.comps||{}).filter(c=>c.situacao==='a_caminho').sort((x,y)=>(y.emissao||'').localeCompare(x.emissao||'')).slice(0,5)
+  Object.values(S.comps||{}).filter(c=>c.situacao==='a_caminho'&&bovDaNota(notaBrajan(c)).kg>0) /* só nota com carne bovina */.sort((x,y)=>(y.emissao||'').localeCompare(x.emissao||'')).slice(0,5)
     .forEach(c=>pend.push(['info',`${esc(c.fornecedor||'Nota')} NF ${esc(c.numero)} a caminho de ${esc(lojaNome(c.loja))} (${kgI(c.itens.reduce((t,i)=>t+(i.unidade==='KG'?i.qtd:0),0))} kg)`]));
   const semVend=L.filter(x=>!x.uv).map(x=>x.l.nome);if(semVend.length)pend.push(['',`Sem vendas do Brajan: ${esc(semVend.join(', '))}`]);
   const semCnpj=S.lojas.filter(l=>!l.cnpj).map(l=>l.nome);if(semCnpj.length)pend.push(['',`CNPJ faltando: ${esc(semCnpj.join(', '))}`]);
@@ -2298,7 +2302,13 @@ async function lerDanfe(f,imgs){
   catch(e){if(S.rf===f){f.falhou=true;toast(e.message||'Não consegui ler a foto. Digite os dados.')}}
   finally{if(LENDO===f)LENDO=null;save();render()}
 }
-function aplicarLeitura(n,modelo){refazForn();
+/* leitura da DANFE: o emitente certo vem da chave (posições 7 a 20); se a leitura trocou emitente com destinatário (CNPJ de uma loja nossa), corrige */
+function corrLeitura(n){if(!n)return n;const ch=String(n.chave||'').replace(/\D/g,''),nossas=S.lojas.map(l=>l.cnpj).filter(Boolean);
+  if(ch.length===44&&!nossas.includes(ch.slice(6,20))){if(n.emitente_cnpj!==ch.slice(6,20)&&nossas.includes(n.emitente_cnpj)&&!n.destinatario_cnpj)n.destinatario_cnpj=n.emitente_cnpj;n.emitente_cnpj=ch.slice(6,20)}
+  else if(nossas.includes(n.emitente_cnpj)&&n.destinatario_cnpj&&!nossas.includes(n.destinatario_cnpj)){const t=n.emitente_cnpj;n.emitente_cnpj=n.destinatario_cnpj;n.destinatario_cnpj=t;const tn=n.emitente_nome;n.emitente_nome=n.destinatario_nome||tn;n.destinatario_nome=tn}
+  if(nossas.includes(n.emitente_cnpj)){n.emitente_cnpj='';n.emitente_nome=n.emitente_nome||''} /* nunca usa o CNPJ de uma loja como fornecedor */
+  return n}
+function aplicarLeitura(n,modelo){refazForn();corrLeitura(n);
   const f=S.rf, fmt=v=>String(r3(v)).replace('.',',');
   if(n.numero)f.nf=n.numero;
   if(n.chave)f.chave=n.chave;
@@ -2634,7 +2644,7 @@ const C={
     LENDO_PDF=true;render();
     try{const imagens=[];for(const f of fs)imagens.push(await lerArq(f));
       const r=await fn('ler-danfe',{imagens});let ok=0,dup=0;
-      for(const x of r.notas||[r.nota]){if(!x)continue;const F=FCNPJ[x.emitente_cnpj],lj=S.lojas.find(l=>l.cnpj&&l.cnpj===x.destinatario_cnpj),loja=lj?lj.id:S.loja;
+      for(const x0 of r.notas||[r.nota]){if(!x0)continue;const x=corrLeitura(x0),F=FCNPJ[x.emitente_cnpj],lj=S.lojas.find(l=>l.cnpj&&l.cnpj===x.destinatario_cnpj),loja=lj?lj.id:S.loja;
         if(!loja){toast('Não achei a loja da nota: escolha a loja no topo e tente de novo.');continue}
         const itens=(x.itens||[]).filter(i=>!i.unidade||/KG/.test(i.unidade)).map(i=>({desc:i.descricao,ncm:i.ncm,c:matchProd(i.descricao),kg:r3(i.quantidade),v:r2(i.valor_total)}));
         const n={id:'np'+Date.now()+ok,loja,forn:F?F.id:'c'+(x.emitente_cnpj||'0'),...(F?{}:{fornNome:x.emitente_nome}),nf:x.numero||'0',chave:x.chave||'',data:x.data_emissao||todayISO(),
