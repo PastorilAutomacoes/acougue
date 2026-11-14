@@ -93,6 +93,7 @@ button,input,select{font:inherit;color:inherit}
 
 main{max-width:1180px;margin:0 auto;padding:14px 16px 110px;display:flex;flex-direction:column;gap:14px;overflow-x:clip}
 main>*{min-width:0;max-width:100%}
+body.largo main,body.largo .top-in{max-width:min(1720px,98vw)} /* painel do gestor no computador: usa a tela inteira */
 .t.tbal td{white-space:normal}
 @media (max-width:600px){.kpis.kbal{grid-template-columns:repeat(3,1fr);gap:6px}.kbal .kpi{padding:7px 8px}.kbal .kpi small{font-size:.62rem}.kbal .kpi b{font-size:.92rem;white-space:normal;line-height:1.2}.kbal .pill{font-size:.78rem;padding:2px 6px}}
 @media (min-width:820px){main{padding-bottom:40px}}
@@ -2246,6 +2247,7 @@ function render(){refazForn();
   const _y=scrollY,_mesma=S._ultAba===S.tab&&S._ultOpen===S.openId,_sc=[...document.querySelectorAll(ROLA)].map(e=>e.scrollTop);
   resetIdx();
   const tabsEl=document.getElementById('tabs'), view=document.getElementById('view');
+  document.body.classList.toggle('largo',S.tab==='painel');
   document.getElementById('treinobar').hidden=!TREINO;
   if(!curUser()){tabsEl.hidden=true;document.getElementById('ctx').innerHTML='';view.innerHTML=vLogin();return}
   tabsEl.hidden=false;
