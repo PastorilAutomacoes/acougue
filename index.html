@@ -2060,7 +2060,7 @@ const FAM_D=[
  {k:'peito',n:'Peito (+ ponta de peito)',pes:['1015','31407'],emb:12.5},
  {k:'cost',n:'Costela do dianteiro',pes:['1018'],emb:null,ocultar:1},
  {k:'retd',n:'Retalho do dianteiro',pes:['1017'],emb:0.6,ocultar:1}];
-const CARNE_T=.75,CARNE_D=.74,REND_T=.75,REND_PA=.95,MOIDA_REF=.04; /* carne aproveitável: traseiro 75%, dianteiro 74% (definido pelo gestor) */
+const CARNE_T=.75,CARNE_D=.74,REND_T=.75,REND_PA=.95,REND_CX=.98,MOIDA_REF=.04; /* caixaria (cortes em caixa): 98% vira venda */ /* carne aproveitável: traseiro 75%, dianteiro 74% (definido pelo gestor) */
 const DIAN_VEND={acem:['33721'],segunda:['33717'],americano:['37608'],paleta:['31397','67866','33720'],peito:['31407'],cupim:['33724'],osso:['69228','69230']};
 let REF_C=null;
 function refCortes(){const n=S.apps.length;if(REF_C&&REF_C.n===n)return REF_C;
@@ -2079,23 +2079,23 @@ function cortesDados(l,a,b){const R=refCortes(),K={},V={},VR={};
   const sm=(o,ks)=>ks.reduce((t,k)=>t+(o[k]||0),0),tras=sm(K,Q_TRAS),dian=sm(K,Q_DIAN),pa=sm(K,Q_PA);
   const cx=Object.entries(K).filter(([k])=>![...Q_TRAS,...Q_DIAN,...Q_PA].includes(k)&&bovBal(k,l)).reduce((t,[,v])=>t+v,0);
   let vk=0,vr=0;Object.keys(V).forEach(c=>{if(bovBal(c,l)){vk+=V[c];vr+=VR[c]}});const pm=vk?vr/vk:0;
-  const cortes=R.T.filter(f=>f.vend.length).map(f=>{const esp=tras*f.usa/100+sm(K,f.vend),ven=sm(V,f.vend),rs=sm(VR,f.vend),pr=ven?rs/ven:pm;return{...f,esp,ven,pr,falta:Math.max(0,esp-ven),faltaRs:Math.max(0,esp-ven)*pr}});
+  const cortes=R.T.filter(f=>f.vend.length).map(f=>{const esp=tras*f.usa/100+sm(K,f.vend)*REND_CX,ven=sm(V,f.vend),rs=sm(VR,f.vend),pr=ven?rs/ven:pm;return{...f,esp,ven,pr,falta:Math.max(0,esp-ven),faltaRs:Math.max(0,esp-ven)*pr}});
   const fralRef=R.T.find(f=>f.k==='fral').usa/100,fralV=V['31404']||0,fralC=Math.max(0,fralV-tras*fralRef),cos=(V['31399']||0)+(V['33727']||0),cosRs=(VR['31399']||0)+(VR['33727']||0);
   const cost={pa,cos,fralV,fralC,pr:cos?cosRs/cos:pm};
   const moi={kg:V['31400']||0,rs:VR['31400']||0},seg={kg:V['33717']||0,rs:VR['33717']||0};
   const dv=Object.fromEntries(Object.entries(DIAN_VEND).map(([k,ks])=>[k,sm(V,ks)])),dvRs=Object.values(DIAN_VEND).flat().reduce((t,k)=>t+(VR[k]||0),0),dvKg=Object.values(dv).reduce((t,v)=>t+v,0);
-  const dianEsp=dian*CARNE_D+sm(K,[...DIAN_VEND.acem,...DIAN_VEND.peito,...DIAN_VEND.paleta,...DIAN_VEND.cupim]);
+  const dianEsp=dian*CARNE_D+sm(K,[...DIAN_VEND.acem,...DIAN_VEND.peito,...DIAN_VEND.paleta,...DIAN_VEND.cupim])*REND_CX;
   /* todas as carnes vendidas, pela peça de onde saem */
   const usados=new Set(),linha=(n,ks,esp,ven)=>{ks.forEach(k=>usados.add(k));const v=ven!=null?ven:sm(V,ks),r=ks.length&&ven==null?sm(VR,ks):null;return{n,ven:v,esp,pr:r&&v?r/v:pm}};
   const fT=R.T.find(f=>f.k==='fral').usa/100,fralT=Math.min(fralV,tras*fT),rT=R.T.find(f=>f.k==='ret').usa/100;
   const pcx=v=>F1.format(v)+'%',uT=k=>R.T.find(f=>f.k===k).usa,uD=k=>R.D.find(f=>f.k===k)?.usa||0;
-  const gT=[...cortes.filter(c=>c.u).map(c=>({...linha(c.n,c.vend,c.esp),pct:pcx(c.usa)})),{...linha('Músculo traseiro',['31403'],tras*uT('musc')/100+sm(K,['31403'])),pct:pcx(uT('musc'))},
+  const gT=[...cortes.filter(c=>c.u).map(c=>({...linha(c.n,c.vend,c.esp),pct:pcx(c.usa)})),{...linha('Músculo traseiro',['31403'],tras*uT('musc')/100+sm(K,['31403'])*REND_CX),pct:pcx(uT('musc'))},
     {n:'Fraldinha (parte do traseiro)',ven:fralT,esp:tras*fT,est:1,pct:pcx(uT('fral'))},linha('Bisteca',['31398'],null)];
   const gC=[linha('Costela minga',['31399'],null),linha('Costela ripa',['33727'],null),{n:'Fraldinha (parte da costela)',ven:Math.max(0,fralV-fralT)}];usados.add('31404');
-  const rD=uD('retd')/100,cxD=k=>sm(K,DIAN_VEND[k]);
+  const rD=uD('retd')/100,cxD=k=>sm(K,DIAN_VEND[k])*REND_CX;
   const dPal={...linha('Paleta (miolo, peixinho, paletinha)',DIAN_VEND.paleta,dian*uD('paleta')/100+cxD('paleta')),pct:pcx(uD('paleta')),obs:'vira segunda/moída'},
     dAce={...linha('Acém + pescoço',DIAN_VEND.acem,dian*uD('acem')/100+cxD('acem')),pct:pcx(uD('acem')),obs:'vira segunda/moída'},
-    dPei={...linha('Peito / ponta de peito',DIAN_VEND.peito,dian*uD('peito')/100+cxD('peito')),pct:pcx(uD('peito')),nota:cxD('peito')>.5?`+ ${kgI(cxD('peito'))} kg comprados em caixa`:''},
+    dPei={...linha('Peito / ponta de peito',DIAN_VEND.peito,dian*uD('peito')/100+cxD('peito')),pct:pcx(uD('peito')),nota:sm(K,DIAN_VEND.peito)>.5?`+ ${kgI(sm(K,DIAN_VEND.peito))} kg comprados em caixa`:''},
     dSeg={...linha('Carne de segunda',DIAN_VEND.segunda,null),nota:'sai do acém e da paleta',bloco:1},dAme={...linha('Corte americano',DIAN_VEND.americano,null),bloco:1},
     dMoi={...linha('Carne moída (= retalho)',['31400'],tras*rT+dian*rD),pct:`${pcx(rT*100)} · ${pcx(rD*100)}`,nota:`retalho do traseiro + do dianteiro · ${vk?pc((V['31400']||0)/vk):'—'} da carne vendida`},
     dCup=linha('Cupim',DIAN_VEND.cupim,null),dOss=linha('Com osso',DIAN_VEND.osso,null);
@@ -2111,7 +2111,7 @@ function cortesDados(l,a,b){const R=refCortes(),K={},V={},VR={};
   const grupos=[{k:'T',n:'Traseiro',info:`${kgI(tras)} kg comprados`,nota:'o retalho (~4%) vai para a moída, no dianteiro',L:gT,...sub(gT,gT.reduce((t,x)=>t+(x.esp||0),0),pcx(usT))},
     {k:'C',n:'Ponta de agulha (costela)',info:`${kgI(pa)} kg comprados`,L:gC,...sub(gC,pa*REND_PA,pc(REND_PA))},
     {k:'D',n:'Dianteiro',info:`${kgI(dian)} kg comprados${sm(K,[...DIAN_VEND.acem,...DIAN_VEND.peito,...DIAN_VEND.paleta,...DIAN_VEND.cupim])>.5?' + caixas':''}`,nota:`${pc(CARNE_D)} do dianteiro + caixas + retalho do traseiro`,L:gD,...sub(gD,dianEsp+tras*rT,pc(CARNE_D))},
-    {k:'O',n:'Feito na loja e aproveitamento',info:cxOutros>.5?`+ ${kgI(cxOutros)} kg de recortes/caixas`:'',L:gO,...sub(gO,cxOutros)}].filter(g=>g.L.some(x=>x.ven>.5)||g.esp>.5);
+    {k:'O',n:'Feito na loja e aproveitamento',info:cxOutros>.5?`+ ${kgI(cxOutros)} kg de recortes/caixas`:'',L:gO,...sub(gO,cxOutros*REND_CX)}].filter(g=>g.L.some(x=>x.ven>.5)||g.esp>.5);
   const deve=grupos.reduce((t,g)=>t+g.esp,0);
   return{R,tras,dian,pa,cx,vk,vr,pm,cortes,cost,moi,seg,dv,dvKg,dvPm:dvKg?dvRs/dvKg:0,dianEsp,deve,grupos}}
 /* período: os mesmos meses fechados da média do quadro Venda × Compra × Pagamento */
@@ -2145,7 +2145,7 @@ function vPainelCortes(l){if(S.role!=='gestor')return null;const P=cortesPer(l);
   const res=geral!=null?`conferência geral ${pc(geral)}${totF>1?` · faltou ${rsK(totF)} nos cortes únicos`:''}`:'';
   return {res,html:`<div class="cts"><div class="vcp-dec">${dec}</div>${tab}
     <p class="hint">Todas as carnes bovinas vendidas aparecem, pela peça de onde saem; a soma bate com o total (conferência geral). "% da peça" = quanto daquela peça vira esse corte. No dianteiro, paleta e acém aparecem baixos porque viram carne de segunda, corte americano e moída: confira pelo bloco "acém + paleta + segunda + americano". Esperado só nos cortes com referência; os outros entram no subtotal da peça. Verde ≥ 95% · amarelo 85–95% · vermelho &lt; 85%. É uma direção, não uma conta exata.</p>
-    ${vcpSec('ref','Como o esperado é calculado',`traseiro ${pc(REND_T)} (repartido nos cortes); dianteiro ${pc(CARNE_D)}; ponta de agulha ${pc(REND_PA)}; caixas a 100%`,`<p class="hint">Usado = (nossas conferências pesadas corte a corte + Embrapa) ÷ 2. Melhora sozinho a cada conferência. No dianteiro a paleta e o acém viram segunda, corte americano e moída, por isso ele é conferido em grupo.</p><div class="pn-row2"><div>${g1}</div><div>${gDr}</div></div>`,'sub')}
+    ${vcpSec('ref','Como o esperado é calculado',`traseiro ${pc(REND_T)} (repartido nos cortes); dianteiro ${pc(CARNE_D)}; ponta de agulha ${pc(REND_PA)};  caixaria ${pc(REND_CX)}`,`<p class="hint">Usado = (nossas conferências pesadas corte a corte + Embrapa) ÷ 2. Melhora sozinho a cada conferência. No dianteiro a paleta e o acém viram segunda, corte americano e moída, por isso ele é conferido em grupo.</p><div class="pn-row2"><div>${g1}</div><div>${gDr}</div></div>`,'sub')}
   </div>`}}
 /* seção que abre e fecha ao tocar no título (fica lembrado enquanto o app estiver aberto) */
 const vcpAb=k=>!!(S.vcpAb||{})[k];
