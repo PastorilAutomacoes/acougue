@@ -2060,7 +2060,7 @@ const FAM_D=[
  {k:'peito',n:'Peito (+ ponta de peito)',pes:['1015','31407'],emb:12.5},
  {k:'cost',n:'Costela do dianteiro',pes:['1018'],emb:null,ocultar:1},
  {k:'retd',n:'Retalho do dianteiro',pes:['1017'],emb:0.6,ocultar:1}];
-const CARNE_T=.74,CARNE_D=.75,REND_T=.76,REND_PA=.95,MOIDA_REF=.04;
+const CARNE_T=.75,CARNE_D=.74,REND_T=.75,REND_PA=.95,MOIDA_REF=.04; /* carne aproveitável: traseiro 75%, dianteiro 74% (definido pelo gestor) */
 const DIAN_VEND={acem:['33721'],segunda:['33717'],americano:['37608'],paleta:['31397','67866','33720'],peito:['31407'],cupim:['33724'],osso:['69228','69230']};
 let REF_C=null;
 function refCortes(){const n=S.apps.length;if(REF_C&&REF_C.n===n)return REF_C;
@@ -2069,7 +2069,9 @@ function refCortes(){const n=S.apps.length;if(REF_C&&REF_C.n===n)return REF_C;
     const kg=(+e.b||0)-(+e.t||0)*(+e.nc||1),ks=e.c==='CX'?(e.cont||[]):[e.c];if(!(kg>0)||!ks.length)return;
     ks.forEach(k=>{const f=F.find(x=>x.pes.includes(k));if(!f)return;acc[g][f.k]=(acc[g][f.k]||0)+kg/ks.length;tot[g]+=kg/ks.length})}));
   const mk=(F,g,cr)=>F.map(f=>{const nos=tot[g]>=300&&acc[g][f.k]>0?acc[g][f.k]/tot[g]*cr*100:null; /* corte nunca pesado separado: usa só a Embrapa */return{...f,nos,usa:nos!=null&&f.emb!=null?(nos+f.emb)/2:(nos??f.emb)}});
-  return REF_C={n,T:mk(FAM_T,'T',CARNE_T),D:mk(FAM_D,'D',CARNE_D),kgT:tot.T,kgD:tot.D}}
+  /* os cortes de cada peça somam exatamente a carne aproveitável definida (traseiro 75%, dianteiro 74%) */
+  const ajusta=(L,alvo)=>{const sm=L.reduce((t,f)=>t+(f.usa||0),0);return sm?L.map(f=>({...f,usa:f.usa==null?null:f.usa*alvo/sm})):L};
+  return REF_C={n,T:ajusta(mk(FAM_T,'T',CARNE_T),REND_T*100),D:ajusta(mk(FAM_D,'D',CARNE_D),CARNE_D*100),kgT:tot.T,kgD:tot.D}}
 function cortesDados(l,a,b){const R=refCortes(),K={},V={},VR={};
   Object.values(S.comps||{}).forEach(c=>{if(c.loja!==l||!c.emissao||c.emissao<a||c.emissao>b)return;const n=notaBrajan(c);if(c.situacao!=='lancada'&&!entrou(n))return;
     n.itens.forEach(it=>{const k=it.cod0||it.c;if(k)K[k]=(K[k]||0)+it.kg})});
@@ -2143,7 +2145,7 @@ function vPainelCortes(l){if(S.role!=='gestor')return null;const P=cortesPer(l);
   const res=geral!=null?`conferência geral ${pc(geral)}${totF>1?` · faltou ${rsK(totF)} nos cortes únicos`:''}`:'';
   return {res,html:`<div class="cts"><div class="vcp-dec">${dec}</div>${tab}
     <p class="hint">Todas as carnes bovinas vendidas aparecem, pela peça de onde saem; a soma bate com o total (conferência geral). "% da peça" = quanto daquela peça vira esse corte. No dianteiro, paleta e acém aparecem baixos porque viram carne de segunda, corte americano e moída: confira pelo bloco "acém + paleta + segunda + americano". Esperado só nos cortes com referência; os outros entram no subtotal da peça. Verde ≥ 95% · amarelo 85–95% · vermelho &lt; 85%. É uma direção, não uma conta exata.</p>
-    ${vcpSec('ref','Como o esperado é calculado',`traseiro × % de cada corte; ponta de agulha × ${pc(REND_PA)}; dianteiro × ${pc(CARNE_D)}; caixas a 100%`,`<p class="hint">Usado = (nossas conferências pesadas corte a corte + Embrapa) ÷ 2. Melhora sozinho a cada conferência. No dianteiro a paleta e o acém viram segunda, corte americano e moída, por isso ele é conferido em grupo.</p><div class="pn-row2"><div>${g1}</div><div>${gDr}</div></div>`,'sub')}
+    ${vcpSec('ref','Como o esperado é calculado',`traseiro ${pc(REND_T)} (repartido nos cortes); dianteiro ${pc(CARNE_D)}; ponta de agulha ${pc(REND_PA)}; caixas a 100%`,`<p class="hint">Usado = (nossas conferências pesadas corte a corte + Embrapa) ÷ 2. Melhora sozinho a cada conferência. No dianteiro a paleta e o acém viram segunda, corte americano e moída, por isso ele é conferido em grupo.</p><div class="pn-row2"><div>${g1}</div><div>${gDr}</div></div>`,'sub')}
   </div>`}}
 /* seção que abre e fecha ao tocar no título (fica lembrado enquanto o app estiver aberto) */
 const vcpAb=k=>!!(S.vcpAb||{})[k];
