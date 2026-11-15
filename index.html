@@ -435,6 +435,12 @@ table.vx{width:100%;border-collapse:collapse;font-size:.84rem;font-family:'IBM P
 .vx td.na{color:#9aa4bb;font-family:'IBM Plex Sans',sans-serif;text-align:center;background:#fafbfe}
 .vx td.best{background:#DDF3E6!important;color:var(--ok);font-weight:700}.vx td.worst{background:#FDE1E1!important;color:var(--crit);font-weight:700}
 .vx tr.sec.sec2 td{background:#7a4a1c!important}
+.vsec{border:1px solid var(--line);border-radius:10px;margin-top:10px;background:#fff}.vsec.on{box-shadow:0 1px 6px rgba(14,26,58,.06)}
+.vsec-h{display:flex;align-items:baseline;gap:10px;width:100%;padding:12px 14px;border:0;background:#F6F8FC;border-radius:10px;font:inherit;color:var(--fg);text-align:left;cursor:pointer;flex-wrap:wrap}
+.vsec.on>.vsec-h{border-radius:10px 10px 0 0;border-bottom:1px solid var(--line)}.vsec-h:hover{background:#EEF2FA}
+.vsec-h b{font-family:Oswald,sans-serif;font-size:1rem;text-transform:uppercase;letter-spacing:.02em}.vsec-h small{color:var(--muted);font-size:.82rem}
+.vsec-c{color:var(--accent);font-size:1rem;width:1em}.vsec-b{padding:12px 14px}
+.vsec.mi>.vsec-h{background:#F6EEE6}.vsec.su>.vsec-h{background:#FBEFF4}.vsec.sub{margin:14px 0 0}.vsec.sub>.vsec-h{background:#EEF6F3}
 .vx tr.sec3 td{background:#9c2f5a!important;color:#fff;font-family:Oswald,sans-serif;font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;text-align:left}
 .vx tr.sub.su td{background:#F7E3EC!important;color:#6b2343}.vcp-su{border-top-color:#e5b3c7}.vcp-dec.su{background:#FBEFF4;border-color:#e5b3c7;color:#6b2343}
 .vx tr.sec2 td{background:#7a4a1c!important;color:#fff;font-family:Oswald,sans-serif;font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;text-align:left}
@@ -2074,7 +2080,7 @@ function cortesDados(l,a,b){const R=refCortes(),K={},V={},VR={};
   return{R,tras,dian,pa,cx,vk,vr,pm,cortes,cost,moi,seg,dv,dvKg,dvPm:dvKg?dvRs/dvKg:0,dianEsp,deve}}
 /* período: os mesmos meses fechados da média do quadro Venda × Compra × Pagamento */
 function cortesPer(l){const D=vcpDados(l);if(!D?.med)return null;const m=D.L.filter(r=>r.fechado&&r.ck>0&&r.vk>0).slice(-3);return{a:m[0].a,b:m[m.length-1].b,n:m.length,per:m.length>1?`${mesRot(m[0].m)} a ${mesRot(m[m.length-1].m)}`:mesRot(m[0].m)}}
-function vPainelCortes(l){if(S.role!=='gestor')return '';const P=cortesPer(l);if(!P)return '';const X=cortesDados(l,P.a,P.b),R=X.R;if(!(X.tras+X.dian+X.pa))return '';
+function vPainelCortes(l){if(S.role!=='gestor')return null;const P=cortesPer(l);if(!P)return null;const X=cortesDados(l,P.a,P.b),R=X.R;if(!(X.tras+X.dian+X.pa))return null;
   const cl=v=>v==null?'':v>=.95?'best':v>=.85?'mid':'worst',ip=v=>v==null||!isFinite(v)?'—':pc(v),k0=v=>kgI(v);
   const lingOut=Object.keys(LING_DE).filter(k=>LING_DE[k]===l).reduce((t,k)=>t+Object.values(S.vend||{}).filter(v=>v.loja===+k&&v.data>=P.a&&v.data<=P.b).reduce((s,v)=>s+(v.itens?.['31408']?.kg||0),0),0);
   const geral=X.deve?X.vk/X.deve:null,falG=Math.max(0,X.deve-X.vk);
@@ -2124,7 +2130,8 @@ function vPainelCortes(l){if(S.role!=='gestor')return '';const P=cortesPer(l);if
      <tr><td>Preço médio desses cortes</td><td colspan="3">${F2.format(X.dvPm)}</td></tr>`):'';
   const gD=t(`<tr><th>Corte do dianteiro</th><th>Nossas lojas<small>${k0(R.kgD)} kg pesados</small></th><th>Embrapa</th><th>Usado</th></tr>`,
     R.D.filter(f=>!f.ocultar).map(f=>`<tr><td>${f.n}</td><td>${f.nos==null?'—':F1.format(f.nos)+'%'}</td><td>${f.emb==null?'—':F1.format(f.emb)+'%'}</td><td class="m3">${f.usa==null?'—':F1.format(f.usa)+'%'}</td></tr>`).join(''));
-  return `<section class="card vcp cts"><div class="card-h"><div><h3>Rendimento por corte — direção</h3><p class="hint">Quanto deveria sair de cada corte pelo que foi comprado × quanto foi vendido no Brajan, em ${P.per}. Serve como direção, não como conta exata. Só o gestor vê.</p></div></div>
+  const res=geral!=null?`conferência geral ${pc(geral)}${totF>1?` · faltou ${rsK(totF)} nos cortes únicos`:''}`:'';
+  return {res,html:`<div class="cts"><p class="hint">Quanto deveria sair de cada corte pelo que foi comprado × quanto foi vendido no Brajan, em ${P.per}. Serve como direção, não como conta exata.</p>
     <div class="vcp-dec">${dec}</div>
     <h4 class="vcp-h">0 · Conferência geral</h4>${g0}
     <p class="hint">Se o geral fecha perto de 100% e um corte aparece faltando, ele está saindo com outro nome (segunda, moída, americano). Se o geral também falta, a carne está sumindo de verdade (quebra, venda sem cupom, estoque).</p>
@@ -2132,7 +2139,10 @@ function vPainelCortes(l){if(S.role!=='gestor')return '';const P=cortesPer(l);if
       <div><h4 class="vcp-h">2 · Cortes únicos</h4>${g2}<p class="hint">Esperado = traseiro × % usado + caixas do corte compradas prontas. Verde ≥ 95% · amarelo 85–95% · vermelho &lt; 85%. R$ ao preço de venda do corte.</p></div></div>
     <div class="pn-row2">${g3?`<div><h4 class="vcp-h">Costela</h4>${g3}<p class="hint">A costela do dianteiro (ripa) também entra aqui; por isso pode passar de 100%.</p></div>`:''}<div><h4 class="vcp-h">3 · Carne moída (retalho) e carne de segunda</h4>${g4}</div></div>
     ${g5?`<div class="pn-row2"><div><h4 class="vcp-h">4 · Referência do dianteiro</h4>${gD}<p class="hint">No dianteiro a paleta e o acém viram segunda, corte americano e moída: acompanhe em grupo.</p></div><div><h4 class="vcp-h">Dianteiro (grupo)</h4>${g5}</div></div>`:''}
-  </section>`}
+  </div>`}}
+/* seção que abre e fecha ao tocar no título (fica lembrado enquanto o app estiver aberto) */
+const vcpAb=k=>!!(S.vcpAb||{})[k];
+const vcpSec=(k,tit,res,corpo,cls='')=>`<div class="vsec ${cls}${vcpAb(k)?' on':''}"><button type="button" class="vsec-h" data-act="vcp-tg" data-v="${k}" aria-expanded="${vcpAb(k)}"><span class="vsec-c">${vcpAb(k)?'▾':'▸'}</span><b>${tit}</b>${res?`<small>${res}</small>`:''}</button>${vcpAb(k)?`<div class="vsec-b">${corpo}</div>`:''}</div>`;
 function vPainelVCP(l){if(S.role!=='gestor')return '';const D=vcpDados(l);
   const card=b=>`<section class="card vcp"><div class="card-h"><div><h3>Venda × Compra × Pagamento</h3><p class="hint">Carne bovina por mês. Compra pela emissão da nota (com S.T., sem miúdos), venda pelo cupom, pagamento pela data do boleto (Brajan). Só o gestor vê.</p></div>${D?'<button type="button" class="btn xl" data-act="vcp-xls" data-id="'+l+'">⬇ Exportar Excel</button>':''}</div>${b}</section>`;
   if(!D)return card('<p class="pn-vazio">As notas de compra desta loja ainda não chegam pelo Brajan.</p>');
@@ -2162,11 +2172,14 @@ function vPainelVCP(l){if(S.role!=='gestor')return '';const D=vcpDados(l);
   const temS=D.L.some(r=>r.sck||r.svk);
   const ruins=MU.filter(o=>o.ck>0&&o.vk/o.ck<.75).map(o=>(PM[o.c]?.n||o.c).toLowerCase());
   const decM=M&&M.mck?`🦴 <b>Miúdos (média ${per}):</b> para cada R$ 100 comprados, vendeu <b>R$ ${M.mcr?kgI(M.mvr/M.mcr*100):'—'}</b>. Vendeu <b>${pc(M.mvk/M.mck)}</b> do kg que comprou (o normal é perto de 95%). Sobra de <b>${M.mvr?pc((M.mvr-M.mcr)/M.mvr):'—'}</b>${M.mvk?`, ou R$ ${F2.format((M.mvr-M.mcr)/M.mvk)} por kg vendido`:''}${ruins.length?` · <span style="color:var(--crit);font-weight:700">${ruins.join(' e ')} abaixo de 75%</span>`:''}.`:'';
-  return card(`<h4 class="vcp-h">🥩 Carne bovina</h4>${dec}<div class="tw"><table class="vx"><thead>${th}</thead><tbody>${tbC}${ab}</tbody></table></div>
-    <div class="vcp-mi"><h4 class="vcp-h">🦴 Miúdos <small>fígado, coração, mocotó, bucho, rabo · fora da conta da carne</small></h4>${decM?`<div class="vcp-dec mi">${decM}</div>`:''}
-    <div class="tw"><table class="vx"><thead>${th}</thead><tbody>${tbM}${abM}${mt}</tbody></table></div></div>
-    ${temS?`<div class="vcp-mi vcp-su"><h4 class="vcp-h">🐖 Suínos <small>só suíno de corte · embutidos (linguiça, salsicha, salame, paio) ficam fora</small></h4>${decS?`<div class="vcp-dec su">${decS}</div>`:''}
-    <div class="tw"><table class="vx"><thead>${th}</thead><tbody>${tbS}${abS}${st}</tbody></table></div></div>`:''}
+  const rC=M&&M.vr?`para cada R$ 100 comprados vendeu R$ ${kgI(M.r100)} · sobra ${pc(M.sp)}`:'',rM=M&&M.mck?`vendeu ${pc(M.mvk/M.mck)} do kg · sobra ${M.mvr?pc((M.mvr-M.mcr)/M.mvr):'—'}`:'',rS=M&&M.sck?`para cada R$ 100 comprados vendeu R$ ${M.scr?kgI(M.svr/M.scr*100):'—'} · sobra ${M.svr?pc((M.svr-M.scr)/M.svr):'—'}`:'';
+  const cortes=vPainelCortes(l);
+  return card(vcpSec('carne','🥩 Carne bovina',rC,`${dec}<div class="tw"><table class="vx"><thead>${th}</thead><tbody>${tbC}${ab}</tbody></table></div>
+      ${cortes?vcpSec('cortes','🔪 Rendimento por corte',cortes.res,cortes.html,'sub'):''}`)
+    +vcpSec('mi','🦴 Miúdos',rM,`${decM?`<div class="vcp-dec mi">${decM}</div>`:''}<p class="hint">Fígado, coração, mocotó, bucho, rabo · fora da conta da carne.</p>
+    <div class="tw"><table class="vx"><thead>${th}</thead><tbody>${tbM}${abM}${mt}</tbody></table></div>`,'mi')
+    +(temS?vcpSec('su','🐖 Suínos',rS,`${decS?`<div class="vcp-dec su">${decS}</div>`:''}<p class="hint">Só suíno de corte · embutidos (linguiça, salsicha, salame, paio) ficam fora.</p>
+    <div class="tw"><table class="vx"><thead>${th}</thead><tbody>${tbS}${abS}${st}</tbody></table></div>`,'su'):'')+`
     <p class="hint">* Mês em andamento (até hoje). Média dos últimos 3 meses fechados. Linhas amarelas são as de decisão; vermelho = negativo.
     Pago: cada boleto é dividido entre carne e miúdos pela nota que ele paga (frango, suíno e embutidos ficam de fora). Diferença num mês é normal (nota do fim do mês paga no mês seguinte). "Vencido sem baixa" costuma ser boleto pago sem baixa no Brajan: confira com o financeiro.
     Miúdos ficam fora da conta da carne; não têm osso, então o normal é vender perto de 95% do que entra (vermelho abaixo de 90%).</p>`)}
@@ -2229,7 +2242,7 @@ function vPainelLoja(l,a,b,pa,pb){const lj=S.lojas.find(x=>x.id===l),h=todayISO(
   const estq=`<section class="card"><h3>Estoque</h3>${est?`<div class="pn-est"><div><small>Última contagem</small><b>${dBR(uc).slice(0,5)}</b></div><div><small>Carne bovina</small><b>${kgI(bovKg(est))} kg</b></div><div><small>Valor (custo)</small><b>${rsI(bovRsL(est,l))}</b></div></div>`:'<p class="pn-vazio">Sem contagem.</p>'}
     ${av.length?`<div class="pn-tags">${av.map(t=>`<span class="pill warn">${t}</span>`).join('')}</div>`:''}
     <button type="button" class="btn" data-act="pn-bal" data-id="${l}">Abrir balanço da loja</button></section>`;
-  return kp+`<div class="pn-row2">${graf}${estq}</div><div class="pn-row2 pn-row3">${notasH}${tops}</div>`+vPainelVCP(l)+vPainelCortes(l)}
+  return kp+`<div class="pn-row2">${graf}${estq}</div><div class="pn-row2 pn-row3">${notasH}${tops}</div>`+vPainelVCP(l)}
 
 /* ---------- comparativo das lojas (painel "Todas as lojas", só gestor) ----------
    Mesmas contas do quadro Venda × Compra × Pagamento de cada loja, lado a lado.
@@ -2521,6 +2534,7 @@ const A={
     x.fora=x.fora||{};x.dentro=x.dentro||{};delete x.fora[k];delete x.dentro[k];if(el.dataset.v==='tirar')x.fora[k]=1;else x.dentro[k]=1;save();render()},
   'bal-xls':()=>exportarBal(),
   'vcp-xls':el=>exportarVCP(+el.dataset.id),
+  'vcp-tg':el=>{const k=el.dataset.v;S.vcpAb={...(S.vcpAb||{}),[k]:!vcpAb(k)};render()},
   'cmp-m':el=>{S.cmpM=el.dataset.v||'';render()},
   'cmp-xls':()=>exportarCmp(),
   'bal-x':el=>{S.balX=S.balX===el.dataset.k?null:el.dataset.k;render()},
