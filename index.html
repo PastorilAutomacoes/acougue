@@ -433,6 +433,22 @@ table.vx{width:100%;border-collapse:collapse;font-size:.84rem;font-family:'IBM P
 .vx.cu tr.subt td{background:#FFF8D9;font-weight:700}.vx.cu tr.subt td:first-child{background:#FFF1B8}
 .vx.cu tr.totg td{background:#0E1A3A!important;color:#fff!important;font-weight:700}
 .vx.cu td.pct{color:var(--muted);font-size:.74rem}.vx.cu tr.blk td{background:#EEF2FA;font-weight:700}.vx.cu tr.blk td:first-child{background:#E3E9F6}
+.rc-k{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:4px 0 14px}.rc-k>div{border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:#F6F8FC}
+.rc-k .t{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:700}.rc-k .v{font-family:Oswald,sans-serif;font-size:1.75rem;line-height:1.15}.rc-k .s{font-size:.76rem;color:var(--muted)}
+.rc-k .ok .v{color:var(--ok)}.rc-k .wa .v{color:#9a6700}.rc-k .cr .v{color:var(--crit)}.rc-k .tot{background:#0E1A3A;border-color:#0E1A3A;color:#fff}.rc-k .tot .t,.rc-k .tot .s{color:#c9d3e8}
+.rc-h{font-family:Oswald,sans-serif;text-transform:uppercase;font-size:.95rem;margin:4px 0 8px;letter-spacing:.02em}.rc-h small{font-family:'IBM Plex Sans',sans-serif;text-transform:none;color:var(--muted);font-size:.8rem;letter-spacing:0}
+.rc-i{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-left:6px solid var(--crit);border-radius:8px;padding:8px 12px;margin-bottom:6px;flex-wrap:wrap;background:#fff}
+.rc-i.y{border-left-color:#E0A100}.rc-i.e{border-left-color:var(--accent);background:#F3F6FF}.rc-i .n{font-weight:700;min-width:230px}.rc-i .p{font-family:'IBM Plex Mono',monospace;font-weight:600;min-width:70px}
+.rc-i .r{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--crit);min-width:170px;white-space:nowrap}.rc-i.y .r{color:#9a6700}.rc-i.e .r{color:var(--accent)}.rc-i .a{color:var(--muted);font-size:.84rem;flex:1;min-width:200px}
+.rc-tag{background:#F26A1B;color:#fff;font-size:.66rem;font-weight:700;padding:1px 6px;border-radius:5px;margin-left:4px}
+.rc-oks{color:var(--ok);font-size:.84rem;background:#EAF7EF;border:1px solid #BFE5CD;border-radius:8px;padding:7px 12px;margin:6px 0 4px}
+.rc-p{display:inline-block;min-width:52px;text-align:center;border-radius:6px;padding:0 6px;font-weight:700}.rc-p.ok{background:#DDF3E6;color:var(--ok)}.rc-p.wa{background:#FFF1C2;color:#855700}.rc-p.cr{background:#FDE1E1;color:var(--crit)}
+.rc-fa{color:var(--crit)}.vx.rc-fl td:nth-child(2),.vx.rc-fl th:nth-child(2),.vx.rc-fl td:nth-child(3),.vx.rc-fl th:nth-child(3){text-align:left!important}.rc-n{color:#9aa4bb}
+.rc-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 6px}.rc-bar .l{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;width:70px}
+.rc-ch{border:1px solid #c9d3e8;border-radius:16px;padding:3px 11px;font:inherit;font-size:.8rem;background:#fff;color:#26324f;cursor:pointer}.rc-ch.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
+.vx.cu tr.rc-f td{font-weight:700;background:#F3F6FC}.vx.cu tr.rc-c td:first-child{padding-left:28px;font-weight:400}.vx.cu tr.rc-c td:first-child::before{content:'└ ';color:#9aa4bb}
+.rc-up{color:var(--ok);font-weight:600}.rc-dn{color:var(--crit);font-weight:600}.rc-z{color:#9aa4bb}.rc-pc{border:1px solid;border-radius:5px;padding:0 6px;font-size:.72rem;font-weight:600}
+@media (max-width:700px){.rc-k{grid-template-columns:repeat(2,1fr)}}
 .vx.cu .nr{color:#9aa4bb;font-family:'IBM Plex Sans',sans-serif}
 .vx.cmp tr.s0 td{background:#0E1A3A!important;color:#fff;font-family:Oswald,sans-serif;font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;text-align:left}
 .vx.cmp tr.sec.s2 td{background:#7a4a1c!important}.vx.cmp tr.sec.s3 td{background:#9c2f5a!important}
@@ -2050,7 +2066,7 @@ const FAM_T=[
  {k:'alc',n:'Alcatra + maminha',pes:['31393','59884','1002','1007','31402','1019'],vend:['31393','31402','59884'],emb:8.2,u:1},
  {k:'pat',n:'Patinho',pes:['31395','1006'],vend:['31395'],emb:8.4,u:1},
  {k:'file',n:'Filé mignon + cordão + bananinha',pes:['31405','1012','1013','33722'],vend:['31405','33722'],emb:4.3,u:1},
- {k:'pic',n:'Picanha',pes:['31409','1001','55043'],vend:['31409','55043'],emb:2.2,u:1},
+ {k:'pic',n:'Picanha + cabeça',pes:['31409','1001','55043'],vend:['31409','55043'],emb:2.2,u:1},
  {k:'musc',n:'Músculo traseiro',pes:['31403','1009'],vend:['31403'],emb:6.8},
  {k:'fral',n:'Fraldinha (do traseiro)',pes:['31404','1008'],vend:[],emb:2.6},
  {k:'ret',n:'Retalho',pes:['1016'],vend:[],emb:4.0}];
@@ -2086,7 +2102,7 @@ function cortesDados(l,a,b){const R=refCortes(),K={},V={},VR={};
   const dv=Object.fromEntries(Object.entries(DIAN_VEND).map(([k,ks])=>[k,sm(V,ks)])),dvRs=Object.values(DIAN_VEND).flat().reduce((t,k)=>t+(VR[k]||0),0),dvKg=Object.values(dv).reduce((t,v)=>t+v,0);
   const dianEsp=dian*CARNE_D+sm(K,[...DIAN_VEND.acem,...DIAN_VEND.peito,...DIAN_VEND.paleta,...DIAN_VEND.cupim])*REND_CX;
   /* todas as carnes vendidas, pela peça de onde saem */
-  const usados=new Set(),linha=(n,ks,esp,ven)=>{ks.forEach(k=>usados.add(k));const v=ven!=null?ven:sm(V,ks),r=ks.length&&ven==null?sm(VR,ks):null;return{n,ven:v,esp,pr:r&&v?r/v:pm}};
+  const usados=new Set(),linha=(n,ks,esp,ven)=>{ks.forEach(k=>usados.add(k));const v=ven!=null?ven:sm(V,ks),r=ks.length&&ven==null?sm(VR,ks):null;return{n,ks,ven:v,esp,pr:r&&v?r/v:pm}};
   const fT=R.T.find(f=>f.k==='fral').usa/100,fralT=Math.min(fralV,tras*fT),rT=R.T.find(f=>f.k==='ret').usa/100;
   const pcx=v=>F1.format(v)+'%',uT=k=>R.T.find(f=>f.k===k).usa,uD=k=>R.D.find(f=>f.k===k)?.usa||0;
   const gT=[...cortes.filter(c=>c.u).map(c=>({...linha(c.n,c.vend,c.esp),pct:pcx(c.usa)})),{...linha('Músculo traseiro',['31403'],tras*uT('musc')/100+sm(K,['31403'])*REND_CX),pct:pcx(uT('musc'))},
@@ -2113,38 +2129,82 @@ function cortesDados(l,a,b){const R=refCortes(),K={},V={},VR={};
     {k:'D',n:'Dianteiro',info:`${kgI(dian)} kg comprados${sm(K,[...DIAN_VEND.acem,...DIAN_VEND.peito,...DIAN_VEND.paleta,...DIAN_VEND.cupim])>.5?' + caixas':''}`,nota:`${pc(CARNE_D)} do dianteiro + caixas + retalho do traseiro`,L:gD,...sub(gD,dianEsp+tras*rT,pc(CARNE_D))},
     {k:'O',n:'Feito na loja e aproveitamento',info:cxOutros>.5?`+ ${kgI(cxOutros)} kg de recortes/caixas`:'',L:gO,...sub(gO,cxOutros*REND_CX)}].filter(g=>g.L.some(x=>x.ven>.5)||g.esp>.5);
   const deve=grupos.reduce((t,g)=>t+g.esp,0);
-  return{R,tras,dian,pa,cx,vk,vr,pm,cortes,cost,moi,seg,dv,dvKg,dvPm:dvKg?dvRs/dvKg:0,dianEsp,deve,grupos}}
+  return{R,tras,dian,pa,cx,vk,vr,pm,cortes,cost,moi,seg,dv,dvKg,dvPm:dvKg?dvRs/dvKg:0,dianEsp,deve,grupos,V,VR,nm}}
 /* período: os mesmos meses fechados da média do quadro Venda × Compra × Pagamento */
 function cortesPer(l){const D=vcpDados(l);if(!D?.med)return null;const m=D.L.filter(r=>r.fechado&&r.ck>0&&r.vk>0).slice(-3);return{a:m[0].a,b:m[m.length-1].b,n:m.length,per:m.length>1?`${mesRot(m[0].m)} a ${mesRot(m[m.length-1].m)}`:mesRot(m[0].m)}}
 function vPainelCortes(l){if(S.role!=='gestor')return null;const P=cortesPer(l);if(!P)return null;const X=cortesDados(l,P.a,P.b),R=X.R;if(!(X.tras+X.dian+X.pa))return null;
-  const cl=v=>v==null?'':v>=.95?'best':v>=.85?'mid':'worst',ip=v=>v==null||!isFinite(v)?'—':pc(v),k0=v=>kgI(v);
+  const k0=v=>kgI(v),ip=v=>v==null||!isFinite(v)?'—':pc(v),pl=r=>r==null?'<span class="nr">—</span>':`<span class="rc-p ${r>=.95?'ok':r>=.85?'wa':'cr'}">${pc(r)}</span>`;
   const lingOut=Object.keys(LING_DE).filter(k=>LING_DE[k]===l).reduce((t,k)=>t+Object.values(S.vend||{}).filter(v=>v.loja===+k&&v.data>=P.a&&v.data<=P.b).reduce((s,v)=>s+(v.itens?.['31408']?.kg||0),0),0);
   const geral=X.deve?X.vk/X.deve:null,falG=Math.max(0,X.deve-X.vk);
-  const uni=X.cortes.filter(c=>c.u&&c.esp>0),pior=[...uni].filter(c=>c.ven/c.esp<.9).sort((a,b)=>a.ven/a.esp-b.ven/b.esp).slice(0,3);
-  const totF=uni.reduce((t,c)=>t+(c.ven/c.esp<.95?c.faltaRs:0),0),gC=X.grupos.find(g=>g.k==='C'),gD=X.grupos.find(g=>g.k==='D');
-  const dec=[geral!=null?`🔎 Vendeu <b>${pc(geral)}</b> do que deveria virar venda (${P.per}).${falG>.5?` Faltaram <b>${k0(falG)} kg (~${rsK(falG*X.pm)})</b> no total`:' Não faltou carne no total'}${totF>1?`; nos cortes únicos faltam ${rsK(totF)}`:''}.${lingOut?` (+ ${k0(lingOut)} kg de linguiça vendida nas outras lojas.)`:''}`:'',
-    pior.length?`🥩 Mais faltam: ${pior.map(c=>`<b>${c.n.split(' ')[0].toLowerCase()} ${pc(c.ven/c.esp)}</b>`).join(' · ')}.`:'',
-    gC&&gC.esp?`🍖 Costela com a fraldinha: ${pc(gC.ven/gC.esp)}.`:'',gD&&gD.esp?`🐄 Dianteiro: ${pc(gD.ven/gD.esp)}.`:''].filter(Boolean).join(' ');
-  const row=x=>{const r=x.esp&&!x.est?x.ven/x.esp:null,f=x.esp&&!x.est?Math.max(0,x.esp-x.ven):0,st=x.est?'<span class="nr">estimado</span>':x.esp?ip(r):x.bloco?'<span class="nr">no bloco abaixo</span>':x.g?'':'<span class="nr">sem referência</span>';
-    return `<tr${x.blk?' class="blk"':''}><td>${x.n}${x.est?'<small>estimada pela referência</small>':x.nota?`<small>${x.nota}</small>`:''}</td><td class="pct">${x.pct||(x.g?'':'—')}</td><td>${k0(x.ven)} kg</td><td>${x.esp?k0(x.esp)+' kg':''}</td><td class="${x.est?'':cl(r)}">${st}</td><td>${x.obs&&r!=null&&r<.85?`<span class="nr">${x.obs}</span>`:r!=null&&r<.95&&f>.5?`${k0(f)} kg · ${rsK(f*(x.pr||X.pm))}`:''}</td></tr>`};
-  const tb=X.grupos.map(g=>{const r=g.esp&&g.k!=='O'?g.ven/g.esp:null,f=r==null?0:Math.max(0,g.esp-g.ven); /* feito na loja: quase tudo sem referência, sem % no subtotal */
-    return `<tr class="grp g${g.k}"><td colspan="6">${g.n}<span>${g.info}</span></td></tr>${g.L.filter(x=>x.ven>.5||x.esp>.5).map(row).join('')}
-      <tr class="subt"><td>Subtotal ${g.n.split(' (')[0].toLowerCase()}${g.nota?`<small>${g.nota}</small>`:''}</td><td class="pct">${g.pct||''}</td><td>${k0(g.ven)} kg</td><td>${g.esp?k0(g.esp)+' kg':''}</td><td class="${cl(r)}">${r!=null?ip(r):''}</td><td>${r!=null&&r<.95&&f>.5?`${k0(f)} kg · ${rsK(f*X.pm)}`:''}</td></tr>`}).join('');
-  const tab=`<div class="tw"><table class="vx ct cu"><tr><th>Carne vendida (${P.per})</th><th>% da peça</th><th>Vendido</th><th>Esperado</th><th>Vendeu ÷ esperado</th><th>Faltou</th></tr>${tb}
-    <tr class="totg"><td>Total de carne bovina vendida</td><td></td><td>${k0(X.vk)} kg</td><td>${k0(X.deve)} kg</td><td>${ip(geral)}</td><td>${falG>.5?`${k0(falG)} kg · ${rsK(falG*X.pm)}`:'—'}</td></tr></table></div>`;
+  const G=k=>X.grupos.find(g=>g.k===k),rg=g=>g&&g.esp&&g.k!=='O'?g.ven/g.esp:null;
+  const rr=x=>x&&x.esp&&!x.est?x.ven/x.esp:null,fk=x=>{const r=rr(x);return r!=null&&r<.95?Math.max(0,x.esp-x.ven):0},fr=x=>fk(x)*(x.pr||X.pm);
+  const gT=G('T'),gC=G('C'),gD=G('D'),blocoD=gD?.L.find(x=>x.blk);
+  /* ---- 1. resumo: 4 números + onde olhar ---- */
+  const kc=(t,r,s,cls='')=>`<div class="${cls||(r==null?'':r>=.95?'ok':r>=.85?'wa':'cr')}"><div class="t">${t}</div><div class="v">${ip(r)}</div><div class="s">${s}</div></div>`;
+  const kpis=`<div class="rc-k">${kc('Conferência geral',geral,falG>.5?`faltaram ${k0(falG)} kg · ~${rsK(falG*X.pm)}`:'não faltou carne','tot')}${gT?kc('Traseiro',rg(gT),`${k0(X.tras)} kg comprados`):''}${gC?kc('Costela',rg(gC),`${k0(X.pa)} kg comprados`):''}${gD?kc('Dianteiro',rg(gD),`${k0(X.dian)} kg + caixas`):''}</div>`;
+  const conf=X.grupos.flatMap(g=>g.L.filter(x=>x.esp&&!x.est&&!x.obs).map(x=>({...x,gk:g.k})));
+  if(gC&&gC.esp)conf.push({n:'Costela (minga, ripa, fraldinha)',ven:gC.ven,esp:gC.esp,pr:X.cost.pr,gk:'C'});
+  const ACAO={T:'conferir a desossa e se está saindo em outro código (moída, bife)',C:'conferir a pesagem da costela e da fraldinha',D:'conferir o que está virando moída'};
+  const ruins=conf.filter(x=>rr(x)<.95&&fr(x)>1).sort((a,b)=>fr(b)-fr(a));
+  const bons=conf.filter(x=>rr(x)>=.95).map(x=>x.n.replace(/\s*\(.*\)/,'').replace(/ \+ .*/,'').replace(/ \/ .*/,'').toLowerCase());
+  const nmC=c=>X.nm(c);
+  const cts=S.conts.filter(c=>c.loja===l).sort((a,b)=>a.data.localeCompare(b.data)).slice(-3),est=[];
+  if(cts.length>=2){const u=cts[cts.length-1];Object.entries(u.itens||{}).forEach(([c,kg])=>{if(!bovBal(c,l)||kg<8)return;const hs=cts.map(x=>x.itens?.[c]||0);if(hs.every((v,i)=>!i||v>hs[i-1])&&kg>=2*Math.max(hs[0],1))est.push({c,hs})})}
+  const itRuim=x=>`<div class="rc-i${rr(x)>=.85?' y':''}"><div class="n">${x.blk?'Acém + paleta + segunda':x.n}</div><div class="p">${pc(rr(x))}</div><div class="r">${k0(fk(x))} kg · ${rsK(fr(x))}</div><div class="a">${ACAO[x.gk]||''}</div></div>`;
+  const itEst=e=>`<div class="rc-i e"><div class="n">${nmC(e.c)} <span class="rc-tag">estoque</span></div><div class="p">${k0(e.hs[e.hs.length-1])} kg</div><div class="r">parada na câmara</div><div class="a">subiu de ${F1.format(e.hs[0])} kg para ${F1.format(e.hs[e.hs.length-1])} kg em ${e.hs.length} contagens (até ${dBR(cts[cts.length-1].data)}): ver preço ou fazer oferta</div></div>`;
+  const olhar=`<div class="rc-h">Onde olhar <small>(${P.per})</small></div>${ruins.map(itRuim).join('')}${est.map(itEst).join('')}${!ruins.length&&!est.length?'<p class="hint">Nada fora do esperado. 👍</p>':''}
+    ${bons.length?`<div class="rc-oks">✅ Dentro do esperado: ${bons.join(' · ')}</div>`:''}${lingOut?`<p class="hint">+ ${k0(lingOut)} kg de linguiça vendida nas outras lojas.</p>`:''}`;
+  /* ---- 2. tabela por peça (enxuta) ---- */
+  const enx=X.grupos.map(g=>{const L=g.k==='D'?g.L.filter(x=>!x.obs&&!x.bloco):g.L;
+    const com=L.filter(x=>x.esp&&!x.est),sem=L.filter(x=>!(x.esp&&!x.est)&&x.ven>.5);
+    const rows=[...com.map(x=>`<tr><td>${x.blk?'Acém · paleta · segunda · americano':x.n}</td><td>${k0(x.ven)} kg</td><td>${k0(x.esp)} kg</td><td>${pl(rr(x))}</td><td class="rc-fa">${fk(x)>.5?rsK(fr(x)):''}</td></tr>`),
+      ...(sem.length?[`<tr><td>${sem.map(x=>x.n.replace(/\s*\(.*\)/,'')).join(' · ')}</td><td>${k0(sem.reduce((t,x)=>t+x.ven,0))} kg</td><td></td><td>${g.k==='C'?'':'<span class="nr">sem referência</span>'}</td><td></td></tr>`]:[])].join('');
+    const r=rg(g),f=r!=null?Math.max(0,g.esp-g.ven):0;
+    return `<tr class="grp g${g.k}"><td colspan="5">${g.n}<span>${g.info}</span></td></tr>${rows}<tr class="subt"><td>${g.n.split(' (')[0]}</td><td>${k0(g.ven)} kg</td><td>${g.esp&&g.k!=='O'?k0(g.esp)+' kg':''}</td><td>${r!=null?pl(r):''}</td><td class="rc-fa">${r!=null&&r<.95&&f>.5?rsK(f*X.pm):''}</td></tr>`}).join('');
+  const tabEnx=`<div class="tw"><table class="vx ct cu"><tr><th>Carne (${P.per})</th><th>Vendido</th><th>Esperado</th><th>Vendeu ÷ esperado</th><th>Faltou</th></tr>${enx}
+    <tr class="totg"><td>Total de carne bovina</td><td>${k0(X.vk)} kg</td><td>${k0(X.deve)} kg</td><td>${ip(geral)}</td><td>${falG>.5?rsK(falG*X.pm):'—'}</td></tr></table></div>`;
+  /* ---- 3. todos os cortes: ordenar, filtrar, % vendido, × mês anterior ---- */
+  const V=X.V,VR=X.VR,m1=P.b.slice(0,7),m0=(([y,m])=>m===1?`${y-1}-12`:`${y}-${String(m-1).padStart(2,'0')}`)(m1.split('-').map(Number));
+  const Vm=mm=>{const o={};Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||!v.data.startsWith(mm))return;Object.entries(v.itens||{}).forEach(([c,x])=>o[c]=(o[c]||0)+x.kg)});return o};
+  const V1=Vm(m1),V0=Vm(m0),temAnt=Object.keys(V0).length>0,sk=(o,ks)=>ks.reduce((t,c)=>t+(o[c]||0),0);
+  const trd=ks=>{if(!temAnt)return null;const a=sk(V0,ks),b=sk(V1,ks);return a>.5?(b-a)/a:b>.5?Infinity:null};
+  const tf=t=>t==null?'<span class="rc-z">—</span>':t===Infinity?'<span class="rc-up">novo</span>':Math.abs(t)<.05?`<span class="rc-z">= ${pc(t)}</span>`:`<span class="${t>0?'rc-up':'rc-dn'}">${t>0?'▲':'▼'} ${pc(Math.abs(t))}</span>`;
+  const PN={T:['Traseiro','#1846C4'],C:['Costela','#b5541b'],D:['Dianteiro','#55627F'],O:['Feito na loja','#0E6B5A'],TC:['Traseiro + costela','#1846C4']};
+  const dono={};X.grupos.forEach(g=>g.L.forEach(x=>(x.ks||[]).forEach(c=>{if(!dono[c])dono[c]={x:x.obs||x.bloco?blocoD:x,gk:g.k}})));
+  const cods=Object.keys(V).filter(c=>bovBal(c,l)&&V[c]>.5).map(c=>{const d=c==='31404'?{x:null,gk:'TC'}:dono[c]||{x:null,gk:'O'},r=rr(d.x);
+    return{c,n:nmC(c),gk:d.gk,kg:V[c],rs:VR[c]||0,pr:VR[c]/V[c],pv:X.vk?V[c]/X.vk:0,t:trd([c]),r,f:d.x?fr(d.x):0}});
+  const fil=S.ctFil||'',prob=!!S.ctProb,ord=S.ctOrd||'grp',okF=gk=>!fil||gk===fil||(gk==='TC'&&(fil==='T'||fil==='C'));
+  const chip=(act,v,txt,on)=>`<button type="button" class="rc-ch${on?' on':''}" data-act="${act}" data-v="${v}">${txt}</button>`;
+  const ORD=[['grp','Agrupado'],['kg','Mais vendido (kg)'],['rs','Mais vendido (R$)'],['menos','Menos vendido'],['preco','Maior preço'],['caiu',`Mais caiu × ${mesRot(m0)}`],['falta','Mais faltou (R$)']];
+  const barras=`<div class="rc-bar"><span class="l">Ordenar</span>${ORD.map(([v,t])=>chip('ct-ord',v,t,ord===v)).join('')}</div>
+    <div class="rc-bar"><span class="l">Filtrar</span>${[['','Todas'],['T','Traseiro'],['C','Costela'],['D','Dianteiro'],['O','Feito na loja']].map(([v,t])=>chip('ct-fil',v,t,fil===v)).join('')}<span style="width:10px"></span>${chip('ct-prob','1','⚠ Só problemas',prob)}</div>`;
+  const hAnt=`${mesRot(m1)} × ${mesRot(m0)}`;
+  let corpo;
+  if(ord==='grp'){
+    const linhaP=(x,ks,nome)=>{const kg=x.ven,rs=ks.length?sk(VR,ks):kg*(x.n.startsWith('Fraldinha')&&V['31404']?VR['31404']/V['31404']:(x.pr||X.pm)),r=rr(x);
+      const ch=ks.filter(c=>V[c]>.5).length>1?ks.filter(c=>V[c]>.5).sort((a,b)=>V[b]-V[a]).map(c=>`<tr class="rc-c"><td>${nmC(c)}</td><td>${k0(V[c])} kg</td><td>${ip(X.vk?V[c]/X.vk:null)}</td><td>${F2.format(VR[c]/V[c])}</td><td>${rsK(VR[c]||0)}</td><td>${tf(trd([c]))}</td><td></td><td></td><td></td></tr>`).join(''):'';
+      return `<tr class="rc-f"><td>${nome||x.n}${x.est?'<small>estimada pela referência</small>':''}</td><td>${k0(kg)} kg</td><td>${ip(X.vk?kg/X.vk:null)}</td><td>${kg?F2.format(rs/kg):''}</td><td>${rsK(rs)}</td><td>${ks.length&&!x.est?tf(trd(ks)):''}</td><td>${x.esp?k0(x.esp)+' kg':''}</td><td>${x.est?'<span class="nr">estimado</span>':x.esp?pl(r):x.g?'':'<span class="nr">sem referência</span>'}</td><td class="rc-fa">${fk(x)>.5?`${k0(fk(x))} kg · ${rsK(fr(x))}`:''}</td></tr>${ch}`};
+    corpo=`<div class="tw"><table class="vx ct cu"><tr><th>Carne</th><th>Vendido</th><th>% vendido</th><th>Preço médio</th><th>Vendido R$</th><th>${hAnt}</th><th>Esperado</th><th>Vendeu ÷ esperado</th><th>Faltou</th></tr>${X.grupos.filter(g=>okF(g.k)).map(g=>{
+      let L=g.k==='D'?[...(blocoD?[{x:blocoD,ks:gD.L.filter(x=>x.obs||x.bloco).flatMap(x=>x.ks||[]),n:'Acém + paleta + segunda + americano'}]:[]),...g.L.filter(x=>!x.obs&&!x.bloco&&!x.blk).map(x=>({x,ks:x.ks||[]}))]:g.L.map(x=>({x,ks:x.n.startsWith('Fraldinha')?[]:(x.ks||[])}));
+      L=L.filter(o=>o.x.ven>.5||o.x.esp>.5);if(prob)L=L.filter(o=>rr(o.x)!=null&&rr(o.x)<.95);if(!L.length)return '';
+      const r=rg(g);return `<tr class="grp g${g.k}"><td colspan="9">${g.n}<span>${g.info}</span></td></tr>${L.map(o=>linhaP(o.x,o.ks,o.n)).join('')}${prob?'':`<tr class="subt"><td>Subtotal ${g.n.split(' (')[0].toLowerCase()}</td><td>${k0(g.ven)} kg</td><td>${ip(X.vk?g.ven/X.vk:null)}</td><td></td><td></td><td></td><td>${g.esp&&g.k!=='O'?k0(g.esp)+' kg':''}</td><td>${r!=null?pl(r):''}</td><td></td></tr>`}`}).join('')}
+      ${fil||prob?'':`<tr class="totg"><td>Total de carne bovina</td><td>${k0(X.vk)} kg</td><td>100%</td><td>${F2.format(X.pm)}</td><td>${rsK(X.vr)}</td><td>${tf(trd(Object.keys(V).filter(c=>bovBal(c,l))))}</td><td>${k0(X.deve)} kg</td><td>${ip(geral)}</td><td>${falG>.5?rsK(falG*X.pm):'—'}</td></tr>`}</table></div>`;
+  }else{
+    let L=cods.filter(x=>okF(x.gk)&&(!prob||(x.r!=null&&x.r<.95)));
+    const so={kg:(a,b)=>b.kg-a.kg,rs:(a,b)=>b.rs-a.rs,menos:(a,b)=>a.kg-b.kg,preco:(a,b)=>b.pr-a.pr,caiu:(a,b)=>(a.t??9)-(b.t??9),falta:(a,b)=>b.f-a.f||b.rs-a.rs}[ord];L.sort(so);
+    corpo=`<div class="tw"><table class="vx ct cu rc-fl"><tr><th>#</th><th>Carne</th><th>Peça</th><th>Vendido</th><th>% vendido</th><th>Preço médio</th><th>Vendido R$</th><th>${hAnt}</th><th>Grupo: vendeu ÷ esperado</th></tr>
+      ${L.map((x,i)=>`<tr><td class="rc-n">${i+1}</td><td><b>${x.n}</b></td><td><span class="rc-pc" style="border-color:${PN[x.gk][1]};color:${PN[x.gk][1]}">${PN[x.gk][0]}</span></td><td>${k0(x.kg)} kg</td><td>${ip(x.pv)}</td><td>${F2.format(x.pr)}</td><td>${rsK(x.rs)}</td><td>${tf(x.t)}</td><td>${pl(x.r)}</td></tr>`).join('')||'<tr><td colspan="9" class="nr">Nada com esse filtro.</td></tr>'}</table></div>
+      <p class="hint">Ao ordenar, os cortes saem dos grupos. A última coluna é a do grupo de onde o corte sai (ex.: contra-filé e ponta mostram o mesmo %). Toque em "Agrupado" para voltar.</p>`}
   const t=(h,rows)=>`<div class="tw"><table class="vx ct">${h}${rows}</table></div>`;
   const g1=t(`<tr><th>Traseiro</th><th>Nossas lojas<small>${k0(R.kgT)} kg pesados</small></th><th>Embrapa</th><th>Usado</th></tr>`,
     R.T.map(f=>`<tr${f.u?'':' class="dim"'}><td>${f.n}</td><td>${f.nos==null?'—':F1.format(f.nos)+'%'}</td><td>${F1.format(f.emb)}%</td><td class="m3">${F1.format(f.usa)}%</td></tr>`).join(''));
   const gDr=t(`<tr><th>Dianteiro</th><th>Nossas lojas<small>${k0(R.kgD)} kg pesados</small></th><th>Embrapa</th><th>Usado</th></tr>`,
     R.D.filter(f=>!f.ocultar).map(f=>`<tr><td>${f.n}</td><td>${f.nos==null?'—':F1.format(f.nos)+'%'}</td><td>${f.emb==null?'—':F1.format(f.emb)+'%'}</td><td class="m3">${f.usa==null?'—':F1.format(f.usa)+'%'}</td></tr>`).join(''));
-  const mes=P.n,moiP=X.vk?X.moi.kg/X.vk:null,escape=Math.max(0,X.moi.kg-MOIDA_REF*X.vk)*Math.max(0,X.pm-(X.moi.kg?X.moi.rs/X.moi.kg:X.pm))/mes;
-  const g4=t(`<tr><th></th><th>Por mês</th><th>% da carne vendida</th><th>Preço do kg</th></tr>`,
-    `<tr><td>Carne moída (= retalho)</td><td>${k0(X.moi.kg/mes)} kg</td><td class="${moiP>MOIDA_REF+.005?'mid':'best'}">${ip(moiP)}<small>esperado ~4%</small></td><td>${X.moi.kg?F2.format(X.moi.rs/X.moi.kg):'—'}<small>médio ${F2.format(X.pm)}</small></td></tr>
-     <tr class="key"><td>Lucro que escapa por mês<small>kg de moída acima de 4% × diferença de preço</small></td><td colspan="3">${escape>1?rsK(escape):'—'}</td></tr>
-     <tr><td>Carne de segunda (produto próprio)</td><td>${k0(X.seg.kg/mes)} kg</td><td>${ip(X.vk?X.seg.kg/X.vk:null)}</td><td>${X.seg.kg?F2.format(X.seg.rs/X.seg.kg):'—'}</td></tr>`);
-  const res=geral!=null?`conferência geral ${pc(geral)}${totF>1?` · faltou ${rsK(totF)} nos cortes únicos`:''}`:'';
-  return {res,html:`<div class="cts"><div class="vcp-dec">${dec}</div>${tab}
-    <p class="hint">Todas as carnes bovinas vendidas aparecem, pela peça de onde saem; a soma bate com o total (conferência geral). "% da peça" = quanto daquela peça vira esse corte. No dianteiro, paleta e acém aparecem baixos porque viram carne de segunda, corte americano e moída: confira pelo bloco "acém + paleta + segunda + americano". Esperado só nos cortes com referência; os outros entram no subtotal da peça. Verde ≥ 95% · amarelo 85–95% · vermelho &lt; 85%. É uma direção, não uma conta exata.</p>
+  const totF=ruins.reduce((s,x)=>s+fr(x),0);
+  const res=geral!=null?`conferência geral ${pc(geral)}${totF>1?` · onde olhar: ${rsK(totF)}`:''}`:'';
+  return {res,html:`<div class="cts">${kpis}${olhar}
+    ${vcpSec('ctab','Tabela por peça',`${X.grupos.length} peças · vendido × esperado`,tabEnx+'<p class="hint">Verde ≥ 95% · amarelo 85–95% · vermelho &lt; 85%. É uma direção, não uma conta exata.</p>','sub')}
+    ${vcpSec('cdet','Todos os cortes',`${cods.length} cortes vendidos · ordenar e filtrar`,barras+corpo,'sub')}
     ${vcpSec('ref','Como o esperado é calculado',`traseiro ${pc(REND_T)} (repartido nos cortes); dianteiro ${pc(CARNE_D)}; ponta de agulha ${pc(REND_PA)};  caixaria ${pc(REND_CX)}`,`<p class="hint">Usado = (nossas conferências pesadas corte a corte + Embrapa) ÷ 2. Melhora sozinho a cada conferência. No dianteiro a paleta e o acém viram segunda, corte americano e moída, por isso ele é conferido em grupo.</p><div class="pn-row2"><div>${g1}</div><div>${gDr}</div></div>`,'sub')}
   </div>`}}
 /* seção que abre e fecha ao tocar no título (fica lembrado enquanto o app estiver aberto) */
@@ -2541,6 +2601,7 @@ const A={
     x.fora=x.fora||{};x.dentro=x.dentro||{};delete x.fora[k];delete x.dentro[k];if(el.dataset.v==='tirar')x.fora[k]=1;else x.dentro[k]=1;save();render()},
   'bal-xls':()=>exportarBal(),
   'vcp-xls':el=>exportarVCP(+el.dataset.id),
+  'ct-ord':el=>{S.ctOrd=el.dataset.v;render()},'ct-fil':el=>{S.ctFil=el.dataset.v;render()},'ct-prob':()=>{S.ctProb=!S.ctProb;render()},
   'vcp-tg':el=>{const k=el.dataset.v;S.vcpAb={...(S.vcpAb||{}),[k]:!vcpAb(k)};render()},
   'cmp-m':el=>{S.cmpM=el.dataset.v||'';render()},
   'cmp-xls':()=>exportarCmp(),
