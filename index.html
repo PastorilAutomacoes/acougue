@@ -2022,7 +2022,8 @@ function vcpDados(l){const h=todayISO(),cps=Object.values(S.comps||{}).filter(c=
   const suS={};F.forEach(r=>Object.values(r.su).forEach(o=>{const t=suS[o.c]||(suS[o.c]={c:o.c,ck:0,cr:0,vk:0,vr:0});['ck','cr','vk','vr'].forEach(k=>t[k]+=o[k])}));
   if(med){med.miud=Object.values(miS).filter(o=>o.ck>.0005||o.vk>.0005).sort((x,y)=>y.vr-x.vr);med.suin=Object.values(suS).filter(o=>o.ck>.0005||o.vk>.0005).sort((x,y)=>y.vr-x.vr);KS.forEach(k=>med[k]/=med.n)} /* média por mês (as razões não mudam) */
   const lingDe=Object.keys(LING_DE).filter(k=>LING_DE[k]===l).map(k=>lojaNome(+k));
-  const dts=contDatas([l]),bal=dts.length>=2?(()=>{const a=dts[dts.length-2],b=dts[dts.length-1],B=balBov([l],a,b).T;return B.vr&&B.margem!=null?{m:B.margem,a,b,txt:`${pc(B.margem)} · balanço de ${dBR(a).slice(0,5)} a ${dBR(b).slice(0,5)}`}:null})():null;
+  /* balanço de pelo menos ~1 mês: da última contagem até a mais recente com 25 dias ou mais antes dela (contagem semanal sozinha não dá conta certa) */
+  const dts=contDatas([l]),bB=dts[dts.length-1],aB=bB?dts.filter(d=>d<=diaMais(bB,-25)).pop():null,bal=aB?(()=>{const a=aB,b=bB,B=balBov([l],a,b).T;return B.vr&&B.margem!=null?{m:B.margem,a,b,txt:`${pc(B.margem)} · balanço de ${dBR(a).slice(0,5)} a ${dBR(b).slice(0,5)}`}:null})():null;
   return{L,med,AB,lingDe,bal,temPag:Object.values(S.pags||{}).some(p=>p.loja===l)}}
 const vcpCalc=r=>{const x={...r};x.rkg=r.ck?r.vk/r.ck:null;x.r100=r.cr?r.vr/r.cr*100:null;x.ckc=r.ck?r.cr/r.ck:null;x.ckv=r.vk?r.cr/r.vk:null;x.pm=r.vk?r.vr/r.vk:null;
   x.skg=x.pm!=null&&x.ckv!=null?x.pm-x.ckv:null;x.sb=r.vr-r.cr;x.sp=r.vr?x.sb/r.vr:null;return x};
@@ -2251,7 +2252,7 @@ function vPainelVCP(l){if(S.role!=='gestor')return '';const D=vcpDados(l);
   const decM=M&&M.mck?`🦴 <b>Miúdos (média ${per}):</b> para cada R$ 100 comprados, vendeu <b>R$ ${M.mcr?kgI(M.mvr/M.mcr*100):'—'}</b>. Vendeu <b>${pc(M.mvk/M.mck)}</b> do kg que comprou (o normal é perto de 95%). Sobra de <b>${M.mvr?pc((M.mvr-M.mcr)/M.mvr):'—'}</b>${M.mvk?`, ou R$ ${F2.format((M.mvr-M.mcr)/M.mvk)} por kg vendido`:''}${ruins.length?` · <span style="color:var(--crit);font-weight:700">${ruins.join(' e ')} abaixo de 75%</span>`:''}.`:'';
   const rC=M&&M.vr?`operação ${pc(M.sp)}${D.temPag?` · financeiro ${pc((M.vr-M.pc)/M.vr)}`:''} · venda ÷ compra ${M.rkg==null?'—':pc(M.rkg)}`:'',rM=M&&M.mck?`vendeu ${pc(M.mvk/M.mck)} do kg · sobra ${M.mvr?pc((M.mvr-M.mcr)/M.mvr):'—'}`:'',rS=M&&M.sck?`para cada R$ 100 comprados vendeu R$ ${M.scr?kgI(M.svr/M.scr*100):'—'} · sobra ${M.svr?pc((M.svr-M.scr)/M.svr):'—'}`:'';
   const cortes=vPainelCortes(l);
-  return card(vcpSec('carne','🥩 Carne bovina',rC,`${dec}<div class="tw"><table class="vx"><thead>${th}</thead><tbody>${tbC}${ab}</tbody></table></div>
+  return card(vcpSec('carne','🥩 Carne bovina',rC,`${dec}${vcpSec('cmes','Mês a mês',`${D.L.map(r=>mesRot(r.m)).join(' · ')} · operação, rendimento e financeiro`,`<div class="tw"><table class="vx"><thead>${th}</thead><tbody>${tbC}${ab}</tbody></table></div>`,'sub')}
       ${cortes?vcpSec('cortes','🔪 Rendimento por corte',cortes.res,cortes.html,'sub'):''}`)
     +vcpSec('mi','🦴 Miúdos',rM,`${decM?`<div class="vcp-dec mi">${decM}</div>`:''}<p class="hint">Fígado, coração, mocotó, bucho, rabo · fora da conta da carne.</p>
     <div class="tw"><table class="vx"><thead>${th}</thead><tbody>${tbM}${abM}${mt}</tbody></table></div>`,'mi')
