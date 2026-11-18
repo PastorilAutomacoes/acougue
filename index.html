@@ -2417,12 +2417,17 @@ function estqLoja(l){const h=todayISO(),R=refCortes(),fam={};EQ_F.forEach(f=>f[2
   const parte=(fk,c)=>{const cs=EQ_F.find(f=>f[1]===fk)[2],t=cs.reduce((s,x)=>s+C[x].v60,0);return t>0?C[c].v60/t:(c===cs[0]?1:0)};
   const uT=k=>(R.T.find(f=>f.k===k)?.usa||0)/100,uD=k=>(R.D.find(f=>f.k===k)?.usa||0)/100;
   const minD=Object.values(C).reduce((m,g)=>g.d0<m?g.d0:m,'9999-12-31');
-  comprasCand(l,minD,'9999-12-31').forEach(n=>n.itens.forEach((ii,i)=>{if(!itemOn(n,i,ii))return;const c=EQ_AL[ii.cod0||ii.c]||ii.cod0||ii.c,kg=+ii.kg||0;if(!(kg>0))return;
-    const addF=(fk,v)=>EQ_F.find(f=>f[1]===fk)[2].forEach(x=>{const g=C[x];if(noPeriodo(n,g.d0,'9999-12-31'))g.ent+=v*parte(fk,x)});
-    if(Q_TRAS.includes(c)||c==='PT'){['pic','file','contra','alc','cm','cd','pat','musc'].forEach(k=>addF(k,kg*uT(k)));addF('fral',kg*FRAL_T);addF('moida',kg*uT('ret'))}
-    else if(Q_DIAN.includes(c)||c==='PD'){addF('bl',kg*(uD('paleta')+uD('acem')));addF('peito',kg*uD('peito'));addF('moida',kg*uD('retd'))}
-    else if(Q_PA.includes(c)||c==='PC1'||c==='PC2')addF('cos',kg*REND_PA);
-    else if(C[c]&&noPeriodo(n,C[c].d0,'9999-12-31'))C[c].ent+=kg*REND_CX}));
+  /* nota conferida com os cortes pesados: usa o peso real de cada corte; sem conferência, reparte a peça pelo % do rendimento */
+  const addPeca=(n,c,kg,addF)=>{if(Q_TRAS.includes(c)||c==='PT'){['pic','file','contra','alc','cm','cd','pat','musc'].forEach(k=>addF(k,kg*uT(k)));addF('fral',kg*FRAL_T);addF('moida',kg*uT('ret'));return true}
+    if(Q_DIAN.includes(c)||c==='PD'){addF('bl',kg*(uD('paleta')+uD('acem')));addF('peito',kg*uD('peito'));addF('moida',kg*uD('retd'));return true}
+    if(Q_PA.includes(c)||c==='PC1'||c==='PC2'){addF('cos',kg*REND_PA);return true}return false};
+  comprasCand(l,minD,'9999-12-31').forEach(n=>{const addF=(fk,v)=>EQ_F.find(f=>f[1]===fk)[2].forEach(x=>{const g=C[x];if(noPeriodo(n,g.d0,'9999-12-31'))g.ent+=v*parte(fk,x)}),
+      addC=(c,v)=>{const g=C[c];if(g&&noPeriodo(n,g.d0,'9999-12-31'))g.ent+=v};
+    const cf=confDe(n),pes=(cf?.pes||[]).filter(e=>e.g!=='miudos');
+    if(pes.length){pes.forEach(e=>{const kg=(+e.b||0)-(+e.t||0)*(+e.nc||1);if(!(kg>0))return;
+      const cs=e.c==='CX'?(e.cont||[]):[e.c];if(!cs.length)return;cs.forEach(x=>{const c=EQ_AL[x]||x,v=kg/cs.length;if(C[c])addC(c,v*REND_CX);else addPeca(n,c,v,addF)})});return}
+    n.itens.forEach((ii,i)=>{if(!itemOn(n,i,ii))return;const c=EQ_AL[ii.cod0||ii.c]||ii.cod0||ii.c,kg=+ii.kg||0;if(!(kg>0))return;
+      if(!addPeca(n,c,kg,addF))addC(c,kg*REND_CX)})});
   Object.values(C).forEach(g=>{const e=g.kg+g.ent-g.ven;g.est=Math.max(0,e);g.neg=e<-1;g.dia=g.v14/14;g.dias=g.dia>.05?g.est/g.dia:(g.est>1?Infinity:null)});
   return{G:C,ult:cts[cts.length-1].data,base:base.data}}
 /* ritmo do mês: carne bovina vendida do dia 1 até ontem × os mesmos dias do mês anterior */
@@ -2448,7 +2453,7 @@ function vEstoque(){if(S.role!=='gestor')return '';
   return `<section class="card es"><div class="card-h"><div><h3>📦 Estoque agora (prévia)</h3><p class="hint">Estoque = última contagem + notas que chegaram − vendas do caixa (Brajan). Dias de estoque = kg ÷ venda média dos últimos 14 dias. 🟢 até ${EQ_LIM[0]} dias · 🟡 ${EQ_LIM[0]+1} a ${EQ_LIM[1]} · 🔴 mais de ${EQ_LIM[1]}. Só o gestor vê.</p></div></div>
     ${kp}${lst}
     ${vcpSec('estq-tb','Todas as carnes por loja',`${L.length} lojas · carne por carne`,`<div class="tw"><table class="vx es-t"><tr><th>Carne</th>${L.map(({lj,E})=>`<th>${esc(lj.nome)}<small>contagem ${dBR(E.ult).slice(0,5)}</small></th>`).join('')}</tr>${tb}</table></div>`,'sub')}
-    <p class="hint">É uma prévia: perda, quebra e a forma de desossar fazem ela se afastar do real com o tempo; a cada contagem ela volta a ser exata. Cortes em caixa são os mais precisos. O traseiro e o dianteiro que chegam são repartidos pelo "% da peça" do rendimento e, entre carnes da mesma parte (ex.: filé e bananinha, contra-filé e ponta), pela venda da própria loja nos últimos 60 dias. O dianteiro é o mais incerto.</p></section>`}
+    <p class="hint">É uma prévia: perda, quebra e a forma de desossar fazem ela se afastar do real com o tempo; a cada contagem ela volta a ser exata. Nota conferida com os cortes pesados usa o peso real de cada corte (o mais preciso). Sem conferência, o traseiro e o dianteiro que chegam são repartidos pelo "% da peça" do rendimento e, entre carnes da mesma parte (ex.: filé e bananinha, contra-filé e ponta), pela venda da própria loja nos últimos 60 dias. O dianteiro é o mais incerto.</p></section>`}
 function vComparativo(){if(S.role!=='gestor')return '';const C=cmpDados();
   if(!C.sel.length)return `<section class="card"><h3>Comparativo das lojas</h3><p class="pn-vazio">Ainda não tem um mês fechado com dados do Brajan em todas as lojas.</p></section>`;
   const per=C.sel.length>1?`${mesRot(C.sel[0])} a ${mesRot(C.sel[C.sel.length-1])}`:mesRot(C.sel[0]),com=C.LJ.filter(x=>x.t),nm=x=>esc(x.l.nome);
