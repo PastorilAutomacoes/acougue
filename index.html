@@ -2149,11 +2149,13 @@ function vPainelCortes(l){if(S.role!=='gestor')return null;const P=cortesPer(l);
   const bons=conf.filter(x=>rr(x)>=.95).map(x=>x.n.replace(/\s*\(.*\)/,'').replace(/ \+ .*/,'').replace(/ \/ .*/,'').toLowerCase());
   const nmC=c=>X.nm(c);
   const cts=S.conts.filter(c=>c.loja===l).sort((a,b)=>a.data.localeCompare(b.data)).slice(-3),est=[];
-  if(cts.length>=2){const u=cts[cts.length-1];Object.entries(u.itens||{}).forEach(([c,kg])=>{if(!bovBal(c,l)||kg<8)return;const hs=cts.map(x=>x.itens?.[c]||0);if(hs.every((v,i)=>!i||v>hs[i-1])&&kg>=2*Math.max(hs[0],1))est.push({c,hs})})}
+  if(cts.length>=2){const u=cts[cts.length-1];Object.entries(u.itens||{}).forEach(([c,kg])=>{if(!bovBal(c,l)||kg<8)return;const hs=cts.map(x=>x.itens?.[c]||0);if(hs.every((v,i)=>v>0&&(!i||v>hs[i-1]))&&kg>=2*hs[0])est.push({c,hs})})}
   const itRuim=x=>`<div class="rc-i${rr(x)>=.85?' y':''}"><div class="n">${x.blk?'Acém + paleta + segunda':x.n}</div><div class="p">${pc(rr(x))}</div><div class="r">${k0(fk(x))} kg · ${rsK(fr(x))}</div><div class="a">${ACAO[x.gk]||''}</div></div>`;
   const itEst=e=>`<div class="rc-i e"><div class="n">${nmC(e.c)} <span class="rc-tag">estoque</span></div><div class="p">${k0(e.hs[e.hs.length-1])} kg</div><div class="r">parada na câmara</div><div class="a">subiu de ${F1.format(e.hs[0])} kg para ${F1.format(e.hs[e.hs.length-1])} kg em ${e.hs.length} contagens (até ${dBR(cts[cts.length-1].data)}): ver preço ou fazer oferta</div></div>`;
-  const olhar=`<div class="rc-h">Onde olhar <small>(${P.per})</small></div>${ruins.map(itRuim).join('')}${est.map(itEst).join('')}${!ruins.length&&!est.length?'<p class="hint">Nada fora do esperado. 👍</p>':''}
+  const olharC=`${ruins.map(itRuim).join('')}${est.map(itEst).join('')}${!ruins.length&&!est.length?'<p class="hint">Nada fora do esperado. 👍</p>':''}
     ${bons.length?`<div class="rc-oks">✅ Dentro do esperado: ${bons.join(' · ')}</div>`:''}${lingOut?`<p class="hint">+ ${k0(lingOut)} kg de linguiça vendida nas outras lojas.</p>`:''}`;
+  if((S.vcpAb||{}).colhar===undefined)S.vcpAb={...(S.vcpAb||{}),colhar:true}; /* começa aberto */
+  const olhar=vcpSec('colhar','Onde olhar',`${P.per}${ruins.length?` · ${ruins.length} cortes faltando · ${rsK(ruins.reduce((t,x)=>t+fr(x),0))}`:''}${est.length?` · ${est.length} parado${est.length>1?'s':''} no estoque`:''}`,olharC,'sub');
   /* ---- 2. tabela por peça (enxuta) ---- */
   const enx=X.grupos.map(g=>{const L=g.k==='D'?g.L.filter(x=>!x.obs&&!x.bloco):g.L;
     const com=L.filter(x=>x.esp&&!x.est),sem=L.filter(x=>!(x.esp&&!x.est)&&x.ven>.5);
