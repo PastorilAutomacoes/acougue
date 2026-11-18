@@ -443,7 +443,7 @@ table.vx{width:100%;border-collapse:collapse;font-size:.84rem;font-family:'IBM P
 .rc-tag{background:#F26A1B;color:#fff;font-size:.66rem;font-weight:700;padding:1px 6px;border-radius:5px;margin-left:4px}
 .rc-oks{color:var(--ok);font-size:.84rem;background:#EAF7EF;border:1px solid #BFE5CD;border-radius:8px;padding:7px 12px;margin:6px 0 4px}
 .rc-p{display:inline-block;min-width:52px;text-align:center;border-radius:6px;padding:0 6px;font-weight:700}.rc-p.ok{background:#DDF3E6;color:var(--ok)}.rc-p.wa{background:#FFF1C2;color:#855700}.rc-p.cr{background:#FDE1E1;color:var(--crit)}
-.rc-fa{color:var(--crit)}.vx th.rc-s{cursor:pointer;user-select:none}.vx th.rc-s:hover{color:var(--accent);text-decoration:underline}.vx th.rc-s.on{color:var(--accent)}.rc-si{color:#b7c1d6;font-size:.7rem}.vx.rc-fl td:nth-child(2),.vx.rc-fl th:nth-child(2),.vx.rc-fl td:nth-child(3),.vx.rc-fl th:nth-child(3){text-align:left!important}.rc-n{color:#9aa4bb}
+.rc-fa{color:var(--crit)}.vcp-mes{margin:2px 0 10px}.vcp-mes .l{width:auto;margin-right:4px}.vx th.rc-s{cursor:pointer;user-select:none}.vx th.rc-s:hover{color:var(--accent);text-decoration:underline}.vx th.rc-s.on{color:var(--accent)}.rc-si{color:#b7c1d6;font-size:.7rem}.vx.rc-fl td:nth-child(2),.vx.rc-fl th:nth-child(2),.vx.rc-fl td:nth-child(3),.vx.rc-fl th:nth-child(3){text-align:left!important}.rc-n{color:#9aa4bb}
 .rc-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 6px}.rc-bar .l{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;width:70px}
 .rc-ch{border:1px solid #c9d3e8;border-radius:16px;padding:3px 11px;font:inherit;font-size:.8rem;background:#fff;color:#26324f;cursor:pointer}.rc-ch.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
 .vx.cu tr.rc-f td{font-weight:700;background:#F3F6FC}.vx.cu tr.rc-c td:first-child{padding-left:28px;font-weight:400}.vx.cu tr.rc-c td:first-child::before{content:'└ ';color:#9aa4bb}
@@ -2016,15 +2016,16 @@ function vcpDados(l){const h=todayISO(),cps=Object.values(S.comps||{}).filter(c=
   const AB={aC:0,aM:0,aS:0,vC:0,vM:0,vS:0,nC:0,nM:0,nS:0};ab.forEach(p=>{const x=sh(p),v=sal(p),xs=x.s||0;if(v<=.005||!(x.c+x.m+xs))return;
     if(p.vencimento&&p.vencimento<h){AB.vC+=v*x.c;AB.vM+=v*x.m;AB.vS+=v*xs;if(x.c)AB.nC++;if(x.m)AB.nM++;if(xs)AB.nS++}else{AB.aC+=v*x.c;AB.aM+=v*x.m;AB.aS+=v*xs}});
   const KS=['ck','cr','vk','vr','pc','pmi','mck','mcr','mvk','mvr','lgk','lgr','sck','scr','svk','svr','psu'];
-  const F=L.filter(r=>r.fechado&&r.ck>0&&r.vk>0).slice(-3),med=F.length?F.reduce((t,r)=>{KS.forEach(k=>t[k]+=r[k]);return t},{...Object.fromEntries(KS.map(k=>[k,0])),n:F.length,de:F[0].m,ate:F[F.length-1].m}):null;
+  const sel=(S.vcpMes||{})[l],F=sel?L.filter(r=>sel.includes(r.m)&&r.ck>0&&r.vk>0):L.filter(r=>r.fechado&&r.ck>0&&r.vk>0).slice(-3),med=F.length?F.reduce((t,r)=>{KS.forEach(k=>t[k]+=r[k]);return t},{...Object.fromEntries(KS.map(k=>[k,0])),n:F.length,de:F[0].m,ate:F[F.length-1].m}):null;
   /* miúdo por miúdo, somando os meses fechados da média */
   const miS={};F.forEach(r=>Object.values(r.mi).forEach(o=>{const t=miS[o.c]||(miS[o.c]={c:o.c,ck:0,cr:0,vk:0,vr:0});['ck','cr','vk','vr'].forEach(k=>t[k]+=o[k])}));
   const suS={};F.forEach(r=>Object.values(r.su).forEach(o=>{const t=suS[o.c]||(suS[o.c]={c:o.c,ck:0,cr:0,vk:0,vr:0});['ck','cr','vk','vr'].forEach(k=>t[k]+=o[k])}));
   if(med){med.miud=Object.values(miS).filter(o=>o.ck>.0005||o.vk>.0005).sort((x,y)=>y.vr-x.vr);med.suin=Object.values(suS).filter(o=>o.ck>.0005||o.vk>.0005).sort((x,y)=>y.vr-x.vr);KS.forEach(k=>med[k]/=med.n)} /* média por mês (as razões não mudam) */
+  if(med){const ms=F.map(r=>r.m),seg=ms.every((m,i)=>!i||m===diaMais(fimMes(ms[i-1]+'-01'),1).slice(0,7));med.per=ms.length===1?mesRot(ms[0]):seg?`${mesRot(ms[0])} a ${mesRot(ms[ms.length-1])}`:ms.map(mesRot).join(' + ');med.meses=ms;med.parcial=F.some(r=>!r.fechado)}
   const lingDe=Object.keys(LING_DE).filter(k=>LING_DE[k]===l).map(k=>lojaNome(+k));
   /* balanço de pelo menos ~1 mês: da última contagem até a mais recente com 25 dias ou mais antes dela (contagem semanal sozinha não dá conta certa) */
   const dts=contDatas([l]),bB=dts[dts.length-1],aB=bB?dts.filter(d=>d<=diaMais(bB,-25)).pop():null,bal=aB?(()=>{const a=aB,b=bB,B=balBov([l],a,b).T;return B.vr&&B.margem!=null?{m:B.margem,a,b,txt:`${pc(B.margem)} · balanço de ${dBR(a).slice(0,5)} a ${dBR(b).slice(0,5)}`}:null})():null;
-  return{L,med,AB,lingDe,bal,temPag:Object.values(S.pags||{}).some(p=>p.loja===l)}}
+  return{L,F,sel:!!sel,med,AB,lingDe,bal,temPag:Object.values(S.pags||{}).some(p=>p.loja===l)}}
 const vcpCalc=r=>{const x={...r};x.rkg=r.ck?r.vk/r.ck:null;x.r100=r.cr?r.vr/r.cr*100:null;x.ckc=r.ck?r.cr/r.ck:null;x.ckv=r.vk?r.cr/r.vk:null;x.pm=r.vk?r.vr/r.vk:null;
   x.skg=x.pm!=null&&x.ckv!=null?x.pm-x.ckv:null;x.sb=r.vr-r.cr;x.sp=r.vr?x.sb/r.vr:null;return x};
 function vcpLinhas(D){const C=D.L.map(vcpCalc),M=D.med?vcpCalc(D.med):null,i0=v=>v==null?'—':kgI(v),r2_=v=>v==null||!isFinite(v)?'—':F2.format(v);
@@ -2143,7 +2144,7 @@ function cortesDados(l,a,b){const R=refCortes(),K={},V={},VR={};
   const deve=grupos.reduce((t,g)=>t+g.esp,0);
   return{R,tras,dian,pa,cx,vk,vr,pm,cortes,cost,moi,seg,dv,dvKg,dvPm:dvKg?dvRs/dvKg:0,dianEsp,deve,grupos,V,VR,nm}}
 /* período: os mesmos meses fechados da média do quadro Venda × Compra × Pagamento */
-function cortesPer(l){const D=vcpDados(l);if(!D?.med)return null;const m=D.L.filter(r=>r.fechado&&r.ck>0&&r.vk>0).slice(-3);return{a:m[0].a,b:m[m.length-1].b,n:m.length,per:m.length>1?`${mesRot(m[0].m)} a ${mesRot(m[m.length-1].m)}`:mesRot(m[0].m)}}
+function cortesPer(l){const D=vcpDados(l);if(!D?.med)return null;const m=D.F;return{a:m[0].a,b:m[m.length-1].b,n:m.length,per:m.length>1?`${mesRot(m[0].m)} a ${mesRot(m[m.length-1].m)}`:mesRot(m[0].m)}}
 function vPainelCortes(l){if(S.role!=='gestor')return null;const P=cortesPer(l);if(!P)return null;const X=cortesDados(l,P.a,P.b),R=X.R;if(!(X.tras+X.dian+X.pa))return null;
   const k0=v=>kgI(v),ip=v=>v==null||!isFinite(v)?'—':pc(v),pl=r=>r==null?'<span class="nr">—</span>':`<span class="rc-p ${r>=.95?'ok':r>=.85?'wa':'cr'}">${pc(r)}</span>`;
   const lingOut=Object.keys(LING_DE).filter(k=>LING_DE[k]===l).reduce((t,k)=>t+Object.values(S.vend||{}).filter(v=>v.loja===+k&&v.data>=P.a&&v.data<=P.b).reduce((s,v)=>s+(v.itens?.['31408']?.kg||0),0),0);
@@ -2214,11 +2215,15 @@ function vPainelCortes(l){if(S.role!=='gestor')return null;const P=cortesPer(l);
 /* seção que abre e fecha ao tocar no título (fica lembrado enquanto o app estiver aberto) */
 const vcpAb=k=>!!(S.vcpAb||{})[k];
 const vcpSec=(k,tit,res,corpo,cls='')=>`<div class="vsec ${cls}${vcpAb(k)?' on':''}"><button type="button" class="vsec-h" data-act="vcp-tg" data-v="${k}" aria-expanded="${vcpAb(k)}"><span class="vsec-c">${vcpAb(k)?'▾':'▸'}</span><b>${tit}</b>${res?`<small>${res}</small>`:''}</button>${vcpAb(k)?`<div class="vsec-b">${corpo}</div>`:''}</div>`;
+/* filtro dos meses da média (todo o quadro e o rendimento por corte usam esses meses) */
+function vcpFiltro(l,D){const on=new Set(D.F.map(r=>r.m)),hj=todayISO();
+  return `<div class="rc-bar vcp-mes"><span class="l">Meses</span>${D.L.filter(r=>r.ck>0&&r.vk>0).map(r=>`<button type="button" class="rc-ch${on.has(r.m)?' on':''}" data-act="vcp-mes" data-id="${l}" data-v="${r.m}">${on.has(r.m)?'✓ ':''}${mesRot(r.m)}${r.fechado?'':` (até ${+hj.slice(8)})`}</button>`).join('')}
+    ${D.sel?`<button type="button" class="rc-ch" data-act="vcp-mes" data-id="${l}" data-v="">↺ Padrão (3 últimos fechados)</button>`:''}<span class="hint" style="margin:0 0 0 6px">${D.med?.parcial?'⚠ mês aberto na média: ainda tem nota por chegar':'toque para escolher os meses da média'}</span></div>`}
 function vPainelVCP(l){if(S.role!=='gestor')return '';const D=vcpDados(l);
-  const card=b=>`<section class="card vcp"><div class="card-h"><div><h3>Venda × Compra × Pagamento</h3><p class="hint">Carne bovina por mês. Compra pela emissão da nota (com S.T., sem miúdos), venda pelo cupom, pagamento pela data do boleto (Brajan). Só o gestor vê.</p></div>${D?'<button type="button" class="btn xl" data-act="vcp-xls" data-id="'+l+'">⬇ Exportar Excel</button>':''}</div>${b}</section>`;
+  const card=b=>`<section class="card vcp"><div class="card-h"><div><h3>Venda × Compra × Pagamento</h3><p class="hint">Carne bovina por mês. Compra pela emissão da nota (com S.T., sem miúdos), venda pelo cupom, pagamento pela data do boleto (Brajan). Só o gestor vê.</p></div>${D?'<button type="button" class="btn xl" data-act="vcp-xls" data-id="'+l+'">⬇ Exportar Excel</button>':''}</div>${D?vcpFiltro(l,D):''}${b}</section>`;
   if(!D)return card('<p class="pn-vazio">As notas de compra desta loja ainda não chegam pelo Brajan.</p>');
   const M=D.med?vcpCalc(D.med):null;
-  const dec=M&&M.ckv&&M.vr?(()=>{const alvo=M.ckv/(1-META_MG),per=D.med.n>1?`${mesRot(D.med.de)} a ${mesRot(D.med.ate)}`:mesRot(D.med.de);
+  const dec=M&&M.ckv&&M.vr?(()=>{const alvo=M.ckv/(1-META_MG),per=D.med.per;
     const fin=D.temPag&&M.vr?(M.vr-M.pc)/M.vr:null,cor=v=>v==null?'':v<0?' cr':'';
     return `<div class="rc-k vk4"><div class="op"><div class="t">Operação · venda − compra</div><div class="v${cor(M.sp)}">${pc(M.sp)}</div><div class="s">R$ ${kgI(M.sb)} por mês · ${per}</div></div>
       <div class="fi"><div class="t">Financeiro · venda − pago</div><div class="v${cor(fin)}">${fin==null?'—':pc(fin)}</div><div class="s">${fin==null?'sem pagamentos do Brajan':`R$ ${kgI(M.vr-M.pc)} por mês`}</div></div>
@@ -2226,7 +2231,7 @@ function vPainelVCP(l){if(S.role!=='gestor')return '';const D=vcpDados(l);
       <div><div class="t">Sobra por kg vendido</div><div class="v">R$ ${F2.format(M.skg)}</div><div class="s">custo R$ ${F2.format(M.ckv)} · preço R$ ${F2.format(M.pm)}</div></div></div>
       <div class="vcp-dec">💡 ${M.sp>=META_MG?`A operação está acima da meta de ${pc(META_MG)}.`:`Para a operação chegar a ${pc(META_MG)}, o preço médio teria que ir de R$ ${F2.format(M.pm)} para <b>R$ ${F2.format(alvo)}</b> (+${pc(alvo/M.pm-1)}).`}</div>`})():'<div class="vcp-dec">Ainda não tem um mês fechado com compra e venda para tirar a média.</div>';
   const rows=vcpLinhas(D),C=rows[0].C;
-  const hj=todayISO(),th=`<tr><th>${esc(lojaNome(l))}</th>${D.L.map(r=>r.fechado?`<th>${mesRot(r.m)}</th>`:`<th class="p">${mesRot(r.m)} (até dia ${+hj.slice(8)})<small>mês aberto: não conclua</small></th>`).join('')}<th class="m3">Média meses fechados</th></tr>`;
+  const hj=todayISO(),th=`<tr><th>${esc(lojaNome(l))}</th>${D.L.map(r=>r.fechado?`<th>${mesRot(r.m)}</th>`:`<th class="p">${mesRot(r.m)} (até dia ${+hj.slice(8)})<small>mês aberto: não conclua</small></th>`).join('')}<th class="m3">${D.sel?'Média dos meses escolhidos':'Média meses fechados'}</th></tr>`;
   const i4=rows.findIndex(r=>r[0]==='sec2'),i5=rows.findIndex(r=>r[0]==='sec3');
   const at=(r,x)=>{const a=r[3]?r[3](x):'';return x.fechado?a:a.includes('class="')?a.replace('class="','class="p '):' class="p"'};
   const tb0=rows.map(r=>r[0]==='sec'||r[0]==='sec2'||r[0]==='sec3'?`<tr class="${r[0]}${r[4]?' '+r[4]:''}"><td colspan="${C.length+2}">${r[1]}</td></tr>`:
@@ -2236,7 +2241,7 @@ function vPainelVCP(l){if(S.role!=='gestor')return '';const D=vcpDados(l);
   const abr=(a,v,n,q)=>D.temPag?`<tr><td>Em aberto a vencer (hoje, parte ${q})</td>${C.map((x,i)=>`<td>${i===C.length-1?kgI(a):''}</td>`).join('')}<td class="m3">—</td></tr>
     <tr><td>Vencido sem baixa (hoje, parte ${q})</td>${C.map((x,i)=>`<td${i===C.length-1&&v>.5?' class="r"':''}>${i===C.length-1?(v>.5?`${n} · ${kgI(v)}`:'0'):''}</td>`).join('')}<td class="m3">—</td></tr>`:'';
   const ab=abr(D.AB.aC,D.AB.vC,D.AB.nC,'da carne'),abM=abr(D.AB.aM,D.AB.vM,D.AB.nM,'dos miúdos'),abS=abr(D.AB.aS,D.AB.vS,D.AB.nS,'do suíno');
-  const MU=D.med?.miud||[],per=D.med?(D.med.n>1?`${mesRot(D.med.de)} a ${mesRot(D.med.ate)}`:mesRot(D.med.de)):'',ncol=C.length+2;
+  const MU=D.med?.miud||[],per=D.med?D.med.per:'',ncol=C.length+2;
   const mrow=(o,tot)=>{const r=o.ck?o.vk/o.ck:null,s=o.vr-o.cr;return `<tr${tot?' class="key"':''}><td>${tot?'Total miúdos':esc(PM[o.c]?.n||o.c)}</td><td>${kgI(o.ck)}</td><td>${kgI(o.vk)}</td>${C.length>3?`<td colspan="${C.length-3}"></td>`:''}<td${r!=null&&r<MIUDO_OK?' class="r"':''}>${r==null?'—':pc(r)}</td>
     <td class="m3">${o.ck?F2.format(o.cr/o.ck):'—'} → ${o.vk?F2.format(o.vr/o.vk):'—'} · <span class="${s<0?'r':'g'}">${kgI(s)}</span></td></tr>`};
   const mt=MU.length&&C.length>=3?`<tr class="sub"><td>Por miúdo · meses fechados (${per})</td><td>Comprou kg</td><td>Vendeu kg</td>${C.length>3?`<td colspan="${C.length-3}"></td>`:''}<td>Vendido ÷ Comprado</td><td class="m3">Custo kg → Preço kg · Sobra R$</td></tr>
@@ -2263,7 +2268,7 @@ function vPainelVCP(l){if(S.role!=='gestor')return '';const D=vcpDados(l);
     Miúdos ficam fora da conta da carne; não têm osso, então o normal é vender perto de 95% do que entra (vermelho abaixo de 90%).</p>`)}
 function exportarVCP(l){if(typeof XLSX==='undefined'){toast('Sem a biblioteca do Excel. Verifique a internet e tente de novo.');return}
   const D=vcpDados(l);if(!D)return;const rows=vcpLinhas(D),C=rows[0].C,M=D.med?vcpCalc(D.med):null,tx=v=>String(v).replace(/<[^>]+>/g,'');
-  const aoa=[[`Venda × Compra × Pagamento — ${lojaNome(l)}`],[`Gerado em ${nowBR()}`],[],['',...D.L.map(r=>mesRot(r.m)+(r.fechado?'':' *')),'Média meses fechados']];
+  const aoa=[[`Venda × Compra × Pagamento — ${lojaNome(l)}`],[`Gerado em ${nowBR()}`],[],['',...D.L.map(r=>mesRot(r.m)+(r.fechado?'':' *')),D.sel?'Média dos meses escolhidos ('+(D.med?.per||'')+')':'Média meses fechados']];
   rows.forEach((r,i)=>{if(r[0]==='sec2'&&rows.findIndex(x=>x[0]==='sec2')===i)aoa.push([],['MIÚDOS']);if(r[0]==='sec3'&&rows.findIndex(x=>x[0]==='sec3')===i)aoa.push([],['SUÍNOS (só suíno de corte)']);
     if(r[0]==='sec'||r[0]==='sec2'||r[0]==='sec3'){aoa.push([],[tx(r[1])]);return}aoa.push([r[1],...C.map(x=>tx(r[2](x))),M?tx(r[2](M)):''])});
   if(D.temPag)aoa.push([],['Em aberto a vencer (hoje) · carne',Math.round(D.AB.aC),'miúdos',Math.round(D.AB.aM)],['Vencido sem baixa (hoje) · carne',Math.round(D.AB.vC),'miúdos',Math.round(D.AB.vM)]);
@@ -2401,7 +2406,7 @@ function exportarCmp(){if(typeof XLSX==='undefined'){toast('Sem a biblioteca do 
   const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:40},...C.LJ.map(()=>({wch:20})),{wch:20}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Comparativo');
   XLSX.writeFile(wb,`Comparativo das lojas ${todayISO()}.xlsx`);toast('Planilha gerada.')}
 /* sobra real da carne bovina (venda − compra) na média dos meses fechados: o número que vale, no lugar da margem do cadastro */
-function sobraReal(l){const D=vcpDados(l),M=D?.med;if(!M||!M.vr)return null;return{v:(M.vr-M.cr)/M.vr,per:M.n>1?`${mesRot(M.de)} a ${mesRot(M.ate)}`:mesRot(M.de)}}
+function sobraReal(l){const D=vcpDados(l),M=D?.med;if(!M||!M.vr)return null;return{v:(M.vr-M.cr)/M.vr,per:M.per}}
 function sobraRealTodas(){const C=cmpDados();if(!C.T||!C.T.vr)return null;return{v:(C.T.vr-C.T.cr)/C.T.vr,per:C.sel.length>1?`${mesRot(C.sel[0])} a ${mesRot(C.sel[C.sel.length-1])}`:mesRot(C.sel[0])}}
 const kpiSobra=(x,sist)=>`<div class="kpi"><small>Sobra real (venda − compra)</small><b class="pn-p ${x?(x.v<.08?'crit':x.v<.16?'warn':'ok'):''}">${x?pc(x.v):'—'}</b><i>${x?`média ${x.per}`:'sem mês fechado do Brajan'}${sist!=null?` · sistema mostra ${pc(sist)}`:''}</i></div>`;
 function vPainel(){
@@ -2613,6 +2618,7 @@ const A={
   'bal-xls':()=>exportarBal(),
   'vcp-xls':el=>exportarVCP(+el.dataset.id),
   'ct-ord':el=>{const v=el.dataset.v;if(v==='grp'){S.ctOrd='grp'}else if(S.ctOrd===v){S.ctDir=-(S.ctDir||-1)}else{S.ctOrd=v;S.ctDir=['nome','tr','r'].includes(v)?1:-1}render()},'ct-fil':el=>{S.ctFil=el.dataset.v;render()},'ct-prob':()=>{S.ctProb=!S.ctProb;render()},
+  'vcp-mes':el=>{const l=+el.dataset.id,v=el.dataset.v,M={...(S.vcpMes||{})};if(!v){delete M[l]}else{const D=vcpDados(l),cur=new Set(M[l]||D.F.map(r=>r.m));cur.has(v)?cur.delete(v):cur.add(v);if(!cur.size){toast('Escolha pelo menos um mês.');return}M[l]=[...cur].sort()}S.vcpMes=M;REF_C=null;render()},
   'vcp-tg':el=>{const k=el.dataset.v;S.vcpAb={...(S.vcpAb||{}),[k]:!vcpAb(k)};render()},
   'cmp-m':el=>{S.cmpM=el.dataset.v||'';render()},
   'cmp-xls':()=>exportarCmp(),
