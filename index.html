@@ -2431,7 +2431,9 @@ function ritmoLoja(l){const y=diaMais(todayISO(),-1),m=y.slice(0,7),d=+y.slice(8
 function vEstoque(){if(S.role!=='gestor')return '';
   const L=S.lojas.filter(lj=>Object.values(S.vend||{}).some(v=>v.loja===lj.id)).map(lj=>({lj,E:estqLoja(lj.id)})).filter(x=>x.E);if(!L.length)return '';
   const cl=d=>d==null?'':d>EQ_LIM[1]?'so':d>EQ_LIM[0]?'at':'ok',fd=d=>d===Infinity?'sem venda':d==null?'—':`${d<10?F1.format(d):Math.round(d)} dias`,k1=v=>F1.format(v);
-  const al=[];L.forEach(({lj,E})=>Object.values(E.G).forEach(g=>{if(g.est>=2&&g.dias!=null&&g.dias>EQ_LIM[0])al.push({lj,g})}));al.sort((a,b)=>b.g.dias-a.g.dias);
+  /* matéria-prima: carne que não existe no Brajan e nunca passa no caixa (ex.: pescoço, vira moída ou segunda) — não gera alerta */
+  const vendidos=new Set();Object.values(S.vend||{}).forEach(v=>Object.keys(v.itens||{}).forEach(c=>vendidos.add(c)));const mp=c=>!NOME_BJ(c)&&!vendidos.has(c);
+  const al=[];L.forEach(({lj,E})=>Object.values(E.G).forEach(g=>{if(!mp(g.c)&&g.est>=2&&g.dias!=null&&g.dias>EQ_LIM[0])al.push({lj,g})}));al.sort((a,b)=>b.g.dias-a.g.dias);
   const nS=al.filter(a=>a.g.dias>EQ_LIM[1]).length,nA=al.length-nS;
   const rit=L.map(({lj})=>{const r=ritmoLoja(lj.id);return `<span>${esc(lj.nome)} <b class="${r==null?'z':r>.02?'up':r<-.02?'dn':'z'}">${r==null?'—':(r>.02?'▲ ':r<-.02?'▼ ':'= ')+pc(Math.abs(r))}</b></span>`}).join('');
   const kp=`<div class="es-k"><div class="so"><div class="t">🔴 Parada</div><div class="v">${nS} ${nS===1?'carne':'carnes'}</div><div class="s">mais de ${EQ_LIM[1]} dias de estoque</div></div>
@@ -2441,7 +2443,7 @@ function vEstoque(){if(S.role!=='gestor')return '';
   const PN={T:'Traseiro',C:'Costela + fraldinha',D:'Dianteiro'};
   const tb=['T','C','D'].map(p=>{const rows=EQ_F.filter(f=>f[0]===p).flatMap(f=>f[2]).filter(c=>L.some(({E})=>{const g=E.G[c];return g&&(g.est>=.5||g.v14>.5)}));if(!rows.length)return '';
     return `<tr class="es-g"><td colspan="${L.length+1}">${PN[p]}</td></tr>`+rows.map(c=>`<tr><td>${eqNome(c)}</td>${L.map(({E})=>{const g=E.G[c];
-      return `<td>${g.neg?`<span class="es-c nd" title="vendeu mais do que entrou desde a contagem">acabou? conferir</span>`:g.est<.5&&!g.dia?'<span class="es-c nd">—</span>':`<span class="es-c ${cl(g.dias)}">${k1(g.est)} kg · <b>${fd(g.dias)}</b></span>`}</td>`}).join('')}</tr>`).join('')}).join('');
+      return `<td>${mp(c)?(g.est>=.5?`<span class="es-c nd">${k1(g.est)} kg · vira moída/segunda</span>`:'<span class="es-c nd">—</span>'):g.neg?`<span class="es-c nd" title="vendeu mais do que entrou desde a contagem">acabou? conferir</span>`:g.est<.5&&!g.dia?'<span class="es-c nd">—</span>':`<span class="es-c ${cl(g.dias)}">${k1(g.est)} kg · <b>${fd(g.dias)}</b></span>`}</td>`}).join('')}</tr>`).join('')}).join('');
   return `<section class="card es"><div class="card-h"><div><h3>📦 Estoque agora (prévia)</h3><p class="hint">Estoque = última contagem + notas que chegaram − vendas do caixa (Brajan). Dias de estoque = kg ÷ venda média dos últimos 14 dias. 🟢 até ${EQ_LIM[0]} dias · 🟡 ${EQ_LIM[0]+1} a ${EQ_LIM[1]} · 🔴 mais de ${EQ_LIM[1]}. Só o gestor vê.</p></div></div>
     ${kp}${lst}
     ${vcpSec('estq-tb','Todas as carnes por loja',`${L.length} lojas · carne por carne`,`<div class="tw"><table class="vx es-t"><tr><th>Carne</th>${L.map(({lj,E})=>`<th>${esc(lj.nome)}<small>contagem ${dBR(E.ult).slice(0,5)}</small></th>`).join('')}</tr>${tb}</table></div>`,'sub')}
