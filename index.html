@@ -2527,7 +2527,8 @@ function vPainel(){
     r.crit.forEach(({c,perda})=>pend.push(['crit',`${esc(l.nome)}: perda de ${pc(perda)} na NF ${esc(c.nf)} (${esc(fnome(c))})`,c.id]));
     return `<button type="button" class="pn-lj ${st}" data-act="pn-loja" data-id="${l.id}" title="Abrir o painel da loja"><h3>${esc(l.nome)}</h3><span class="c">${esc(l.cidade||'')}</span>
       <table><tr><td>Vendas</td><td>${r.vr?rsK(r.vr):'—'}</td></tr><tr><td>Kg vendidos</td><td>${r.vk?kgI(r.vk):'—'}</td></tr>
-      <tr><td>Sobra real</td><td>${(x=>x?`<b class="pn-p ${x.v<.08?'crit':x.v<.16?'warn':'ok'}">${pc(x.v)}</b>`:'—')(sobraReal(l.id))}</td></tr><tr><td>Perda desossa</td><td>${r.perda==null?'—':`<span class="pill ${perdaSt(r.perda)}">${pc(r.perda)}</span>`}</td></tr>
+      <tr><td>Sobra real</td><td>${(x=>x?`<b class="pn-p ${x.v<.08?'crit':x.v<.16?'warn':'ok'}">${pc(x.v)}</b>`:'—')(sobraReal(l.id))}</td></tr>${(()=>{const D=vcpDados(l.id),M=D?.med?vcpCalc(D.med):null;if(!M||!M.vr)return '';const fin=D.temPag?(M.vr-M.pc)/M.vr:null;
+        return `<tr><td>Financeiro (venda − pago)</td><td>${fin==null?'—':`<b class="pn-p ${fin<.08?'crit':fin<.16?'warn':'ok'}">${pc(fin)}</b>`}</td></tr><tr><td>Venda ÷ compra (kg)</td><td>${M.rkg==null?'—':pc(M.rkg)}</td></tr><tr><td>Sobra por kg vendido</td><td>${M.skg==null?'—':'R$ '+F2.format(M.skg)}</td></tr>`})()}<tr><td>Perda desossa</td><td>${r.perda==null?'—':`<span class="pill ${perdaSt(r.perda)}">${pc(r.perda)}</span>`}</td></tr>
       <tr><td>Compras</td><td>${r.ck?kgI(r.ck)+' kg':'—'}</td></tr><tr><td>Última contagem</td><td>${uc?dBR(uc).slice(0,5):'—'}</td></tr></table>
       <div class="pn-tags">${tags.map(([c,t])=>`<span class="pill ${c}">${t}</span>`).join('')}</div></button>`}).join('')}</div>`;
   const atras=L.filter(x=>!x.uc||dias(x.uc,h)>7).map(x=>x.l.nome);
@@ -2552,7 +2553,7 @@ function vPainel(){
     <h3>Custo médio do kg</h3><table class="pn-t">${['traseiro','dianteiro','caixaria'].map(g=>{const v=cm(g),w=cma(g),d=v&&w?(v/w-1)*100:null;
       return `<tr><td>${GRN[g]||g}</td><td class="n">${v?rs(v):'—'}</td><td class="n">${d==null?'':Math.abs(d)<.5?'=':`<span class="${d>0?'pn-dn':'pn-up'}">${d>0?'▲':'▼'} ${F1.format(Math.abs(d))}%</span>`}</td></tr>`}).join('')}</table></section>`;
   if(lj)return per+vPainelLoja(lj.id,a,b,pa,pb);
-  return per+kp+`<h3 style="margin:4px 0 -4px">Lojas</h3>`+lojas+`<div class="pn-row">${pnGrafico()}${pendH}${fr}</div>`+vEstoque()+vComparativo()}
+  return per+`<h3 style="margin:4px 0 -4px">Lojas</h3>`+lojas+`<div class="pn-row">${pnGrafico()}${pendH}${fr}</div>`+vEstoque()+vComparativo()}
 
 function render(){refazForn();
   /* guarda onde a pessoa estava (página e listas com rolagem) para não voltar ao topo a cada toque */
