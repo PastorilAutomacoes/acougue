@@ -454,7 +454,7 @@ table.vx{width:100%;border-collapse:collapse;font-size:.84rem;font-family:'IBM P
 .vx.es-t td,.vx.es-t th{text-align:center}.vx.es-t td:first-child,.vx.es-t th:first-child{text-align:left}.vx.es-t th small{display:block;font-weight:400;font-size:.66rem;text-transform:none}
 .vx.es-t tr.es-g td{background:#E9EEF8;font-family:Oswald,sans-serif;text-transform:uppercase;font-size:.74rem;letter-spacing:.04em;color:#33405e;text-align:left}
 .es-c{display:inline-block;min-width:140px;border-radius:7px;padding:2px 8px;font-family:'IBM Plex Mono',monospace;font-size:.8rem}.es-c b{font-family:'IBM Plex Sans',sans-serif}
-.es-c.ok{background:#EAF7EF;color:#1d6b3f}.es-c.at{background:#FFF1C2;color:#855700;font-weight:700}.es-c.so{background:#FDE1E1;color:var(--crit);font-weight:700}.es-c.nd{color:#9aa4bb}
+.es-c.ok{background:#EAF7EF;color:#1d6b3f}.es-c.at{background:#FFF1C2;color:#855700;font-weight:700}.es-c.so{background:#FDE1E1;color:var(--crit);font-weight:700}.es-c.nd{color:#9aa4bb}.es-c.sus{background:#F1F2F5;color:#55627F;border:1px dashed #b3bccf}.es-c.sus b{color:#9a6700}
 @media (max-width:700px){.es-k{grid-template-columns:1fr 1fr}}
 .pn-pc{background:#E9EEF8;color:#33405e;border-radius:10px;padding:0 8px;font-size:.75rem;font-family:'IBM Plex Sans',sans-serif;vertical-align:2px}
 .rc-fa{color:var(--crit)}.vcp-mes{margin:2px 0 10px}.vcp-mes .l{width:auto;margin-right:4px}.vx th.rc-s{cursor:pointer;user-select:none}.vx th.rc-s:hover{color:var(--accent);text-decoration:underline}.vx th.rc-s.on{color:var(--accent)}.rc-si{color:#b7c1d6;font-size:.7rem}.vx.rc-fl td:nth-child(2),.vx.rc-fl th:nth-child(2),.vx.rc-fl td:nth-child(3),.vx.rc-fl th:nth-child(3){text-align:left!important}.rc-n{color:#9aa4bb}
@@ -2405,7 +2405,7 @@ const EQ_F=[
 const EQ_AL={'1001':'31409','1012':'31405','1013':'31405','1003':'33730','1002':'31393','1007':'31402','1019':'31393','1004':'31396','1005':'31394','1006':'31395','1009':'31403','1008':'31404','1011':'33721','1014':'31397','1015':'31407','1016':'31400','1017':'31400'};
 const EQ_LIM=[6,9]; /* até 6 dias normal · 7 a 9 atenção · mais de 9 parada (definido pelo gestor) */
 const eqNome=c=>PM[c]?.n||(NOME_BJ(c).replace(/^CB\s+/i,'').replace(/\s+KG$/i,'').toLowerCase().replace(/^./,x=>x.toUpperCase()))||c;
-function estqLoja(l){const h=todayISO(),R=refCortes(),fam={};EQ_F.forEach(f=>f[2].forEach(c=>fam[c]=f));
+function estqLoja(l){const h=todayISO(),R=refCortes(),fam={},susp=[];EQ_F.forEach(f=>f[2].forEach(c=>fam[c]=f));
   const cts=S.conts.filter(c=>c.loja===l).sort((a,b)=>a.data.localeCompare(b.data));if(!cts.length)return null;
   const it=c=>{const o={};Object.entries(c.itens||{}).forEach(([k,v])=>{const kk=EQ_AL[k]||k;o[kk]=(o[kk]||0)+v});return o};
   /* ponto de partida: a última contagem completa (8+ carnes); contagem parcial mais nova vale só para as carnes que ela tem */
@@ -2423,13 +2423,29 @@ function estqLoja(l){const h=todayISO(),R=refCortes(),fam={};EQ_F.forEach(f=>f[2
     if(Q_PA.includes(c)||c==='PC1'||c==='PC2'){addF('cos',kg*REND_PA);return true}return false};
   comprasCand(l,minD,'9999-12-31').forEach(n=>{const addF=(fk,v)=>EQ_F.find(f=>f[1]===fk)[2].forEach(x=>{const g=C[x];if(noPeriodo(n,g.d0,'9999-12-31'))g.ent+=v*parte(fk,x)}),
       addC=(c,v)=>{const g=C[c];if(g&&noPeriodo(n,g.d0,'9999-12-31'))g.ent+=v};
-    const cf=confDe(n),pes=(cf?.pes||[]).filter(e=>e.g!=='miudos');
-    if(pes.length){pes.forEach(e=>{const kg=(+e.b||0)-(+e.t||0)*(+e.nc||1);if(!(kg>0))return;
-      const cs=e.c==='CX'?(e.cont||[]):[e.c];if(!cs.length)return;cs.forEach(x=>{const c=EQ_AL[x]||x,v=kg/cs.length;if(C[c])addC(c,v*REND_CX);else addPeca(n,c,v,addF)})});return}
+    const cf=confDe(n),pes=(cf?.pes||[]).filter(e=>e.g!=='miudos'),quem=cf?.por||S.recs.find(r=>nkey(r)===nkey(n))?.por||'';
+    if(pes.length){
+      /* o que a nota deveria dar (pelo % da peça) e o que foi pesado */
+      const notaKg=n.itens.reduce((t,ii,i)=>t+(itemOn(n,i,ii)?(+ii.kg||0):0),0),temPeca=n.itens.some(ii=>{const c=ii.cod0||ii.c;return [...Q_TRAS,...Q_DIAN,...Q_PA,'PT','PD','PC1','PC2'].includes(c)});
+      const Ef={};n.itens.forEach((ii,i)=>{if(itemOn(n,i,ii))addPeca(n,ii.cod0||ii.c,+ii.kg||0,(fk,v)=>Ef[fk]=(Ef[fk]||0)+v)});
+      const W={},pecas=[];let pesKg=0;pes.forEach(e=>{const kg=(+e.b||0)-(+e.t||0)*(+e.nc||1);if(!(kg>0))return;pesKg+=kg;const cs=e.c==='CX'?(e.cont||[]):[e.c];
+        cs.forEach(x=>{const c=EQ_AL[x]||x,v=kg/cs.length;if(C[c])W[c]=(W[c]||0)+v;else pecas.push([c,v])})});
+      /* peça pesada inteira (sem desossar) não conta na perda */
+      const inteiro=pecas.filter(([c])=>[...Q_TRAS,...Q_DIAN,...Q_PA,'PT','PD','PC1','PC2'].includes(c)).reduce((t,[,v])=>t+v,0),base_=notaKg-inteiro;
+      const perda=base_>20?1-(pesKg-inteiro)/base_:null;
+      if(perda!=null&&(perda>.35||(temPeca&&perda<.15))){susp.push({t:'conf',nf:n.nf,forn:fnome(n),perda,quem,id:cf.id});
+        n.itens.forEach((ii,i)=>{if(!itemOn(n,i,ii))return;const c=EQ_AL[ii.cod0||ii.c]||ii.cod0||ii.c,kg=+ii.kg||0;if(kg>0&&!addPeca(n,c,kg,addF))addC(c,kg*REND_CX)});return}
+      pecas.forEach(([c,v])=>addPeca(n,c,v,addF));
+      /* corte acima do dobro do esperado para a peça: usa o % da peça só para aquela família */
+      const ruim=new Set();if(temPeca)EQ_F.forEach(([,fk,cs])=>{const w=cs.reduce((t,c)=>t+(W[c]||0),0),e=Ef[fk]||0;
+        if(w>3&&w>2*e){ruim.add(fk);const top=cs.filter(c=>W[c]).sort((a,b)=>W[b]-W[a])[0];susp.push({t:'corte',nf:n.nf,forn:fnome(n),c:top,pc:w/Math.max(1,n.itens.reduce((t,ii)=>t+([...Q_TRAS,...Q_DIAN,...Q_PA,'PT','PD','PC1','PC2'].includes(ii.cod0||ii.c)?(+ii.kg||0):0),0)),esp:e*parte(fk,top),w:W[top],quem,id:cf.id});if(e>0)addF(fk,e)}});
+      Object.entries(W).forEach(([c,v])=>{if(!ruim.has(C[c].fk))addC(c,v*REND_CX)});return}
     n.itens.forEach((ii,i)=>{if(!itemOn(n,i,ii))return;const c=EQ_AL[ii.cod0||ii.c]||ii.cod0||ii.c,kg=+ii.kg||0;if(!(kg>0))return;
       if(!addPeca(n,c,kg,addF))addC(c,kg*REND_CX)})});
-  Object.values(C).forEach(g=>{const e=g.kg+g.ent-g.ven;g.est=Math.max(0,e);g.neg=e<-1;g.dia=g.v14/14;g.dias=g.dia>.05?g.est/g.dia:(g.est>1?Infinity:null)});
-  return{G:C,ult:cts[cts.length-1].data,base:base.data}}
+  Object.values(C).forEach(g=>{const e=g.kg+g.ent-g.ven;g.est=Math.max(0,e);g.neg=e<-1;g.dia=g.v14/14;g.dias=g.dia>.05?g.est/g.dia:(g.est>1?Infinity:null);
+    const r60=g.v60/60;if(g.kg>=5&&(r60>0?g.kg>30*r60:NOME_BJ(g.c)))
+      {g.sus=true;const ct=cts.filter(x=>x.data===g.d0).pop();susp.push({t:'cont',c:g.c,kg:g.kg,d0:g.d0,sem:r60*7,quem:ct?.corr?.por||ct?.por||''})}});
+  return{G:C,ult:cts[cts.length-1].data,base:base.data,susp}}
 /* ritmo do mês: carne bovina vendida do dia 1 até ontem × os mesmos dias do mês anterior */
 function ritmoLoja(l){const y=diaMais(todayISO(),-1),m=y.slice(0,7),d=+y.slice(8),pm=diaMais(m+'-01',-1).slice(0,7),pd=Math.min(d,+fimMes(pm+'-01').slice(8));
   let a=0,b=0;Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l)return;const t=Object.entries(v.itens||{}).reduce((s,[c,x])=>s+(bovBal(c,l)?x.kg:0),0);
@@ -2439,7 +2455,7 @@ function vEstoque(){if(S.role!=='gestor')return '';
   const cl=d=>d==null?'':d>EQ_LIM[1]?'so':d>EQ_LIM[0]?'at':'ok',fd=d=>d===Infinity?'sem venda':d==null?'—':`${d<10?F1.format(d):Math.round(d)} dias`,k1=v=>F1.format(v);
   /* matéria-prima: carne que não existe no Brajan e nunca passa no caixa (ex.: pescoço, vira moída ou segunda) — não gera alerta */
   const vendidos=new Set();Object.values(S.vend||{}).forEach(v=>Object.keys(v.itens||{}).forEach(c=>vendidos.add(c)));const mp=c=>!NOME_BJ(c)&&!vendidos.has(c);
-  const al=[];L.forEach(({lj,E})=>Object.values(E.G).forEach(g=>{if(!mp(g.c)&&g.est>=2&&g.dias!=null&&g.dias>EQ_LIM[0])al.push({lj,g})}));al.sort((a,b)=>b.g.dias-a.g.dias);
+  const al=[];L.forEach(({lj,E})=>Object.values(E.G).forEach(g=>{if(!mp(g.c)&&!g.sus&&g.est>=2&&g.dias!=null&&g.dias>EQ_LIM[0])al.push({lj,g})}));al.sort((a,b)=>b.g.dias-a.g.dias);
   const nS=al.filter(a=>a.g.dias>EQ_LIM[1]).length,nA=al.length-nS;
   const rit=L.map(({lj})=>{const r=ritmoLoja(lj.id);return `<span>${esc(lj.nome)} <b class="${r==null?'z':r>.02?'up':r<-.02?'dn':'z'}">${r==null?'—':(r>.02?'▲ ':r<-.02?'▼ ':'= ')+pc(Math.abs(r))}</b></span>`}).join('');
   const kp=`<div class="es-k"><div class="so"><div class="t">🔴 Parada</div><div class="v">${nS} ${nS===1?'carne':'carnes'}</div><div class="s">mais de ${EQ_LIM[1]} dias de estoque</div></div>
@@ -2449,11 +2465,11 @@ function vEstoque(){if(S.role!=='gestor')return '';
   const PN={T:'Traseiro',C:'Costela + fraldinha',D:'Dianteiro'};
   const tb=['T','C','D'].map(p=>{const rows=EQ_F.filter(f=>f[0]===p).flatMap(f=>f[2]).filter(c=>L.some(({E})=>{const g=E.G[c];return g&&(g.est>=.5||g.v14>.5)}));if(!rows.length)return '';
     return `<tr class="es-g"><td colspan="${L.length+1}">${PN[p]}</td></tr>`+rows.map(c=>`<tr><td>${eqNome(c)}</td>${L.map(({E})=>{const g=E.G[c];
-      return `<td>${mp(c)?(g.est>=.5?`<span class="es-c nd">${k1(g.est)} kg · vira moída/segunda</span>`:'<span class="es-c nd">—</span>'):g.neg?`<span class="es-c nd" title="vendeu mais do que entrou desde a contagem">acabou? conferir</span>`:g.est<.5&&!g.dia?'<span class="es-c nd">—</span>':`<span class="es-c ${cl(g.dias)}">${k1(g.est)} kg · <b>${fd(g.dias)}</b></span>`}</td>`}).join('')}</tr>`).join('')}).join('');
+      return `<td>${g.sus?`<span class="es-c sus" title="contagem suspeita: confira e corrija">${k1(g.est)} kg · <b>⚠ contagem suspeita</b></span>`:mp(c)?(g.est>=.5?`<span class="es-c nd">${k1(g.est)} kg · vira moída/segunda</span>`:'<span class="es-c nd">—</span>'):g.neg?`<span class="es-c nd" title="vendeu mais do que entrou desde a contagem">acabou? conferir</span>`:g.est<.5&&!g.dia?'<span class="es-c nd">—</span>':`<span class="es-c ${cl(g.dias)}">${k1(g.est)} kg · <b>${fd(g.dias)}</b></span>`}</td>`}).join('')}</tr>`).join('')}).join('');
   return `<section class="card es"><div class="card-h"><div><h3>📦 Estoque agora (prévia)</h3><p class="hint">Estoque = última contagem + notas que chegaram − vendas do caixa (Brajan). Dias de estoque = kg ÷ venda média dos últimos 14 dias. 🟢 até ${EQ_LIM[0]} dias · 🟡 ${EQ_LIM[0]+1} a ${EQ_LIM[1]} · 🔴 mais de ${EQ_LIM[1]}. Só o gestor vê.</p></div></div>
     ${kp}${lst}
     ${vcpSec('estq-tb','Todas as carnes por loja',`${L.length} lojas · carne por carne`,`<div class="tw"><table class="vx es-t"><tr><th>Carne</th>${L.map(({lj,E})=>`<th>${esc(lj.nome)}<small>contagem ${dBR(E.ult).slice(0,5)}</small></th>`).join('')}</tr>${tb}</table></div>`,'sub')}
-    <p class="hint">É uma prévia: perda, quebra e a forma de desossar fazem ela se afastar do real com o tempo; a cada contagem ela volta a ser exata. Nota conferida com os cortes pesados usa o peso real de cada corte (o mais preciso). Sem conferência, o traseiro e o dianteiro que chegam são repartidos pelo "% da peça" do rendimento e, entre carnes da mesma parte (ex.: filé e bananinha, contra-filé e ponta), pela venda da própria loja nos últimos 60 dias. O dianteiro é o mais incerto.</p></section>`}
+    <p class="hint">É uma prévia: perda, quebra e a forma de desossar fazem ela se afastar do real com o tempo; a cada contagem ela volta a ser exata. Nota conferida com os cortes pesados usa o peso real de cada corte (o mais preciso), desde que a perda da nota fique entre 15% e 35% e nenhum corte passe do dobro do esperado; senão, usa o % da peça e avisa em Pendências. Corte contado com mais de 30 dias de venda fica como 'contagem suspeita' e não entra nos alertas. Sem conferência, o traseiro e o dianteiro que chegam são repartidos pelo "% da peça" do rendimento e, entre carnes da mesma parte (ex.: filé e bananinha, contra-filé e ponta), pela venda da própria loja nos últimos 60 dias. O dianteiro é o mais incerto.</p></section>`}
 function vComparativo(){if(S.role!=='gestor')return '';const C=cmpDados();
   if(!C.sel.length)return `<section class="card"><h3>Comparativo das lojas</h3><p class="pn-vazio">Ainda não tem um mês fechado com dados do Brajan em todas as lojas.</p></section>`;
   const per=C.sel.length>1?`${mesRot(C.sel[0])} a ${mesRot(C.sel[C.sel.length-1])}`:mesRot(C.sel[0]),com=C.LJ.filter(x=>x.t),nm=x=>esc(x.l.nome);
@@ -2520,9 +2536,14 @@ function vPainel(){
     .forEach(c=>pend.push(['info',`${esc(c.fornecedor||'Nota')} NF ${esc(c.numero)} a caminho de ${esc(lojaNome(c.loja))} (${kgI(c.itens.reduce((t,i)=>t+(i.unidade==='KG'?i.qtd:0),0))} kg)`]));
   const semVend=L.filter(x=>!x.uv).map(x=>x.l.nome);if(semVend.length)pend.push(['',`Sem vendas do Brajan: ${esc(semVend.join(', '))}`]);
   const semCnpj=S.lojas.filter(l=>!l.cnpj).map(l=>l.nome);if(semCnpj.length)pend.push(['',`CNPJ faltando: ${esc(semCnpj.join(', '))}`]);
+  /* lançamentos suspeitos (conferência, corte, contagem): o estoque já usa a estimativa no lugar; aqui é para corrigir na origem */
+  S.lojas.forEach(lj=>{if(!Object.values(S.vend||{}).some(v=>v.loja===lj.id))return;const E=estqLoja(lj.id);if(!E)return;const nm=esc(lj.nome),q=x=>x.quem?` · lançado por ${esc(x.quem)}`:'';
+    E.susp.forEach(x=>{if(x.t==='conf')pend.unshift(['crit',`<b>Conferência suspeita</b> · ${nm} · NF ${esc(x.nf)} (${esc(x.forn)}): perda de ${pc(x.perda)} (normal 15% a 35%); no estoque foi usado o % da peça${q(x)}`,x.id]);
+      else if(x.t==='corte')pend.unshift(['',`<b>Corte fora da proporção</b> · ${nm} · NF ${esc(x.nf)}: ${esc(eqNome(x.c))} pesou ${kgI(x.w)} kg (esperado ~${kgI(x.esp)} kg); usado o % da peça${q(x)}`,x.id]);
+      else pend.unshift(['',`<b>Contagem suspeita</b> · ${nm} · ${dBR(x.d0).slice(0,5)}: ${esc(eqNome(x.c))} ${F1.format(x.kg)} kg, mas a loja vende ~${F1.format(x.sem)} kg por semana. Toque para corrigir${q(x)}`,null,'ce-ir',`data-l="${lj.id}" data-d="${x.d0}"`])})});
   /* pendências: mostra 4 e o resto abre ao tocar, para não passar da altura do gráfico */
   const pAb=!!S.pendAb,pV=pAb?pend:pend.slice(0,4);
-  const pendH=`<section class="card"><h3>Pendências${pend.length?` <small class="pn-pc">${pend.length}</small>`:''}</h3>${pend.length?`<ul class="pn-pend">${pV.map(([c,t,id])=>`<li class="${c}">${id?`<button type="button" data-act="open-conf" data-id="${id}">${t}</button>`:t}</li>`).join('')}</ul>${pend.length>4?`<button type="button" class="lnk" data-act="pend-tg">${pAb?'▴ Mostrar menos':`▾ Ver todas (${pend.length})`}</button>`:''}`:'<p class="pn-vazio">Nada pendente.</p>'}</section>`;
+  const pendH=`<section class="card"><h3>Pendências${pend.length?` <small class="pn-pc">${pend.length}</small>`:''}</h3>${pend.length?`<ul class="pn-pend">${pV.map(([c,t,id,act,ex])=>`<li class="${c}">${act?`<button type="button" data-act="${act}" ${ex||''}>${t}</button>`:id?`<button type="button" data-act="open-conf" data-id="${id}">${t}</button>`:t}</li>`).join('')}</ul>${pend.length>4?`<button type="button" class="lnk" data-act="pend-tg">${pAb?'▴ Mostrar menos':`▾ Ver todas (${pend.length})`}</button>`:''}`:'<p class="pn-vazio">Nada pendente.</p>'}</section>`;
   const F={};L.forEach(({r})=>Object.entries(r.forn).forEach(([k,f])=>{const x=F[k]||(F[k]={nome:f.nome,kg:0,nf:0,conf:0});x.kg+=f.kg;x.nf+=f.nf;x.conf+=f.conf}));
   const P={},PA={};L.forEach(({r,ant})=>{[[r,P],[ant,PA]].forEach(([o,d])=>Object.entries(o.peca).forEach(([g,q])=>{const x=d[g]||(d[g]={kg:0,v:0});x.kg+=q.kg;x.v+=q.v}))});
   const cm=g=>P[g]?.kg?P[g].v/P[g].kg:null,cma=g=>PA[g]?.kg?PA[g].v/PA[g].kg:null;
@@ -2698,6 +2719,7 @@ const A={
   'vcp-xls':el=>exportarVCP(+el.dataset.id),
   'ct-ord':el=>{const v=el.dataset.v;if(v==='grp'){S.ctOrd='grp'}else if(S.ctOrd===v){S.ctDir=-(S.ctDir||-1)}else{S.ctOrd=v;S.ctDir=['nome','tr','r'].includes(v)?1:-1}render()},'ct-fil':el=>{S.ctFil=el.dataset.v;render()},'ct-prob':()=>{S.ctProb=!S.ctProb;render()},
   'vcp-mes':el=>{const l=+el.dataset.id,v=el.dataset.v,M={...(S.vcpMes||{})};if(!v){delete M[l]}else{const D=vcpDados(l),cur=new Set(M[l]||D.F.map(r=>r.m));cur.has(v)?cur.delete(v):cur.add(v);if(!cur.size){toast('Escolha pelo menos um mês.');return}M[l]=[...cur].sort()}S.vcpMes=M;REF_C=null;render()},
+  'ce-ir':el=>{S.tab='contagem';guardaAba();abrirCorr(+el.dataset.l,el.dataset.d);render();setTimeout(()=>document.getElementById('ced')?.scrollIntoView({behavior:'smooth',block:'start'}),50)},
   'pend-tg':()=>{S.pendAb=!S.pendAb;render()},
   'vcp-tg':el=>{const k=el.dataset.v;S.vcpAb={...(S.vcpAb||{}),[k]:!vcpAb(k)};render()},
   'cmp-m':el=>{S.cmpM=el.dataset.v||'';render()},
