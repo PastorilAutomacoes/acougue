@@ -2089,6 +2089,7 @@ const FAM_D=[
  {k:'peito',n:'Peito (+ ponta de peito)',pes:['1015','31407'],emb:12.5},
  {k:'cost',n:'Costela do dianteiro',pes:['1018'],emb:null,ocultar:1},
  {k:'retd',n:'Retalho do dianteiro',pes:['1017'],emb:0.6,ocultar:1}];
+const FRAL_T=.029; /* fraldinha: ~1,6 kg por traseiro (5 pesadas, média 1,59 kg) — vem no traseiro ou na costela, mesmo peso */
 const CARNE_T=.75,CARNE_D=.74,REND_T=.75,REND_PA=.95,REND_CX=.98,MOIDA_REF=.04; /* caixaria (cortes em caixa): 98% vira venda */ /* carne aproveitável: traseiro 75%, dianteiro 74% (definido pelo gestor) */
 const DIAN_VEND={acem:['33721'],segunda:['33717'],americano:['37608'],paleta:['31397','67866','33720'],peito:['31407'],cupim:['33724'],osso:['69228','69230']};
 let REF_C=null;
@@ -2100,7 +2101,8 @@ function refCortes(){const n=S.apps.length;if(REF_C&&REF_C.n===n)return REF_C;
   const mk=(F,g,cr)=>F.map(f=>{const nos=tot[g]>=300&&acc[g][f.k]>0?acc[g][f.k]/tot[g]*cr*100:null; /* corte nunca pesado separado: usa só a Embrapa */return{...f,nos,usa:nos!=null&&f.emb!=null?(nos+f.emb)/2:(nos??f.emb)}});
   /* os cortes de cada peça somam exatamente a carne aproveitável definida (traseiro 75%, dianteiro 74%) */
   const ajusta=(L,alvo)=>{const sm=L.reduce((t,f)=>t+(f.usa||0),0);return sm?L.map(f=>({...f,usa:f.usa==null?null:f.usa*alvo/sm})):L};
-  return REF_C={n,T:ajusta(mk(FAM_T,'T',CARNE_T),REND_T*100),D:ajusta(mk(FAM_D,'D',CARNE_D),CARNE_D*100),kgT:tot.T,kgD:tot.D}}
+  const fixaF=L=>{const o=ajusta(L.filter(f=>f.k!=='fral'),REND_T*100-FRAL_T*100);const f=L.find(x=>x.k==='fral');return [...o.slice(0,FAM_T.findIndex(x=>x.k==='fral')),{...f,usa:FRAL_T*100},...o.slice(FAM_T.findIndex(x=>x.k==='fral'))]};
+  return REF_C={n,T:fixaF(mk(FAM_T,'T',CARNE_T)),D:ajusta(mk(FAM_D,'D',CARNE_D),CARNE_D*100),kgT:tot.T,kgD:tot.D}}
 function cortesDados(l,a,b){const R=refCortes(),K={},V={},VR={};
   Object.values(S.comps||{}).forEach(c=>{if(c.loja!==l||!c.emissao||c.emissao<a||c.emissao>b)return;const n=notaBrajan(c);if(c.situacao!=='lancada'&&!entrou(n))return;
     n.itens.forEach(it=>{const k=it.cod0||it.c;if(k)K[k]=(K[k]||0)+it.kg})});
@@ -2116,11 +2118,12 @@ function cortesDados(l,a,b){const R=refCortes(),K={},V={},VR={};
   const dianEsp=dian*CARNE_D+sm(K,[...DIAN_VEND.acem,...DIAN_VEND.peito,...DIAN_VEND.paleta,...DIAN_VEND.cupim])*REND_CX;
   /* todas as carnes vendidas, pela peça de onde saem */
   const usados=new Set(),linha=(n,ks,esp,ven)=>{ks.forEach(k=>usados.add(k));const v=ven!=null?ven:sm(V,ks),r=ks.length&&ven==null?sm(VR,ks):null;return{n,ks,ven:v,esp,pr:r&&v?r/v:pm}};
-  const fT=R.T.find(f=>f.k==='fral').usa/100,fralT=Math.min(fralV,tras*fT),rT=R.T.find(f=>f.k==='ret').usa/100;
+  const rT=R.T.find(f=>f.k==='ret').usa/100;
   const pcx=v=>F1.format(v)+'%',uT=k=>R.T.find(f=>f.k===k).usa,uD=k=>R.D.find(f=>f.k===k)?.usa||0;
   const gT=[...cortes.filter(c=>c.u).map(c=>({...linha(c.n,c.vend,c.esp),pct:pcx(c.usa)})),{...linha('Músculo traseiro',['31403'],tras*uT('musc')/100+sm(K,['31403'])*REND_CX),pct:pcx(uT('musc'))},
-    {n:'Fraldinha (parte do traseiro)',ven:fralT,esp:tras*fT,est:1,pct:pcx(uT('fral'))},linha('Bisteca',['31398'],null)];
-  const gC=[linha('Costela minga',['31399'],null),linha('Costela ripa',['33727'],null),{n:'Fraldinha (parte da costela)',ven:Math.max(0,fralV-fralT)}];usados.add('31404');
+    linha('Bisteca',['31398'],null)];
+  const gC=[linha('Costela minga',['31399'],null),linha('Costela ripa',['33727'],null),{...linha('Fraldinha',['31404'],null),nota:'toda, venha no traseiro ou na costela'}];
+  const espC=pa*REND_PA+tras*FRAL_T+sm(K,['31404'])*REND_CX; /* costela 95% + 1 fraldinha por traseiro (+ fraldinha comprada em caixa) */
   const rD=uD('retd')/100,cxD=k=>sm(K,DIAN_VEND[k])*REND_CX;
   const dPal={...linha('Paleta (miolo, peixinho, paletinha)',DIAN_VEND.paleta,dian*uD('paleta')/100+cxD('paleta')),pct:pcx(uD('paleta')),obs:'vira segunda/moída'},
     dAce={...linha('Acém + pescoço',DIAN_VEND.acem,dian*uD('acem')/100+cxD('acem')),pct:pcx(uD('acem')),obs:'vira segunda/moída'},
@@ -2136,9 +2139,9 @@ function cortesDados(l,a,b){const R=refCortes(),K={},V={},VR={};
   const outros=Object.keys(V).filter(c=>bovBal(c,l)&&!usados.has(c)&&V[c]>.5).sort((x,y)=>V[y]-V[x]).map(c=>linha(nm(c),[c],null));
   const gO=outros;
   const sub=(L,esp,pct)=>({ven:L.filter(x=>!x.blk).reduce((t,x)=>t+(x.ven||0),0),esp,pct});
-  const usT=[...R.T.filter(f=>f.vend.length||f.k==='fral')].reduce((t,f)=>t+f.usa,0);
-  const grupos=[{k:'T',n:'Traseiro',info:`${kgI(tras)} kg comprados`,nota:'o retalho (~4%) vai para a moída, no dianteiro',L:gT,...sub(gT,gT.reduce((t,x)=>t+(x.esp||0),0),pcx(usT))},
-    {k:'C',n:'Ponta de agulha (costela)',info:`${kgI(pa)} kg comprados`,L:gC,...sub(gC,pa*REND_PA,pc(REND_PA))},
+  const usT=[...R.T.filter(f=>f.vend.length)].reduce((t,f)=>t+f.usa,0);
+  const grupos=[{k:'T',n:'Traseiro',info:`${kgI(tras)} kg comprados · sem a fraldinha`,nota:'o retalho (~4%) vai para a moída e a fraldinha vai com a costela',L:gT,...sub(gT,gT.reduce((t,x)=>t+(x.esp||0),0),pcx(usT))},
+    {k:'C',n:'Costela + fraldinha',info:`${kgI(pa)} kg de ponta de agulha + 1 fraldinha por traseiro (${pc(FRAL_T)})`,nota:`esperado: costela × ${pc(REND_PA)} + traseiro × ${pc(FRAL_T)}`,L:gC,...sub(gC,espC,null)},
     {k:'D',n:'Dianteiro',info:`${kgI(dian)} kg comprados${sm(K,[...DIAN_VEND.acem,...DIAN_VEND.peito,...DIAN_VEND.paleta,...DIAN_VEND.cupim])>.5?' + caixas':''}`,nota:`${pc(CARNE_D)} do dianteiro + caixas + retalho do traseiro`,L:gD,...sub(gD,dianEsp+tras*rT,pc(CARNE_D))},
     {k:'O',n:'Feito na loja e aproveitamento',info:cxOutros>.5?`+ ${kgI(cxOutros)} kg de recortes/caixas`:'',L:gO,...sub(gO,cxOutros*REND_CX)}].filter(g=>g.L.some(x=>x.ven>.5)||g.esp>.5);
   const deve=grupos.reduce((t,g)=>t+g.esp,0);
@@ -2156,7 +2159,7 @@ function vPainelCortes(l){if(S.role!=='gestor')return null;const P=cortesPer(l);
   const kc=(t,r,s,cls='')=>`<div class="${cls||(r==null?'':r>=.95?'ok':r>=.85?'wa':'cr')}"><div class="t">${t}</div><div class="v">${ip(r)}</div><div class="s">${s}</div></div>`;
   const kpis=`<div class="rc-k">${kc('Conferência geral',geral,falG>.5?`faltaram ${k0(falG)} kg · ~${rsK(falG*X.pm)}`:'não faltou carne','tot')}${gT?kc('Traseiro',rg(gT),`${k0(X.tras)} kg comprados`):''}${gC?kc('Costela',rg(gC),`${k0(X.pa)} kg comprados`):''}${gD?kc('Dianteiro',rg(gD),`${k0(X.dian)} kg + caixas`):''}</div>`;
   const conf=X.grupos.flatMap(g=>g.L.filter(x=>x.esp&&!x.est&&!x.obs).map(x=>({...x,gk:g.k})));
-  if(gC&&gC.esp)conf.push({n:'Costela (minga, ripa, fraldinha)',ven:gC.ven,esp:gC.esp,pr:X.cost.pr,gk:'C'});
+  if(gC&&gC.esp)conf.push({n:'Costela + fraldinha',ven:gC.ven,esp:gC.esp,pr:X.cost.pr,gk:'C'});
   const ACAO={T:'conferir a desossa e se está saindo em outro código (moída, bife)',C:'conferir a pesagem da costela e da fraldinha',D:'conferir o que está virando moída'};
   const ruins=conf.filter(x=>rr(x)<.95&&fr(x)>1).sort((a,b)=>fr(b)-fr(a));
   const bons=conf.filter(x=>rr(x)>=.95).map(x=>x.n.replace(/\s*\(.*\)/,'').replace(/ \+ .*/,'').replace(/ \/ .*/,'').toLowerCase());
@@ -2176,8 +2179,8 @@ function vPainelCortes(l){if(S.role!=='gestor')return null;const P=cortesPer(l);
   const trd=ks=>{if(!temAnt)return null;const a=sk(V0,ks),b=sk(V1,ks);return a>.5?(b-a)/a:b>.5?Infinity:null};
   const tf=t=>t==null?'<span class="rc-z">—</span>':t===Infinity?'<span class="rc-up">novo</span>':Math.abs(t)<.05?`<span class="rc-z">= ${pc(t)}</span>`:`<span class="${t>0?'rc-up':'rc-dn'}">${t>0?'▲':'▼'} ${pc(Math.abs(t))}</span>`;
   const PN={T:['Traseiro','#1846C4'],C:['Costela','#b5541b'],D:['Dianteiro','#55627F'],O:['Feito na loja','#0E6B5A'],TC:['Traseiro + costela','#1846C4']};
-  const dono={};X.grupos.forEach(g=>g.L.forEach(x=>(x.ks||[]).forEach(c=>{if(!dono[c])dono[c]={x:x.obs||x.bloco?blocoD:x,gk:g.k}})));
-  const cods=Object.keys(V).filter(c=>bovBal(c,l)&&V[c]>.5).map(c=>{const d=c==='31404'?{x:null,gk:'TC'}:dono[c]||{x:null,gk:'O'},r=rr(d.x);
+  const dono={};X.grupos.forEach(g=>g.L.forEach(x=>(x.ks||[]).forEach(c=>{if(!dono[c])dono[c]={x:x.obs||x.bloco?blocoD:g.k==='C'?{ven:g.ven,esp:g.esp,pr:X.cost.pr}:x,gk:g.k}})));
+  const cods=Object.keys(V).filter(c=>bovBal(c,l)&&V[c]>.5).map(c=>{const d=dono[c]||{x:null,gk:'O'},r=rr(d.x);
     return{c,n:nmC(c),gk:d.gk,kg:V[c],rs:VR[c]||0,pr:VR[c]/V[c],pv:X.vk?V[c]/X.vk:0,t:trd([c]),r,f:d.x?fr(d.x):0}});
   const fil=S.ctFil||'',prob=!!S.ctProb,ord=S.ctOrd||'grp',okF=gk=>!fil||gk===fil||(gk==='TC'&&(fil==='T'||fil==='C'));
   const chip=(act,v,txt,on)=>`<button type="button" class="rc-ch${on?' on':''}" data-act="${act}" data-v="${v}">${txt}</button>`;
@@ -2191,7 +2194,7 @@ function vPainelCortes(l){if(S.role!=='gestor')return null;const P=cortesPer(l);
       const ch=ks.filter(c=>V[c]>.5).length>1?ks.filter(c=>V[c]>.5).sort((a,b)=>V[b]-V[a]).map(c=>`<tr class="rc-c"><td>${nmC(c)}</td><td>${k0(V[c])} kg</td><td>${ip(X.vk?V[c]/X.vk:null)}</td><td>${F2.format(VR[c]/V[c])}</td><td>${rsK(VR[c]||0)}</td><td>${tf(trd([c]))}</td><td></td><td></td><td></td></tr>`).join(''):'';
       return `<tr class="rc-f"><td>${nome||x.n}${x.est?'<small>estimada pela referência</small>':''}</td><td>${k0(kg)} kg</td><td>${ip(X.vk?kg/X.vk:null)}</td><td>${kg?F2.format(rs/kg):''}</td><td>${rsK(rs)}</td><td>${ks.length&&!x.est?tf(trd(ks)):''}</td><td>${x.esp?k0(x.esp)+' kg':''}</td><td>${x.est?'<span class="nr">estimado</span>':x.esp?pl(r):x.g?'':'<span class="nr">sem referência</span>'}</td><td class="rc-fa">${fk(x)>.5?`${k0(fk(x))} kg · ${rsK(fr(x))}`:''}</td></tr>${ch}`};
     corpo=`<div class="tw"><table class="vx ct cu"><tr>${hs('nome','Carne')}${hs('kg','Vendido')}${hs('kg','% vendido')}${hs('preco','Preço médio')}${hs('rs','Vendido R$')}${hs('tr',hAnt)}<th>Esperado</th>${hs('r','Vendeu ÷ esperado')}<th>Faltou</th></tr>${X.grupos.filter(g=>okF(g.k)).map(g=>{
-      let L=g.k==='D'?[...(blocoD?[{x:blocoD,ks:gD.L.filter(x=>x.obs||x.bloco).flatMap(x=>x.ks||[]),n:'Acém + paleta + segunda + americano'}]:[]),...g.L.filter(x=>!x.obs&&!x.bloco&&!x.blk).map(x=>({x,ks:x.ks||[]}))]:g.L.map(x=>({x,ks:x.n.startsWith('Fraldinha')?[]:(x.ks||[])}));
+      let L=g.k==='D'?[...(blocoD?[{x:blocoD,ks:gD.L.filter(x=>x.obs||x.bloco).flatMap(x=>x.ks||[]),n:'Acém + paleta + segunda + americano'}]:[]),...g.L.filter(x=>!x.obs&&!x.bloco&&!x.blk).map(x=>({x,ks:x.ks||[]}))]:g.L.map(x=>({x,ks:x.ks||[]}));
       L=L.filter(o=>o.x.ven>.5||o.x.esp>.5);if(prob)L=L.filter(o=>rr(o.x)!=null&&rr(o.x)<.95);if(!L.length)return '';
       const r=rg(g);return `<tr class="grp g${g.k}"><td colspan="9">${g.n}<span>${g.info}</span></td></tr>${L.map(o=>linhaP(o.x,o.ks,o.n)).join('')}${prob?'':`<tr class="subt"><td>Subtotal ${g.n.split(' (')[0].toLowerCase()}</td><td>${k0(g.ven)} kg</td><td>${ip(X.vk?g.ven/X.vk:null)}</td><td></td><td></td><td></td><td>${g.esp&&g.k!=='O'?k0(g.esp)+' kg':''}</td><td>${r!=null?pl(r):''}</td><td></td></tr>`}`}).join('')}
       ${fil||prob?'':`<tr class="totg"><td>Total de carne bovina</td><td>${k0(X.vk)} kg</td><td>100%</td><td>${F2.format(X.pm)}</td><td>${rsK(X.vr)}</td><td>${tf(trd(Object.keys(V).filter(c=>bovBal(c,l))))}</td><td>${k0(X.deve)} kg</td><td>${ip(geral)}</td><td>${falG>.5?rsK(falG*X.pm):'—'}</td></tr>`}</table></div>`;
