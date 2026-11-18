@@ -2462,12 +2462,17 @@ function vEstoque(){if(S.role!=='gestor')return '';
   const abas=`<div class="es-abas">${L.map(x=>{const n=nPar(x);return `<button type="button" class="${x===sel?'on':''}" data-act="es-lj" data-v="${x.lj.id}">${esc(x.lj.nome)}${n?` <span class="es-n">${n}</span>`:''}</button>`}).join('')}</div>`;
   const PN={T:'Traseiro',C:'Costela + fraldinha',D:'Dianteiro'};
   const cel=(c,g)=>g.sus?`<span class="es-c sus" title="contagem suspeita: confira e corrija">⚠ contagem suspeita</span>`:mp(c)?'<span class="es-c nd">vira moída/segunda</span>':g.neg?'<span class="es-c nd" title="vendeu mais do que entrou desde a contagem">acabou? conferir</span>':g.est<.5&&!g.dia?'<span class="es-c nd">—</span>':`<span class="es-c ${cl(g.dias)}"><b>${fd(g.dias)}</b></span>`;
-  const tb=['T','C','D'].map(p=>{const rows=EQ_F.filter(f=>f[0]===p).flatMap(f=>f[2]).filter(c=>{const g=E.G[c];return g&&(g.est>=.5||g.v14>.5)});if(!rows.length)return '';
-    return `<tr class="es-g"><td colspan="4">${PN[p]}</td></tr>`+rows.map(c=>{const g=E.G[c];return `<tr><td>${eqNome(c)}</td><td>${g.neg?'—':k1(g.est)+' kg'}</td><td>${g.dia>.05?k1(g.dia)+' kg':'—'}</td><td>${cel(c,g)}</td></tr>`}).join('')}).join('');
+  const linha=c=>{const g=E.G[c];return `<tr><td>${eqNome(c)}</td><td>${g.neg?'—':k1(g.est)+' kg'}</td><td>${g.dia>.05?k1(g.dia)+' kg':'—'}</td><td>${cel(c,g)}</td></tr>`};
+  const tem=c=>{const g=E.G[c];return g&&(g.est>=.5||g.v14>.5)},ord=S.esOrd||'',dir=S.esDir||-1;
+  /* ordenar pelo título da coluna; sem ordem, agrupa por peça */
+  const val={nome:c=>eqNome(c),kg:c=>E.G[c].neg?0:E.G[c].est,dia:c=>E.G[c].dia,dias:c=>{const g=E.G[c];return g.sus||mp(c)||g.neg?null:g.dias===Infinity?1e9:g.dias}}[ord];
+  const tb=val?EQ_F.flatMap(f=>f[2]).filter(tem).sort((x,y)=>{const a=val(x),b=val(y);if(a==null||b==null)return (a==null)-(b==null);return (typeof a==='string'?a.localeCompare(b):a-b)*dir}).map(linha).join('')
+    :['T','C','D'].map(p=>{const rows=EQ_F.filter(f=>f[0]===p).flatMap(f=>f[2]).filter(tem);if(!rows.length)return '';return `<tr class="es-g"><td colspan="4">${PN[p]}</td></tr>`+rows.map(linha).join('')}).join('');
+  const hs=(k,t)=>`<th class="rc-s${ord===k?' on':''}" data-act="es-ord" data-v="${k}" title="Toque para ordenar">${t}${ord===k?(dir>0?' ▲':' ▼'):' <span class="rc-si">⇅</span>'}</th>`;
   const nTot=L.reduce((t,x)=>t+nPar(x),0);
   return `<section class="card es">${vcpSec('estq','📦 Estoque agora (prévia)',`${L.length} loja${L.length>1?"s":""}${nTot?` · ${nTot} carne${nTot>1?'s':''} parada${nTot>1?'s':''}`:''} · toque para abrir`,`<p class="hint" style="margin:0 0 8px">Última contagem + notas que chegaram − vendas do Brajan. 🟢 até ${EQ_LIM[0]} dias · 🟡 ${EQ_LIM[0]+1} a ${EQ_LIM[1]} · 🔴 mais de ${EQ_LIM[1]}. Só o gestor vê.</p>
     ${abas}<p class="hint" style="margin:6px 0">Contagem de ${dBR(E.ult).slice(0,5)} · dias de estoque = kg ÷ venda média dos últimos 14 dias</p>
-    <div class="tw"><table class="vx es-t"><tr><th>Carne</th><th>Estoque</th><th>Vende por dia</th><th>Dias de estoque</th></tr>${tb}</table></div>`)}</section>`}
+    ${ord?`<button type="button" class="rc-ch" data-act="es-ord" data-v="" style="margin-bottom:6px">▤ Agrupar por peça</button>`:''}<div class="tw"><table class="vx es-t"><tr>${hs('nome','Carne')}${hs('kg','Estoque')}${hs('dia','Vende por dia')}${hs('dias','Dias de estoque')}</tr>${tb}</table></div>`)}</section>`}
 function vComparativo(){if(S.role!=='gestor')return '';const C=cmpDados();
   if(!C.sel.length)return `<section class="card"><h3>Comparativo das lojas</h3><p class="pn-vazio">Ainda não tem um mês fechado com dados do Brajan em todas as lojas.</p></section>`;
   const per=C.sel.length>1?`${mesRot(C.sel[0])} a ${mesRot(C.sel[C.sel.length-1])}`:mesRot(C.sel[0]),com=C.LJ.filter(x=>x.t),nm=x=>esc(x.l.nome);
@@ -2727,6 +2732,7 @@ const A={
   'ct-ord':el=>{const v=el.dataset.v;if(v==='grp'){S.ctOrd='grp'}else if(S.ctOrd===v){S.ctDir=-(S.ctDir||-1)}else{S.ctOrd=v;S.ctDir=['nome','tr','r'].includes(v)?1:-1}render()},'ct-fil':el=>{S.ctFil=el.dataset.v;render()},'ct-prob':()=>{S.ctProb=!S.ctProb;render()},
   'vcp-mes':el=>{const l=+el.dataset.id,v=el.dataset.v,M={...(S.vcpMes||{})};if(!v){delete M[l]}else{const D=vcpDados(l),cur=new Set(M[l]||D.F.map(r=>r.m));cur.has(v)?cur.delete(v):cur.add(v);if(!cur.size){toast('Escolha pelo menos um mês.');return}M[l]=[...cur].sort()}S.vcpMes=M;REF_C=null;render()},
   'ce-ir':el=>{S.tab='contagem';guardaAba();abrirCorr(+el.dataset.l,el.dataset.d);render();setTimeout(()=>document.getElementById('ced')?.scrollIntoView({behavior:'smooth',block:'start'}),50)},
+  'es-ord':el=>{const v=el.dataset.v;if(!v)S.esOrd='';else if(S.esOrd===v)S.esDir=-(S.esDir||-1);else{S.esOrd=v;S.esDir=v==='nome'?1:-1}render()},
   'es-lj':el=>{S.esLj=+el.dataset.v;render()},
   'pend-tg':()=>{S.pendAb=!S.pendAb;render()},
   'vcp-tg':el=>{const k=el.dataset.v;S.vcpAb={...(S.vcpAb||{}),[k]:!vcpAb(k)};render()},
