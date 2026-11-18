@@ -2156,15 +2156,6 @@ function vPainelCortes(l){if(S.role!=='gestor')return null;const P=cortesPer(l);
     ${bons.length?`<div class="rc-oks">✅ Dentro do esperado: ${bons.join(' · ')}</div>`:''}${lingOut?`<p class="hint">+ ${k0(lingOut)} kg de linguiça vendida nas outras lojas.</p>`:''}`;
   if((S.vcpAb||{}).colhar===undefined)S.vcpAb={...(S.vcpAb||{}),colhar:true}; /* começa aberto */
   const olhar=vcpSec('colhar','Onde olhar',`${P.per}${ruins.length?` · ${ruins.length} cortes faltando · ${rsK(ruins.reduce((t,x)=>t+fr(x),0))}`:''}${est.length?` · ${est.length} parado${est.length>1?'s':''} no estoque`:''}`,olharC,'sub');
-  /* ---- 2. tabela por peça (enxuta) ---- */
-  const enx=X.grupos.map(g=>{const L=g.k==='D'?g.L.filter(x=>!x.obs&&!x.bloco):g.L;
-    const com=L.filter(x=>x.esp&&!x.est),sem=L.filter(x=>!(x.esp&&!x.est)&&x.ven>.5);
-    const rows=[...com.map(x=>`<tr><td>${x.blk?'Acém · paleta · segunda · americano':x.n}</td><td>${k0(x.ven)} kg</td><td>${k0(x.esp)} kg</td><td>${pl(rr(x))}</td><td class="rc-fa">${fk(x)>.5?rsK(fr(x)):''}</td></tr>`),
-      ...(sem.length?[`<tr><td>${sem.map(x=>x.n.replace(/\s*\(.*\)/,'')).join(' · ')}</td><td>${k0(sem.reduce((t,x)=>t+x.ven,0))} kg</td><td></td><td>${g.k==='C'?'':'<span class="nr">sem referência</span>'}</td><td></td></tr>`]:[])].join('');
-    const r=rg(g),f=r!=null?Math.max(0,g.esp-g.ven):0;
-    return `<tr class="grp g${g.k}"><td colspan="5">${g.n}<span>${g.info}</span></td></tr>${rows}<tr class="subt"><td>${g.n.split(' (')[0]}</td><td>${k0(g.ven)} kg</td><td>${g.esp&&g.k!=='O'?k0(g.esp)+' kg':''}</td><td>${r!=null?pl(r):''}</td><td class="rc-fa">${r!=null&&r<.95&&f>.5?rsK(f*X.pm):''}</td></tr>`}).join('');
-  const tabEnx=`<div class="tw"><table class="vx ct cu"><tr><th>Carne (${P.per})</th><th>Vendido</th><th>Esperado</th><th>Vendeu ÷ esperado</th><th>Faltou</th></tr>${enx}
-    <tr class="totg"><td>Total de carne bovina</td><td>${k0(X.vk)} kg</td><td>${k0(X.deve)} kg</td><td>${ip(geral)}</td><td>${falG>.5?rsK(falG*X.pm):'—'}</td></tr></table></div>`;
   /* ---- 3. todos os cortes: ordenar, filtrar, % vendido, × mês anterior ---- */
   const V=X.V,VR=X.VR,m1=P.b.slice(0,7),m0=(([y,m])=>m===1?`${y-1}-12`:`${y}-${String(m-1).padStart(2,'0')}`)(m1.split('-').map(Number));
   const Vm=mm=>{const o={};Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||!v.data.startsWith(mm))return;Object.entries(v.itens||{}).forEach(([c,x])=>o[c]=(o[c]||0)+x.kg)});return o};
@@ -2205,7 +2196,6 @@ function vPainelCortes(l){if(S.role!=='gestor')return null;const P=cortesPer(l);
   const totF=ruins.reduce((s,x)=>s+fr(x),0);
   const res=geral!=null?`conferência geral ${pc(geral)}${totF>1?` · onde olhar: ${rsK(totF)}`:''}`:'';
   return {res,html:`<div class="cts">${kpis}${olhar}
-    ${vcpSec('ctab','Tabela por peça',`${X.grupos.length} peças · vendido × esperado`,tabEnx+'<p class="hint">Verde ≥ 95% · amarelo 85–95% · vermelho &lt; 85%. É uma direção, não uma conta exata.</p>','sub')}
     ${vcpSec('cdet','Todos os cortes',`${cods.length} cortes vendidos · ordenar e filtrar`,barras+corpo,'sub')}
     ${vcpSec('ref','Como o esperado é calculado',`traseiro ${pc(REND_T)} (repartido nos cortes); dianteiro ${pc(CARNE_D)}; ponta de agulha ${pc(REND_PA)};  caixaria ${pc(REND_CX)}`,`<p class="hint">Usado = (nossas conferências pesadas corte a corte + Embrapa) ÷ 2. Melhora sozinho a cada conferência. No dianteiro a paleta e o acém viram segunda, corte americano e moída, por isso ele é conferido em grupo.</p><div class="pn-row2"><div>${g1}</div><div>${gDr}</div></div>`,'sub')}
   </div>`}}
