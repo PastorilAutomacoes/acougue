@@ -443,7 +443,7 @@ table.vx{width:100%;border-collapse:collapse;font-size:.84rem;font-family:'IBM P
 .rc-tag{background:#F26A1B;color:#fff;font-size:.66rem;font-weight:700;padding:1px 6px;border-radius:5px;margin-left:4px}
 .rc-oks{color:var(--ok);font-size:.84rem;background:#EAF7EF;border:1px solid #BFE5CD;border-radius:8px;padding:7px 12px;margin:6px 0 4px}
 .rc-p{display:inline-block;min-width:52px;text-align:center;border-radius:6px;padding:0 6px;font-weight:700}.rc-p.ok{background:#DDF3E6;color:var(--ok)}.rc-p.wa{background:#FFF1C2;color:#855700}.rc-p.cr{background:#FDE1E1;color:var(--crit)}
-.rc-fa{color:var(--crit)}.vx.rc-fl td:nth-child(2),.vx.rc-fl th:nth-child(2),.vx.rc-fl td:nth-child(3),.vx.rc-fl th:nth-child(3){text-align:left!important}.rc-n{color:#9aa4bb}
+.rc-fa{color:var(--crit)}.vx th.rc-s{cursor:pointer;user-select:none}.vx th.rc-s:hover{color:var(--accent);text-decoration:underline}.vx th.rc-s.on{color:var(--accent)}.rc-si{color:#b7c1d6;font-size:.7rem}.vx.rc-fl td:nth-child(2),.vx.rc-fl th:nth-child(2),.vx.rc-fl td:nth-child(3),.vx.rc-fl th:nth-child(3){text-align:left!important}.rc-n{color:#9aa4bb}
 .rc-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 6px}.rc-bar .l{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;width:70px}
 .rc-ch{border:1px solid #c9d3e8;border-radius:16px;padding:3px 11px;font:inherit;font-size:.8rem;background:#fff;color:#26324f;cursor:pointer}.rc-ch.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
 .vx.cu tr.rc-f td{font-weight:700;background:#F3F6FC}.vx.cu tr.rc-c td:first-child{padding-left:28px;font-weight:400}.vx.cu tr.rc-c td:first-child::before{content:'└ ';color:#9aa4bb}
@@ -2177,24 +2177,24 @@ function vPainelCortes(l){if(S.role!=='gestor')return null;const P=cortesPer(l);
     return{c,n:nmC(c),gk:d.gk,kg:V[c],rs:VR[c]||0,pr:VR[c]/V[c],pv:X.vk?V[c]/X.vk:0,t:trd([c]),r,f:d.x?fr(d.x):0}});
   const fil=S.ctFil||'',prob=!!S.ctProb,ord=S.ctOrd||'grp',okF=gk=>!fil||gk===fil||(gk==='TC'&&(fil==='T'||fil==='C'));
   const chip=(act,v,txt,on)=>`<button type="button" class="rc-ch${on?' on':''}" data-act="${act}" data-v="${v}">${txt}</button>`;
-  const ORD=[['grp','Agrupado'],['kg','Mais vendido (kg)'],['rs','Mais vendido (R$)'],['menos','Menos vendido'],['preco','Maior preço'],['caiu',`Mais caiu × ${mesRot(m0)}`],['falta','Mais faltou (R$)']];
-  const barras=`<div class="rc-bar"><span class="l">Ordenar</span>${ORD.map(([v,t])=>chip('ct-ord',v,t,ord===v)).join('')}</div>
-    <div class="rc-bar"><span class="l">Filtrar</span>${[['','Todas'],['T','Traseiro'],['C','Costela'],['D','Dianteiro'],['O','Feito na loja']].map(([v,t])=>chip('ct-fil',v,t,fil===v)).join('')}<span style="width:10px"></span>${chip('ct-prob','1','⚠ Só problemas',prob)}</div>`;
+  const dir=S.ctDir||-1,hs=(k,t)=>`<th class="rc-s${ord===k?' on':''}" data-act="ct-ord" data-v="${k}" title="Toque para ordenar">${t}${ord===k?(dir>0?' ▲':' ▼'):' <span class="rc-si">⇅</span>'}</th>`;
+  const barras=`<div class="rc-bar">${chip('ct-ord','grp','▤ Agrupado',ord==='grp')}<span style="width:14px"></span>${[['','Todas'],['T','Traseiro'],['C','Costela'],['D','Dianteiro'],['O','Feito na loja']].map(([v,t])=>chip('ct-fil',v,t,fil===v)).join('')}<span style="width:10px"></span>${chip('ct-prob','1','⚠ Só problemas',prob)}</div><p class="hint" style="margin:0 0 6px">Toque no título de uma coluna para ordenar (de novo inverte). "Agrupado" volta para a tabela por peça.</p>`;
+
   const hAnt=`${mesRot(m1)} × ${mesRot(m0)}`;
   let corpo;
   if(ord==='grp'){
     const linhaP=(x,ks,nome)=>{const kg=x.ven,rs=ks.length?sk(VR,ks):kg*(x.n.startsWith('Fraldinha')&&V['31404']?VR['31404']/V['31404']:(x.pr||X.pm)),r=rr(x);
       const ch=ks.filter(c=>V[c]>.5).length>1?ks.filter(c=>V[c]>.5).sort((a,b)=>V[b]-V[a]).map(c=>`<tr class="rc-c"><td>${nmC(c)}</td><td>${k0(V[c])} kg</td><td>${ip(X.vk?V[c]/X.vk:null)}</td><td>${F2.format(VR[c]/V[c])}</td><td>${rsK(VR[c]||0)}</td><td>${tf(trd([c]))}</td><td></td><td></td><td></td></tr>`).join(''):'';
       return `<tr class="rc-f"><td>${nome||x.n}${x.est?'<small>estimada pela referência</small>':''}</td><td>${k0(kg)} kg</td><td>${ip(X.vk?kg/X.vk:null)}</td><td>${kg?F2.format(rs/kg):''}</td><td>${rsK(rs)}</td><td>${ks.length&&!x.est?tf(trd(ks)):''}</td><td>${x.esp?k0(x.esp)+' kg':''}</td><td>${x.est?'<span class="nr">estimado</span>':x.esp?pl(r):x.g?'':'<span class="nr">sem referência</span>'}</td><td class="rc-fa">${fk(x)>.5?`${k0(fk(x))} kg · ${rsK(fr(x))}`:''}</td></tr>${ch}`};
-    corpo=`<div class="tw"><table class="vx ct cu"><tr><th>Carne</th><th>Vendido</th><th>% vendido</th><th>Preço médio</th><th>Vendido R$</th><th>${hAnt}</th><th>Esperado</th><th>Vendeu ÷ esperado</th><th>Faltou</th></tr>${X.grupos.filter(g=>okF(g.k)).map(g=>{
+    corpo=`<div class="tw"><table class="vx ct cu"><tr>${hs('nome','Carne')}${hs('kg','Vendido')}${hs('kg','% vendido')}${hs('preco','Preço médio')}${hs('rs','Vendido R$')}${hs('tr',hAnt)}<th>Esperado</th>${hs('r','Vendeu ÷ esperado')}<th>Faltou</th></tr>${X.grupos.filter(g=>okF(g.k)).map(g=>{
       let L=g.k==='D'?[...(blocoD?[{x:blocoD,ks:gD.L.filter(x=>x.obs||x.bloco).flatMap(x=>x.ks||[]),n:'Acém + paleta + segunda + americano'}]:[]),...g.L.filter(x=>!x.obs&&!x.bloco&&!x.blk).map(x=>({x,ks:x.ks||[]}))]:g.L.map(x=>({x,ks:x.n.startsWith('Fraldinha')?[]:(x.ks||[])}));
       L=L.filter(o=>o.x.ven>.5||o.x.esp>.5);if(prob)L=L.filter(o=>rr(o.x)!=null&&rr(o.x)<.95);if(!L.length)return '';
       const r=rg(g);return `<tr class="grp g${g.k}"><td colspan="9">${g.n}<span>${g.info}</span></td></tr>${L.map(o=>linhaP(o.x,o.ks,o.n)).join('')}${prob?'':`<tr class="subt"><td>Subtotal ${g.n.split(' (')[0].toLowerCase()}</td><td>${k0(g.ven)} kg</td><td>${ip(X.vk?g.ven/X.vk:null)}</td><td></td><td></td><td></td><td>${g.esp&&g.k!=='O'?k0(g.esp)+' kg':''}</td><td>${r!=null?pl(r):''}</td><td></td></tr>`}`}).join('')}
       ${fil||prob?'':`<tr class="totg"><td>Total de carne bovina</td><td>${k0(X.vk)} kg</td><td>100%</td><td>${F2.format(X.pm)}</td><td>${rsK(X.vr)}</td><td>${tf(trd(Object.keys(V).filter(c=>bovBal(c,l))))}</td><td>${k0(X.deve)} kg</td><td>${ip(geral)}</td><td>${falG>.5?rsK(falG*X.pm):'—'}</td></tr>`}</table></div>`;
   }else{
     let L=cods.filter(x=>okF(x.gk)&&(!prob||(x.r!=null&&x.r<.95)));
-    const so={kg:(a,b)=>b.kg-a.kg,rs:(a,b)=>b.rs-a.rs,menos:(a,b)=>a.kg-b.kg,preco:(a,b)=>b.pr-a.pr,caiu:(a,b)=>(a.t??9)-(b.t??9),falta:(a,b)=>b.f-a.f||b.rs-a.rs}[ord];L.sort(so);
-    corpo=`<div class="tw"><table class="vx ct cu rc-fl"><tr><th>#</th><th>Carne</th><th>Peça</th><th>Vendido</th><th>% vendido</th><th>Preço médio</th><th>Vendido R$</th><th>${hAnt}</th><th>Grupo: vendeu ÷ esperado</th></tr>
+    const val={nome:x=>x.n,kg:x=>x.kg,preco:x=>x.pr,rs:x=>x.rs,tr:x=>x.t,r:x=>x.r}[ord]||(x=>x.rs);L.sort((a,b)=>{const va=val(a),vb=val(b);if(va==null||vb==null)return (va==null)-(vb==null);return (typeof va==='string'?va.localeCompare(vb):va-vb)*dir});
+    corpo=`<div class="tw"><table class="vx ct cu rc-fl"><tr><th>#</th>${hs('nome','Carne')}<th>Peça</th>${hs('kg','Vendido')}${hs('kg','% vendido')}${hs('preco','Preço médio')}${hs('rs','Vendido R$')}${hs('tr',hAnt)}${hs('r','Grupo: vendeu ÷ esperado')}</tr>
       ${L.map((x,i)=>`<tr><td class="rc-n">${i+1}</td><td><b>${x.n}</b></td><td><span class="rc-pc" style="border-color:${PN[x.gk][1]};color:${PN[x.gk][1]}">${PN[x.gk][0]}</span></td><td>${k0(x.kg)} kg</td><td>${ip(x.pv)}</td><td>${F2.format(x.pr)}</td><td>${rsK(x.rs)}</td><td>${tf(x.t)}</td><td>${pl(x.r)}</td></tr>`).join('')||'<tr><td colspan="9" class="nr">Nada com esse filtro.</td></tr>'}</table></div>
       <p class="hint">Ao ordenar, os cortes saem dos grupos. A última coluna é a do grupo de onde o corte sai (ex.: contra-filé e ponta mostram o mesmo %). Toque em "Agrupado" para voltar.</p>`}
   const t=(h,rows)=>`<div class="tw"><table class="vx ct">${h}${rows}</table></div>`;
@@ -2603,7 +2603,7 @@ const A={
     x.fora=x.fora||{};x.dentro=x.dentro||{};delete x.fora[k];delete x.dentro[k];if(el.dataset.v==='tirar')x.fora[k]=1;else x.dentro[k]=1;save();render()},
   'bal-xls':()=>exportarBal(),
   'vcp-xls':el=>exportarVCP(+el.dataset.id),
-  'ct-ord':el=>{S.ctOrd=el.dataset.v;render()},'ct-fil':el=>{S.ctFil=el.dataset.v;render()},'ct-prob':()=>{S.ctProb=!S.ctProb;render()},
+  'ct-ord':el=>{const v=el.dataset.v;if(v==='grp'){S.ctOrd='grp'}else if(S.ctOrd===v){S.ctDir=-(S.ctDir||-1)}else{S.ctOrd=v;S.ctDir=['nome','tr','r'].includes(v)?1:-1}render()},'ct-fil':el=>{S.ctFil=el.dataset.v;render()},'ct-prob':()=>{S.ctProb=!S.ctProb;render()},
   'vcp-tg':el=>{const k=el.dataset.v;S.vcpAb={...(S.vcpAb||{}),[k]:!vcpAb(k)};render()},
   'cmp-m':el=>{S.cmpM=el.dataset.v||'';render()},
   'cmp-xls':()=>exportarCmp(),
