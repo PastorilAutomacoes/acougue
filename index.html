@@ -454,7 +454,7 @@ table.vx{width:100%;border-collapse:collapse;font-size:.84rem;font-family:'IBM P
 .vx.es-t td,.vx.es-t th{text-align:center}.vx.es-t td:first-child,.vx.es-t th:first-child{text-align:left}.vx.es-t th small{display:block;font-weight:400;font-size:.66rem;text-transform:none}
 .vx.es-t tr.es-g td{background:#E9EEF8;font-family:Oswald,sans-serif;text-transform:uppercase;font-size:.74rem;letter-spacing:.04em;color:#33405e;text-align:left}
 .es-c{display:inline-block;min-width:140px;border-radius:7px;padding:2px 8px;font-family:'IBM Plex Mono',monospace;font-size:.8rem}.es-c b{font-family:'IBM Plex Sans',sans-serif}
-.es-c.ok{background:#EAF7EF;color:#1d6b3f}.es-c.at{background:#FFF1C2;color:#855700;font-weight:700}.es-c.so{background:#FDE1E1;color:var(--crit);font-weight:700}.es-c.nd{color:#9aa4bb}.es-c.sus{background:#F1F2F5;color:#55627F;border:1px dashed #b3bccf}.es-c.sus b{color:#9a6700}
+.es-c.ok{background:#EAF7EF;color:#1d6b3f}.es-c.at{background:#FFF1C2;color:#855700;font-weight:700}.es-c.so{background:#FDE1E1;color:var(--crit);font-weight:700}.es-c.nd{color:#9aa4bb}.es-abas{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}.es-abas button{border:1px solid #c9d3e8;background:#fff;border-radius:8px;padding:6px 14px;font:inherit;font-weight:700;font-size:.85rem;color:#26324f;cursor:pointer}.es-abas button.on{background:var(--accent);border-color:var(--accent);color:#fff}.es-n{background:var(--crit);color:#fff;border-radius:9px;padding:0 6px;font-size:.7rem;margin-left:4px}.vx.es-t td:nth-child(2),.vx.es-t td:nth-child(3){font-family:'IBM Plex Mono',monospace}.es-c.sus{background:#F1F2F5;color:#55627F;border:1px dashed #b3bccf}.es-c.sus b{color:#9a6700}
 @media (max-width:700px){.es-k{grid-template-columns:1fr 1fr}}
 .pn-pc{background:#E9EEF8;color:#33405e;border-radius:10px;padding:0 8px;font-size:.75rem;font-family:'IBM Plex Sans',sans-serif;vertical-align:2px}
 .pn-lj tr.sep td{padding-top:8px}
@@ -2454,23 +2454,19 @@ function ritmoLoja(l){const y=diaMais(todayISO(),-1),m=y.slice(0,7),d=+y.slice(8
 function vEstoque(){if(S.role!=='gestor')return '';
   const L=S.lojas.filter(lj=>Object.values(S.vend||{}).some(v=>v.loja===lj.id)).map(lj=>({lj,E:estqLoja(lj.id)})).filter(x=>x.E);if(!L.length)return '';
   const cl=d=>d==null?'':d>EQ_LIM[1]?'so':d>EQ_LIM[0]?'at':'ok',fd=d=>d===Infinity?'sem venda':d==null?'—':`${d<10?F1.format(d):Math.round(d)} dias`,k1=v=>F1.format(v);
-  /* matéria-prima: carne que não existe no Brajan e nunca passa no caixa (ex.: pescoço, vira moída ou segunda) — não gera alerta */
+  /* matéria-prima: carne que não existe no Brajan e nunca passa no caixa (ex.: pescoço, vira moída ou segunda) */
   const vendidos=new Set();Object.values(S.vend||{}).forEach(v=>Object.keys(v.itens||{}).forEach(c=>vendidos.add(c)));const mp=c=>!NOME_BJ(c)&&!vendidos.has(c);
-  const al=[];L.forEach(({lj,E})=>Object.values(E.G).forEach(g=>{if(!mp(g.c)&&!g.sus&&g.est>=2&&g.dias!=null&&g.dias>EQ_LIM[0])al.push({lj,g})}));al.sort((a,b)=>b.g.dias-a.g.dias);
-  const nS=al.filter(a=>a.g.dias>EQ_LIM[1]).length,nA=al.length-nS;
-  const rit=L.map(({lj})=>{const r=ritmoLoja(lj.id);return `<span>${esc(lj.nome)} <b class="${r==null?'z':r>.02?'up':r<-.02?'dn':'z'}">${r==null?'—':(r>.02?'▲ ':r<-.02?'▼ ':'= ')+pc(Math.abs(r))}</b></span>`}).join('');
-  const kp=`<div class="es-k"><div class="so"><div class="t">🔴 Parada</div><div class="v">${nS} ${nS===1?'carne':'carnes'}</div><div class="s">mais de ${EQ_LIM[1]} dias de estoque</div></div>
-    <div class="at"><div class="t">🟡 Atenção</div><div class="v">${nA} ${nA===1?'carne':'carnes'}</div><div class="s">${EQ_LIM[0]+1} a ${EQ_LIM[1]} dias de estoque</div></div>
-    <div><div class="t">Ritmo do mês × mês anterior (mesmos dias, carne bovina)</div><div class="es-rit">${rit}</div></div></div>`;
-  const lstC=al.length?`${al.slice(0,8).map(({lj,g})=>`<div class="es-a ${cl(g.dias)}"><div class="n">${g.n}</div><div class="l">${esc(lj.nome)}</div><div class="q">${k1(g.est)} kg · vende ${k1(g.dia)} kg/dia</div><div class="d">${g.dias===Infinity?'sem venda':'~'+fd(g.dias)}</div><div class="a">${g.dias>EQ_LIM[1]?'parada: fazer oferta ou parar de pedir':'girando devagar: segurar o próximo pedido'}</div></div>`).join('')}${al.length>8?`<p class="hint">+ ${al.length-8} na tabela abaixo.</p>`:''}`:'<p class="hint">Nenhuma carne parada. 👍</p>';
+  /* uma aba por loja */
+  const sel=L.find(x=>x.lj.id===S.esLj)||L[0],E=sel.E;
+  const nPar=({E})=>Object.values(E.G).filter(g=>!mp(g.c)&&!g.sus&&g.est>=2&&g.dias!=null&&g.dias>EQ_LIM[1]).length;
+  const abas=`<div class="es-abas">${L.map(x=>{const n=nPar(x);return `<button type="button" class="${x===sel?'on':''}" data-act="es-lj" data-v="${x.lj.id}">${esc(x.lj.nome)}${n?` <span class="es-n">${n}</span>`:''}</button>`}).join('')}</div>`;
   const PN={T:'Traseiro',C:'Costela + fraldinha',D:'Dianteiro'};
-  const tb=['T','C','D'].map(p=>{const rows=EQ_F.filter(f=>f[0]===p).flatMap(f=>f[2]).filter(c=>L.some(({E})=>{const g=E.G[c];return g&&(g.est>=.5||g.v14>.5)}));if(!rows.length)return '';
-    return `<tr class="es-g"><td colspan="${L.length+1}">${PN[p]}</td></tr>`+rows.map(c=>`<tr><td>${eqNome(c)}</td>${L.map(({E})=>{const g=E.G[c];
-      return `<td>${g.sus?`<span class="es-c sus" title="contagem suspeita: confira e corrija">${k1(g.est)} kg · <b>⚠ contagem suspeita</b></span>`:mp(c)?(g.est>=.5?`<span class="es-c nd">${k1(g.est)} kg · vira moída/segunda</span>`:'<span class="es-c nd">—</span>'):g.neg?`<span class="es-c nd" title="vendeu mais do que entrou desde a contagem">acabou? conferir</span>`:g.est<.5&&!g.dia?'<span class="es-c nd">—</span>':`<span class="es-c ${cl(g.dias)}">${k1(g.est)} kg · <b>${fd(g.dias)}</b></span>`}</td>`}).join('')}</tr>`).join('')}).join('');
-  return `<section class="card es"><div class="card-h"><div><h3>📦 Estoque agora (prévia)</h3><p class="hint">Estoque = última contagem + notas que chegaram − vendas do caixa (Brajan). Dias de estoque = kg ÷ venda média dos últimos 14 dias. 🟢 até ${EQ_LIM[0]} dias · 🟡 ${EQ_LIM[0]+1} a ${EQ_LIM[1]} · 🔴 mais de ${EQ_LIM[1]}. Só o gestor vê.</p></div></div>
-    ${kp}${(()=>{if((S.vcpAb||{})['estq-ol']===undefined)S.vcpAb={...(S.vcpAb||{}),'estq-ol':true};return vcpSec('estq-ol','Para olhar hoje',al.length?`${nS} parada${nS===1?'':'s'} · ${nA} em atenção`:'nada parado',lstC,'sub')})()}
-    ${vcpSec('estq-tb','Todas as carnes por loja',`${L.length} lojas · carne por carne`,`<div class="tw"><table class="vx es-t"><tr><th>Carne</th>${L.map(({lj,E})=>`<th>${esc(lj.nome)}<small>contagem ${dBR(E.ult).slice(0,5)}</small></th>`).join('')}</tr>${tb}</table></div>`,'sub')}
-    <p class="hint">É uma prévia: perda, quebra e a forma de desossar fazem ela se afastar do real com o tempo; a cada contagem ela volta a ser exata. Nota conferida com os cortes pesados usa o peso real de cada corte (o mais preciso), desde que a perda da nota fique entre 15% e 35% e nenhum corte passe do dobro do esperado; senão, usa o % da peça e avisa em Pendências. Corte contado com mais de 30 dias de venda fica como 'contagem suspeita' e não entra nos alertas. Sem conferência, o traseiro e o dianteiro que chegam são repartidos pelo "% da peça" do rendimento e, entre carnes da mesma parte (ex.: filé e bananinha, contra-filé e ponta), pela venda da própria loja nos últimos 60 dias. O dianteiro é o mais incerto.</p></section>`}
+  const cel=(c,g)=>g.sus?`<span class="es-c sus" title="contagem suspeita: confira e corrija">⚠ contagem suspeita</span>`:mp(c)?'<span class="es-c nd">vira moída/segunda</span>':g.neg?'<span class="es-c nd" title="vendeu mais do que entrou desde a contagem">acabou? conferir</span>':g.est<.5&&!g.dia?'<span class="es-c nd">—</span>':`<span class="es-c ${cl(g.dias)}"><b>${fd(g.dias)}</b></span>`;
+  const tb=['T','C','D'].map(p=>{const rows=EQ_F.filter(f=>f[0]===p).flatMap(f=>f[2]).filter(c=>{const g=E.G[c];return g&&(g.est>=.5||g.v14>.5)});if(!rows.length)return '';
+    return `<tr class="es-g"><td colspan="4">${PN[p]}</td></tr>`+rows.map(c=>{const g=E.G[c];return `<tr><td>${eqNome(c)}</td><td>${g.neg?'—':k1(g.est)+' kg'}</td><td>${g.dia>.05?k1(g.dia)+' kg':'—'}</td><td>${cel(c,g)}</td></tr>`}).join('')}).join('');
+  return `<section class="card es"><div class="card-h"><div><h3>📦 Estoque agora (prévia)</h3><p class="hint">Última contagem + notas que chegaram − vendas do Brajan. 🟢 até ${EQ_LIM[0]} dias · 🟡 ${EQ_LIM[0]+1} a ${EQ_LIM[1]} · 🔴 mais de ${EQ_LIM[1]}. Só o gestor vê.</p></div></div>
+    ${abas}<p class="hint" style="margin:6px 0">Contagem de ${dBR(E.ult).slice(0,5)} · dias de estoque = kg ÷ venda média dos últimos 14 dias</p>
+    <div class="tw"><table class="vx es-t"><tr><th>Carne</th><th>Estoque</th><th>Vende por dia</th><th>Dias de estoque</th></tr>${tb}</table></div></section>`}
 function vComparativo(){if(S.role!=='gestor')return '';const C=cmpDados();
   if(!C.sel.length)return `<section class="card"><h3>Comparativo das lojas</h3><p class="pn-vazio">Ainda não tem um mês fechado com dados do Brajan em todas as lojas.</p></section>`;
   const per=C.sel.length>1?`${mesRot(C.sel[0])} a ${mesRot(C.sel[C.sel.length-1])}`:mesRot(C.sel[0]),com=C.LJ.filter(x=>x.t),nm=x=>esc(x.l.nome);
@@ -2730,6 +2726,7 @@ const A={
   'ct-ord':el=>{const v=el.dataset.v;if(v==='grp'){S.ctOrd='grp'}else if(S.ctOrd===v){S.ctDir=-(S.ctDir||-1)}else{S.ctOrd=v;S.ctDir=['nome','tr','r'].includes(v)?1:-1}render()},'ct-fil':el=>{S.ctFil=el.dataset.v;render()},'ct-prob':()=>{S.ctProb=!S.ctProb;render()},
   'vcp-mes':el=>{const l=+el.dataset.id,v=el.dataset.v,M={...(S.vcpMes||{})};if(!v){delete M[l]}else{const D=vcpDados(l),cur=new Set(M[l]||D.F.map(r=>r.m));cur.has(v)?cur.delete(v):cur.add(v);if(!cur.size){toast('Escolha pelo menos um mês.');return}M[l]=[...cur].sort()}S.vcpMes=M;REF_C=null;render()},
   'ce-ir':el=>{S.tab='contagem';guardaAba();abrirCorr(+el.dataset.l,el.dataset.d);render();setTimeout(()=>document.getElementById('ced')?.scrollIntoView({behavior:'smooth',block:'start'}),50)},
+  'es-lj':el=>{S.esLj=+el.dataset.v;render()},
   'pend-tg':()=>{S.pendAb=!S.pendAb;render()},
   'vcp-tg':el=>{const k=el.dataset.v;S.vcpAb={...(S.vcpAb||{}),[k]:!vcpAb(k)};render()},
   'cmp-m':el=>{S.cmpM=el.dataset.v||'';render()},
