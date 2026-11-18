@@ -2404,7 +2404,7 @@ const EQ_F=[
  ['D','bl',['33717','33721','31397','67866','33720','37608','Lmviigk94']],['D','peito',['31407']],['D','moida',['31400']]];
 /* códigos da pesagem do app que são a mesma carne do caixa */
 const EQ_AL={'1001':'31409','1012':'31405','1013':'31405','1003':'33730','1002':'31393','1007':'31402','1019':'31393','1004':'31396','1005':'31394','1006':'31395','1009':'31403','1008':'31404','1011':'33721','1014':'31397','1015':'31407','1016':'31400','1017':'31400'};
-const EQ_LIM=[6,9]; /* até 6 dias normal · 7 a 9 atenção · mais de 9 parada (definido pelo gestor) */
+const EQ_LIM=[4,6]; /* até 4 dias normal · 5 a 6 atenção · 7 ou mais parada (definido pelo gestor) */
 const eqNome=c=>PM[c]?.n||(NOME_BJ(c).replace(/^CB\s+/i,'').replace(/\s+KG$/i,'').toLowerCase().replace(/^./,x=>x.toUpperCase()))||c;
 function estqLoja(l){const h=todayISO(),R=refCortes(),fam={},susp=[];EQ_F.forEach(f=>f[2].forEach(c=>fam[c]=f));
   const cts=S.conts.filter(c=>c.loja===l).sort((a,b)=>a.data.localeCompare(b.data));if(!cts.length)return null;
