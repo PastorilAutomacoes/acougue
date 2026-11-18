@@ -457,7 +457,7 @@ table.vx{width:100%;border-collapse:collapse;font-size:.84rem;font-family:'IBM P
 .es-c.ok{background:#EAF7EF;color:#1d6b3f}.es-c.at{background:#FFF1C2;color:#855700;font-weight:700}.es-c.so{background:#FDE1E1;color:var(--crit);font-weight:700}.es-c.nd{color:#9aa4bb}.es-c.sus{background:#F1F2F5;color:#55627F;border:1px dashed #b3bccf}.es-c.sus b{color:#9a6700}
 @media (max-width:700px){.es-k{grid-template-columns:1fr 1fr}}
 .pn-pc{background:#E9EEF8;color:#33405e;border-radius:10px;padding:0 8px;font-size:.75rem;font-family:'IBM Plex Sans',sans-serif;vertical-align:2px}
-.pn-lj tr.sep td{padding-top:8px}
+.pn-lj tr.sep td{padding-top:8px}.pn-lj td.pn-curto{color:#9a6700;font-size:.72rem;text-align:left!important;padding-top:4px}
 .rc-fa{color:var(--crit)}.vcp-mes{margin:2px 0 10px}.vcp-mes .l{width:auto;margin-right:4px}.vx th.rc-s{cursor:pointer;user-select:none}.vx th.rc-s:hover{color:var(--accent);text-decoration:underline}.vx th.rc-s.on{color:var(--accent)}.rc-si{color:#b7c1d6;font-size:.7rem}.vx.rc-fl td:nth-child(2),.vx.rc-fl th:nth-child(2),.vx.rc-fl td:nth-child(3),.vx.rc-fl th:nth-child(3){text-align:left!important}.rc-n{color:#9aa4bb}
 .rc-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 6px}.rc-bar .l{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;width:70px}
 .rc-ch{border:1px solid #c9d3e8;border-radius:16px;padding:3px 11px;font:inherit;font-size:.8rem;background:#fff;color:#26324f;cursor:pointer}.rc-ch.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
@@ -2005,6 +2005,17 @@ const META_MG=.16,MIUDO_OK=.9; /* miúdo não tem osso: abaixo de 90% vendido do
 const NOME_BJ=c=>{for(const x of Object.values(S.custos||{})){const n=x?.itens?.[c]?.n;if(n)return n}return ''};
 const suiCod=c=>{if(!c)return false;const n=NOME_BJ(c);return /^CS /i.test(n)&&!/SALAME|LINGUI|PAIO|SALSICH|TEMPERAD/i.test(n)};
 const suiNome=c=>{const n=NOME_BJ(c).replace(/^CS\s+/i,'').replace(/\s+KG$/i,'');return n?n[0]+n.slice(1).toLowerCase():c};
+/* boleto → parte da carne bovina, dos miúdos e do suíno, pela nota que ele paga; sem nota, pela média das notas do mesmo fornecedor */
+function vcpShare(cps){
+  const SH={},porF={};cps.forEach(c=>{const n=notaBrajan(c);if(!(n.v>0))return;const q=bovDaNota(n).rs,mm=n.itens.reduce((t,it)=>t+(miudoIt(it)?valItem(n,it):0),0),ss=n.itens.reduce((t,it)=>t+(suiCod(it.cod0)?valItem(n,it):0),0);
+    SH[c.chave]={c:q/n.v,m:mm/n.v,s:ss/n.v};const f=porF[c.cnpj]||(porF[c.cnpj]={c:0,m:0,s:0,t:0});f.c+=q;f.m+=mm;f.s+=ss;f.t+=n.v});
+  return p=>SH[p.chave]||(porF[p.cnpj]?.t?{c:porF[p.cnpj].c/porF[p.cnpj].t,m:porF[p.cnpj].m/porF[p.cnpj].t,s:porF[p.cnpj].s/porF[p.cnpj].t}:{c:0,m:0,s:0});}
+/* venda × compra × pagamento de uma loja num período qualquer (cartões do painel) */
+function vcpFaixa(l,a,b){const cps=Object.values(S.comps||{}).filter(c=>c.loja===l&&c.emissao),sh=vcpShare(cps),r={ck:0,cr:0,vk:0,vr:0,pc:0};
+  notasBal().forEach(n=>{if(n.loja!==l||n.data<a||n.data>b||!entrou(n))return;const q=bovDaNota(n);r.ck+=q.kg;r.cr+=q.rs});
+  Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||v.data<a||v.data>b)return;Object.entries(v.itens||{}).forEach(([c,x])=>{if(bovBal(c,l)){r.vk+=x.kg;r.vr+=x.rs}})});
+  Object.values(S.pags||{}).forEach(p=>{if(p.loja!==l||!p.pagamento||p.pagamento<a||p.pagamento>b)return;r.pc+=(p.valor_pago||0)*(sh(p).c||0)});
+  return {...vcpCalc(r),temPag:Object.values(S.pags||{}).some(p=>p.loja===l)}}
 function vcpDados(l){const h=todayISO(),cps=Object.values(S.comps||{}).filter(c=>c.loja===l&&c.emissao);
   if(!cps.length)return null;
   /* começa no 1º mês completo de notas lançadas no Brajan e de vendas (começou depois do dia 5: o mês fica de fora) */
@@ -2013,9 +2024,7 @@ function vcpDados(l){const h=todayISO(),cps=Object.values(S.comps||{}).filter(c=
   if(!lc)return null;const m0=[ini(lc),v0?ini(v0):''].sort().pop();
   const ms=[];for(let m=m0;m<=h.slice(0,7);m=diaMais(fimMes(m+'-01'),1).slice(0,7))ms.push(m);
   /* boleto → parte da carne bovina e parte dos miúdos, pela nota que ele paga; sem nota, pela média das notas do mesmo fornecedor */
-  const SH={},porF={};cps.forEach(c=>{const n=notaBrajan(c);if(!(n.v>0))return;const q=bovDaNota(n).rs,mm=n.itens.reduce((t,it)=>t+(miudoIt(it)?valItem(n,it):0),0),ss=n.itens.reduce((t,it)=>t+(suiCod(it.cod0)?valItem(n,it):0),0);
-    SH[c.chave]={c:q/n.v,m:mm/n.v,s:ss/n.v};const f=porF[c.cnpj]||(porF[c.cnpj]={c:0,m:0,s:0,t:0});f.c+=q;f.m+=mm;f.s+=ss;f.t+=n.v});
-  const sh=p=>SH[p.chave]||(porF[p.cnpj]?.t?{c:porF[p.cnpj].c/porF[p.cnpj].t,m:porF[p.cnpj].m/porF[p.cnpj].t,s:porF[p.cnpj].s/porF[p.cnpj].t}:{c:0,m:0,s:0});
+  const sh=vcpShare(cps);
   const L=ms.slice(-6).map(m=>{const a=m+'-01',b=fimMes(a),r={m,a,b,fechado:b<h,ck:0,cr:0,vk:0,vr:0,pc:0,pmi:0,mck:0,mcr:0,mvk:0,mvr:0,lgk:0,lgr:0,sck:0,scr:0,svk:0,svr:0,psu:0,mi:{},su:{}};
     const mi=c=>r.mi[c]||(r.mi[c]={c,ck:0,cr:0,vk:0,vr:0}),su=c=>r.su[c]||(r.su[c]={c,ck:0,cr:0,vk:0,vr:0});
     notasBal().forEach(n=>{if(n.loja!==l||n.data<a||n.data>b||!entrou(n))return;const q=bovDaNota(n);r.ck+=q.kg;r.cr+=q.rs;
@@ -2527,7 +2536,7 @@ function vPainel(){
     tags.push(uv&&dias(uv,h)<=3?['ok','Brajan ok']:uv?['warn','Brajan parado desde '+dBR(uv).slice(0,5)]:['sem','Sem Brajan']);
     r.crit.forEach(({c,perda})=>pend.push(['crit',`${esc(l.nome)}: perda de ${pc(perda)} na NF ${esc(c.nf)} (${esc(fnome(c))})`,c.id]));
     return `<button type="button" class="pn-lj ${st}" data-act="pn-loja" data-id="${l.id}" title="Abrir o painel da loja"><h3>${esc(l.nome)}</h3><span class="c">${esc(l.cidade||'')}</span>
-      ${(()=>{const D=vcpDados(l.id),M=D?.med?vcpCalc(D.med):null,ok=!!(M&&M.vr),fin=ok&&D.temPag?(M.vr-M.pc)/M.vr:null,so=sobraReal(l.id),mk=ok&&M.cr?M.vr/M.cr-1:null;
+      ${(()=>{const M=brajanLoja(l.id)?vcpFaixa(l.id,a,b):null,ok=!!(M&&M.vr&&M.cr),fin=ok&&M.temPag?(M.vr-M.pc)/M.vr:null,so=ok?{v:M.sp}:null,mk=ok?M.vr/M.cr-1:null,curto=dias(a,b<h?b:h)+1<28;
         const cor=(v,a,b)=>v==null?'—':`<b class="pn-p ${v<a?'crit':v<b?'warn':'ok'}">${pc(v)}</b>`;
         return `<table><tr><td>Vendas</td><td>${r.vr?rsK(r.vr):'—'}</td></tr>
         <tr><td>Markup</td><td>${cor(mk,.0870,.1905)}</td></tr>
@@ -2538,6 +2547,7 @@ function vPainel(){
         <tr><td>Venda ÷ compra (kg)</td><td>${ok&&M.rkg!=null?pc(M.rkg):'—'}</td></tr>
         <tr><td>Sobra por kg vendido</td><td>${ok&&M.skg!=null?'R$ '+F2.format(M.skg):'—'}</td></tr>
         <tr><td>Perda desossa</td><td>${r.perda==null?'—':`<span class="pill ${perdaSt(r.perda)}">${pc(r.perda)}</span>`}</td></tr>
+        ${ok&&curto?`<tr><td colspan="2" class="pn-curto">⚠ período curto: chegada de nota distorce markup, operação e financeiro</td></tr>`:''}
         <tr class="sep"><td>Última contagem</td><td>${uc?dBR(uc).slice(0,5):'—'}</td></tr>`})()}</table>
       <div class="pn-tags">${tags.map(([c,t])=>`<span class="pill ${c}">${t}</span>`).join('')}</div></button>`}).join('')}</div>`;
   const atras=L.filter(x=>!x.uc||dias(x.uc,h)>7).map(x=>x.l.nome);
