@@ -510,6 +510,8 @@ button.pn-nl{cursor:pointer}button.pn-nl:hover{background:var(--surface-2)}
 .cm4 .rs{color:var(--muted);font-size:.75rem;margin-top:2px;padding-left:19px}
 .cm4 .v{font-family:Oswald,sans-serif;font-size:1.45rem;line-height:1.15;font-weight:600}.cm4 .s{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--muted);margin-top:2px}
 .cm4 td.best{background:#E8F6EE}.cm4 td.best .v{color:#16804A}.cm4 td.worst{background:#FDECEC}.cm4 td.worst .v{color:#C62828}.cm4 td.md{background:#F3F6FC}
+.tf-l{display:flex;flex-direction:column;font-size:.74rem;color:var(--muted);font-weight:600;gap:3px}.tf-l .in{width:auto;min-width:140px}
+.tf-t{margin:10px 0 4px;width:100%}.tf-t td,.tf-t th{padding:4px 6px}.tf-t .in{width:100%;min-width:70px}.tf-t td:first-child .in{min-width:200px}
 </style>
 
 <header class="top">
@@ -773,7 +775,7 @@ const linhasPadrao=()=>['traseiro','dianteiro','costela'].map(g=>({c:'G:'+g,kg:'
 function newNForm(loja){return{loja:loja||1,nf:'',forn:'',data:todayISO(),kg:'',v:''}}
 function newCd(loja){return{loja:loja||1,data:todayISO(),modo:'app',pes:[],prod:null,peso:'',linhas:[{c:'',kg:''}]}}
 const S={role:'conferente',loja:1,tab:'nf',openId:null,filtro:'todas',nfiltro:'todas',mesC:MES0,mesN:MES0,bal:{a:CONTS[0],b:CONTS[2]},set:structuredClone(DEF_SET),
-  lojas:structuredClone(DEF_LOJAS),prods:{},vimp:{},vend:{},custos:{},comps:{},pags:{},pn:{p:'mes',a:'',b:''},apps:[],notasApp:[],conts:[],mods:{},used:[],apel:{},
+  lojas:structuredClone(DEF_LOJAS),prods:{},vimp:{},vend:{},custos:{},comps:{},pags:{},transfs:[],tf:null,pn:{p:'mes',a:'',b:''},apps:[],notasApp:[],conts:[],mods:{},used:[],apel:{},
   recs:[],rf:newRf(1),draft:newDraft(1),nForm:newNForm(1),cd:newCd(1),done:null,doneComp:false,confirm:false,cconfirm:false,resetAsk:false,users:[],user:null,uForm:{nome:'',usuario:'',perfil:'conferente',loja:1},uCode:null,
   lg:{modo:'entrar',usuario:'',erro:'',busy:false},boot:true};
 const curUser=()=>S.users.find(u=>u.id===S.user)||null;
@@ -797,7 +799,8 @@ const T={
   vend:objT(()=>S.vend),   /* vendas por loja e dia vindas do Brajan (função erp-receber) */
   custo:objT(()=>S.custos), /* custo e preço atuais por loja vindos do Brajan */
   comp:objT(()=>S.comps),   /* notas de compra de carne vindas do Brajan (a caminho ou lançadas) */
-  pag:objT(()=>S.pags),     /* boletos dos frigoríficos (Brajan); o servidor só manda para o gestor */
+  pag:objT(()=>S.pags),
+  transf:arrT(()=>S.transfs,v=>S.transfs=v,t=>t.id), /* transferência de carne entre lojas (só o gestor lança) */     /* boletos dos frigoríficos (Brajan); o servidor só manda para o gestor */
   apel:objT(()=>S.apel), /* nome do item na nota do fornecedor → produto do cadastro */
   used:{list:()=>S.used.map(ch=>[ch,{ch}]),put:k=>{if(!S.used.includes(k))S.used.push(k)},del:k=>{S.used=S.used.filter(x=>x!==k)}},
   set:{list:()=>[['set',S.set]],put:(k,d)=>{S.set=mergeSet(d)},del:()=>{}},
@@ -860,10 +863,10 @@ async function sincronizar(){if(!SY.on||TREINO)return;try{const m=await puxar(fa
 function agendarEnvio(){clearTimeout(SY.tPush);SY.tPush=setTimeout(enviar,700)}
 function guardarCache(){if(!S.user)return;clearTimeout(SY.tCache);SY.tCache=setTimeout(guardarCacheJa,300)}
 function guardarCacheJa(){if(!S.user||TREINO)return;clearTimeout(SY.tCache);
-  const d={v:1,recs:S.recs,apps:S.apps,notasApp:S.notasApp,conts:S.conts,prods:S.prods,vimp:S.vimp,vend:S.vend,custos:S.custos,comps:S.comps,pags:S.pags,used:S.used,apel:S.apel,set:S.set,lojas:S.lojas,base:[...SY.base],cursor:SY.cursor,tipos:Object.keys(T)};
+  const d={v:1,recs:S.recs,apps:S.apps,notasApp:S.notasApp,conts:S.conts,prods:S.prods,vimp:S.vimp,vend:S.vend,custos:S.custos,comps:S.comps,pags:S.pags,transfs:S.transfs,used:S.used,apel:S.apel,set:S.set,lojas:S.lojas,base:[...SY.base],cursor:SY.cursor,tipos:Object.keys(T)};
   try{localStorage.setItem(KEY+':dados:'+S.user,JSON.stringify(d))}catch(e){}}
 function lerCache(){try{const d=JSON.parse(localStorage.getItem(KEY+':dados:'+S.user)||'null');if(!d||d.v!==1)return false;
-  ['recs','apps','notasApp','conts','prods','vimp','vend','custos','comps','pags','used','lojas','apel'].forEach(k=>{if(d[k])S[k]=d[k]});S.set=mergeSet(d.set);
+  ['recs','apps','notasApp','conts','prods','vimp','vend','custos','comps','pags','transfs','used','lojas','apel'].forEach(k=>{if(d[k])S[k]=d[k]});S.set=mergeSet(d.set);
   SY.base=new Map(d.base||[]);SY.cursor=d.cursor||null;
   /* tipo que esta versão conhece e a cópia guardada não: a versão anterior pode ter pulado esses registros; busca tudo dele uma vez */
   const conh=d.tipos||Object.keys(T).filter(t=>t!=='pag');SY.faltam=SY.cursor?Object.keys(T).filter(t=>!conh.includes(t)):[];
@@ -1018,7 +1021,15 @@ function notaFoto(r){if(!r?.dig?.length)return null;
   return{loja:r.loja,forn:r.forn,fornNome:r.fornNome,nf:r.nf,data:r.data,itens,kg:r3(itens.reduce((t,i)=>t+i.kg,0)),v:r.lida?.vt||sv,fonte:r.lida?'foto':'digitada',foto:true,rec:r.id}}
 /* loja que já manda as notas pelo Brajan: a nota lida pela foto não entra mais na conta (evita contar duas vezes uma nota com número digitado errado) */
 const brajanLoja=l=>Object.values(S.comps||{}).some(c=>c.loja===l);
-function notasBal(){if(NBAL_C)return NBAL_C;const m=new Map(allNotas().map(n=>[nkey(n),n]));S.recs.forEach(r=>{const k=nkey(r);if(!m.has(k)&&!brajanLoja(r.loja)){const n=notaFoto(r);if(n)m.set(k,n)}});return NBAL_C=[...m.values()]}
+function notasBal(){if(NBAL_C)return NBAL_C;const m=new Map(allNotas().map(n=>[nkey(n),n]));S.recs.forEach(r=>{const k=nkey(r);if(!m.has(k)&&!brajanLoja(r.loja)){const n=notaFoto(r);if(n)m.set(k,n)}});
+  (S.transfs||[]).forEach(t=>notasTransf(t).forEach(n=>m.set(nkey(n),n)));return NBAL_C=[...m.values()]}
+/* transferência entre lojas: no destino entra como compra; na origem sai (kg e R$ negativos), pelo custo do kg informado.
+   Item que não é carne bovina naquela loja (ex.: linguiça caseira fora de Parecis e São Felipe) fica fora da conta da carne. */
+function notasTransf(t){const nf=String(t.id).replace(/\D/g,'').slice(-6)||'1';
+  const mk=(loja,sg,outra)=>{const itens=(t.itens||[]).filter(i=>i.c&&+i.kg>0).map(i=>{const kg_=r3(sg*i.kg),v=r2(kg_*(+i.rk||0)),bv=bovBal(i.c,loja);
+      return{desc:`${(PM[i.c]?.n||NOME_BJ(i.c)||i.c).toUpperCase()} (transferência)`,c:i.c,cod0:i.c,gd:bv?'caixaria':'outros',...(bv?{}:{nb:true}),kg:kg_,v,pc:i.pc||null}});
+    return{loja,forn:'TRF',fornNome:`Transferência ${sg>0?'de':'para'} ${lojaNome(outra)}`,nf,data:t.data,hora:t.hora||'',itens,kg:r3(itens.reduce((a,i)=>a+i.kg,0)),v:r2(itens.reduce((a,i)=>a+i.v,0)),fonte:'transferência',transf:sg>0?'ent':'sai',tid:t.id}};
+  return [mk(t.para,1,t.de),mk(t.de,-1,t.para)]}
 /* excluir nota recebida: antes da pesagem, quem recebeu ou gerente/gestor; com pesagem iniciada, só gerente/gestor; conferida, ninguém */
 const podeExcluirRec=r=>S.role!=='conferente'||(!confDoRec(r)&&!r.lock&&r.uid===S.user); /* gerente/gestor apagam qualquer nota recebida (com a conferência junto) */
 /* compara o que foi digitado da DANFE com o XML: por peça e, na caixaria/outros, por carne */
@@ -1502,8 +1513,34 @@ function vContagem(){
       <div class="rows">${salvas.map(c=>`<div class="row static"><div class="row-main"><b>${dBR(c.data)}${S.loja?'':' · '+esc(lojaNome(c.loja))}</b><span>${c.modo==='exemplo'?'Contagem de exemplo':c.modo==='app'?'Pesada no app':'Lançada do papel'}${c.por!=='—'?' · '+esc(c.por):''}</span>${c.corr?`<span><span class="pill warn">Corrigida por ${esc(c.corr.por)}</span></span>`:''}</div>
         <div class="row-side"><span class="num">${kg(bovKg(c.itens))} kg</span>${g?`<span class="hint num">${rs(bovRs(c.itens))}</span>`:''}${c.modo==='exemplo'?'':`<div class="inrow"><button type="button" class="btn sm" data-act="zap" data-txt="${esc(msgCont(c))}" data-n="${esc(S.set.zap[c.loja]||S.set.zap.dir||'')}">WhatsApp</button>${S.role==='gestor'?`<button type="button" class="btn sm blue" data-act="ce-abre" data-l="${c.loja}" data-d="${c.data}">Corrigir</button>`:''}</div>`}</div></div>`).join('')}</div>
     </section>
+    ${vTransf()}
   </div></div>`;
 }
+/* transferência entre lojas: tira de uma loja e põe na outra (estoque, compras, balanço e rendimento) */
+const tfNova=()=>({data:todayISO(),hora:'',de:3,para:1,linhas:[{c:'',kg:'',pc:'',rk:''}]});
+/* carnes do cadastro do Brajan (código numérico): as do app (1001…) e as peças inteiras ficam de fora */
+const tfCarnes=()=>Object.values(PM).filter(p=>/^\d{5,}$/.test(p.c)&&((p.bov&&!p.miudo)||p.c==='31408')).sort((a,b)=>a.n.localeCompare(b.n));
+function vTransf(){if(S.role!=='gestor')return '';const f=S.tf||(S.tf=tfNova()),L=[...(S.transfs||[])].sort((a,b)=>b.data.localeCompare(a.data)||String(b.id).localeCompare(String(a.id)));
+  const ops=sel=>`<option value="">Escolher carne</option>`+tfCarnes().map(p=>`<option value="${p.c}"${p.c===sel?' selected':''}>${esc(p.n)}</option>`).join('');
+  const tot=f.linhas.reduce((t,x)=>t+(num(x.kg)||0)*(num(x.rk)||0),0);
+  const form=`<div class="tf-f"><div class="inrow" style="flex-wrap:wrap;gap:10px">
+      <label class="tf-l">Data<input type="date" id="tf-data" class="in" value="${f.data}"></label>
+      <label class="tf-l">Hora (se souber)<input type="time" id="tf-hora" class="in" value="${f.hora||''}"></label>
+      <label class="tf-l">Sai de<select id="tf-de" class="in">${lojaOpts(f.de)}</select></label>
+      <label class="tf-l">Vai para<select id="tf-para" class="in">${lojaOpts(f.para)}</select></label></div>
+    <div class="tw"><table class="vx tf-t"><tr><th>Carne</th><th>Kg</th><th>Peças</th><th>Custo R$/kg</th><th>Valor</th><th></th></tr>
+    ${f.linhas.map((x,i)=>`<tr><td><select id="tf-c-${i}" class="in">${ops(x.c)}</select></td><td><input id="tf-kg-${i}" class="in" inputmode="decimal" value="${esc(x.kg)}" placeholder="0,000"></td>
+      <td><input id="tf-pc-${i}" class="in" inputmode="numeric" value="${esc(x.pc)}" placeholder="—"></td><td><input id="tf-rk-${i}" class="in" inputmode="decimal" value="${esc(x.rk)}" placeholder="0,00"></td>
+      <td class="n">${num(x.kg)&&num(x.rk)?rs(num(x.kg)*num(x.rk)):'—'}</td><td>${f.linhas.length>1?`<button type="button" class="bmini" data-act="tf-rm" data-i="${i}">✕</button>`:''}</td></tr>`).join('')}
+    <tr><td colspan="4"><button type="button" class="lnk" data-act="tf-add">+ Outra carne</button></td><td class="n"><b>${tot?rs(tot):''}</b></td><td></td></tr></table></div>
+    <p class="hint">O custo vem do Brajan da loja que envia (pode mudar). Sem hora, conta como chegada depois da contagem do dia.</p>
+    <div class="inrow"><button type="button" class="btn blue" data-act="tf-salvar">Salvar transferência</button>${S.tf.edit?'<button type="button" class="btn" data-act="tf-limpar">Cancelar</button>':''}</div></div>`;
+  const lista=L.length?`<div class="rows" style="margin-top:12px">${L.map(t=>{const kgT=(t.itens||[]).reduce((a,i)=>a+(+i.kg||0),0),vT=(t.itens||[]).reduce((a,i)=>a+(+i.kg||0)*(+i.rk||0),0);
+      return `<div class="row static"><div class="row-main"><b>${dBR(t.data)}${t.hora?' '+t.hora:''} · ${esc(lojaNome(t.de))} → ${esc(lojaNome(t.para))}</b>
+      <span>${(t.itens||[]).map(i=>`${esc(PM[i.c]?.n||NOME_BJ(i.c)||i.c)} ${F1.format(+i.kg)} kg${i.pc?` (${i.pc} pç)`:''}`).join(' · ')}</span><span class="hint">lançada por ${esc(t.por||'—')} em ${esc(t.quando||'')}</span></div>
+      <div class="row-side"><span class="num">${kg(kgT)} kg</span><span class="hint num">${rs(vT)}</span><div class="inrow"><button type="button" class="btn sm" data-act="tf-ed" data-id="${t.id}">Corrigir</button><button type="button" class="btn sm" data-act="tf-del" data-id="${t.id}">Apagar</button></div></div></div>`}).join('')}</div>`:'';
+  return `<section class="card es">${vcpSec('trf','🔁 Transferência entre lojas',`${L.length?`${L.length} lançada${L.length>1?'s':''} · `:''}tira o estoque de uma loja e põe na outra · toque para abrir`,
+    `<p class="hint" style="margin:0 0 8px">Carne levada de uma loja para outra sem nota no Brajan. Na loja que envia sai do estoque e das compras; na que recebe entra como compra, pelo custo do kg. Só o gestor vê.</p>${form}${lista}`)}</section>`}
 
 /* ---------- CONFERÊNCIAS ---------- */
 function vLista(){
@@ -1697,7 +1734,7 @@ const bovBal=(c,l)=>(!!PM[c]?.bov&&!PM[c]?.miudo)||(l!=null&&!!BOV_LOJA[c]?.incl
 const miudoIt=it=>{if(it.nb||NAO_BOV.test(norm(it.desc||'')))return false;const c=it.c||matchProd(it.desc);return !!PM[c]?.miudo||(classNF(it)==='outros'&&/miud|figado|mocoto|bucho|rumen|coracao|rabo|lingua|tripa/.test(norm(it.desc)))};
 /* itens de cada nota que entram no balanço: o padrão é carne bovina sem miúdos; a escolha fica salva na nota (documento vimp "loja|itens|nota") */
 const itKey=n=>`${n.loja}|itens|${nkey(n)}`;
-function itemOn(n,i,it){const v=S.vimp[itKey(n)]?.x?.[i];if(v!=null)return !!v;return grupoItem(it)==='Bovino'&&!miudoIt(it)}
+function itemOn(n,i,it){if(n.transf)return !it.nb; /* transferência: conta o que é carne bovina naquela loja */const v=S.vimp[itKey(n)]?.x?.[i];if(v!=null)return !!v;return grupoItem(it)==='Bovino'&&!miudoIt(it)}
 /* notas que entram nas compras do balanço: as do Brajan/XML e, na loja sem Brajan, as lidas pela foto.
    A nota da foto que não achou par no Brajan fica de fora, mas pode ser incluída; qualquer nota pode ser tirada.
    A escolha fica salva por loja e período (documento vimp "loja|EI|EF|notas", que o gerente da loja também pode gravar). */
@@ -1709,7 +1746,7 @@ function incluida(n,a,b){const s=S.vimp[selKey(n.loja,a,b)],k=nkey(n);if(s?.fora
 const valItem=(n,it)=>{const sv=n.itens.reduce((t,i)=>t+(i.v||0),0),sk=n.itens.reduce((t,i)=>t+i.kg,0);return n.v*(sv?(it.v||0)/sv:(sk?it.kg/sk:1))};
 const bovDaNota=n=>{let kgv=0,rsv=0,fora=0,foraKg=0;
   n.itens.forEach((it,i)=>{if(itemOn(n,i,it)){kgv+=it.kg;rsv+=valItem(n,it)}else if(grupoItem(it)==='Bovino'||miudoIt(it)){fora++;foraKg+=it.kg}});return{kg:kgv,rs:rsv,fora,foraKg}};
-function sitNota(n){const c=confDe(n);if(c){const x=analise(c);return x.st==='sem'?['ok','Conferida']:[perdaSt(x.perda),`Conferida · ${pc(x.perda)}`]}
+function sitNota(n){if(n.transf)return['ok',n.transf==='ent'?'Transferência (entrada)':'Transferência (saída)'];const c=confDe(n);if(c){const x=analise(c);return x.st==='sem'?['ok','Conferida']:[perdaSt(x.perda),`Conferida · ${pc(x.perda)}`]}
   if(n.fora)return['warn','Nº não achado no Brajan'];if(S.recs.some(r=>nkey(r)===nkey(n)))return['warn','Recebida, sem pesagem'];return['crit','Não conferida']}
 function balDetCompras(ids,a,b){const L=ids.flatMap(l=>comprasCand(l,a,b));
   const rows=L.map(n=>{const on=incluida(n,a,b),q=bovDaNota(n),[st,t]=sitNota(n);
@@ -1975,7 +2012,7 @@ function pnLoja(l,a,b){const r={vk:0,vr:0,cv:0,ck:0,cr:0,nn:0,nf:0,conf:0,forn:{
   Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||v.data<a||v.data>b)return;
     Object.entries(v.itens||{}).forEach(([c,x])=>{if(!bovBal(c,l))return;r.vk+=x.kg;r.vr+=x.rs;r.cv+=x.kg*custoDe(l,c)})});
   notasBal().forEach(n=>{if(n.loja!==l||n.data<a||n.data>b||!entrou(n))return;let tem=false;
-    n.itens.forEach((it,i)=>{if(!itemOn(n,i,it))return;tem=true;const v=valItem(n,it);r.ck+=it.kg;r.cr+=v;
+    n.itens.forEach((it,i)=>{if(!itemOn(n,i,it))return;if(!n.transf)tem=true;const v=valItem(n,it);r.ck+=it.kg;r.cr+=v;
       const g=classNF(it);if(['traseiro','dianteiro','caixaria'].includes(g)&&v>0){const q=r.peca[g]||(r.peca[g]={kg:0,v:0});q.kg+=it.kg;q.v+=v}
       const f=r.forn[n.forn]||(r.forn[n.forn]={nome:fnome(n),kg:0,nf:0,conf:0});f.kg+=it.kg});
     if(tem)r.nn++});
@@ -2129,6 +2166,7 @@ function refCortes(){const n=S.apps.length;if(REF_C&&REF_C.n===n)return REF_C;
 function cortesDados(l,a,b){const R=refCortes(),K={},V={},VR={};
   Object.values(S.comps||{}).forEach(c=>{if(c.loja!==l||!c.emissao||c.emissao<a||c.emissao>b)return;const n=notaBrajan(c);if(c.situacao!=='lancada'&&!entrou(n))return;
     n.itens.forEach(it=>{const k=it.cod0||it.c;if(k)K[k]=(K[k]||0)+it.kg})});
+  (S.transfs||[]).forEach(t=>{if(t.data<a||t.data>b||(t.de!==l&&t.para!==l))return;const sg=t.para===l?1:-1;(t.itens||[]).forEach(i=>{if(i.c&&+i.kg>0)K[i.c]=(K[i.c]||0)+sg*i.kg/REND_CX})});
   Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||v.data<a||v.data>b)return;Object.entries(v.itens||{}).forEach(([c,x])=>{V[c]=(V[c]||0)+x.kg;VR[c]=(VR[c]||0)+x.rs})});
   const sm=(o,ks)=>ks.reduce((t,k)=>t+(o[k]||0),0),tras=sm(K,Q_TRAS),dian=sm(K,Q_DIAN),pa=sm(K,Q_PA);
   const cx=Object.entries(K).filter(([k])=>![...Q_TRAS,...Q_DIAN,...Q_PA].includes(k)&&bovBal(k,l)).reduce((t,[,v])=>t+v,0);
@@ -2329,11 +2367,11 @@ function vPainelLoja(l,a,b,pa,pb){const lj=S.lojas.find(x=>x.id===l),h=todayISO(
   const tops=`<section class="card"><div class="card-h"><h3>Carnes mais vendidas</h3><span class="tag">top 10</span></div>${top.length?`<table class="pn-t"><tr><th>Carne</th><th class="n">Kg</th><th class="n">R$</th><th class="n">Margem</th></tr>
     ${top.map(q=>{const mg=q.rs?(q.rs-q.cv)/q.rs:null;return `<tr><td>${esc(PM[q.c]?.n||S.custos?.[l]?.itens?.[q.c]?.n||q.c)}</td><td class="n">${kgI(q.kg)}</td><td class="n">${rsI(q.rs)}</td><td class="n"${mg<0?' style="color:var(--crit);font-weight:600"':''}>${pc(mg)}</td></tr>`}).join('')}</table>`:'<p class="pn-vazio">Sem vendas no período.</p>'}</section>`;
   /* notas de entrada: todas as notas emitidas para a loja no período (Brajan/XML, ou foto enquanto o XML não chega) e as recebidas ainda sem pesagem */
-  const nm=new Map();notasBal().filter(n=>n.loja===l&&n.data>=a&&n.data<=b&&(n.brajan?n.itens.length&&bovDaNota(n).kg>0:!n.itens?.length||bovDaNota(n).kg>0)).forEach(n=>nm.set(nkey(n),n));
+  const nm=new Map();notasBal().filter(n=>n.loja===l&&n.data>=a&&n.data<=b&&(n.transf||(n.brajan?n.itens.length&&bovDaNota(n).kg>0:!n.itens?.length||bovDaNota(n).kg>0))).forEach(n=>nm.set(nkey(n),n));
   const bl=brajanLoja(l);
   S.recs.filter(x=>x.loja===l&&!nm.has(nkey(x))&&(!confDoRec(x)||(bl&&x.data>=a&&x.data<=b))).forEach(x=>nm.set(nkey(x),{...(notaFoto(x)||{loja:l,forn:x.forn,fornNome:x.fornNome,nf:x.nf,data:x.data,itens:[],kg:0,v:0,foto:true}),fora:bl}));
   const notas=[...nm.values()].sort((x,y)=>(y.data||'').localeCompare(x.data||'')||(+y.nf)-(+x.nf));
-  const sitN=n=>{const c=confDe(n);
+  const sitN=n=>{if(n.transf)return{st:'ok',t:n.transf==='ent'?'Transferência':'Transferência (saída)'};const c=confDe(n);
     if(n.fora){const r=S.recs.find(y=>nkey(y)===nkey(n));return c?{act:'open-conf',id:c.id,st:'warn',t:'Nº não achado no Brajan'}:{act:'startrec',id:r?.id,st:'warn',t:'Nº não achado no Brajan'}}
     if(c){const x=analise(c);return{act:'open-conf',id:c.id,st:x.st==='sem'?'ok':perdaSt(x.perda),t:x.st==='sem'?'Conferida':`Conferida · perda ${pc(x.perda)}`}}
     const r=S.recs.find(y=>nkey(y)===nkey(n));if(r)return{act:'startrec',id:r.id,st:'warn',t:'Recebida, sem pesagem'};
@@ -2404,6 +2442,7 @@ function estqLoja(l){const h=todayISO(),R=refCortes(),fam={},susp=[];EQ_F.forEac
     if(Q_PA.includes(c)||c==='PC1'||c==='PC2'){addF('cos',kg*REND_PA);return true}return false};
   comprasCand(l,minD,'9999-12-31').forEach(n=>{const addF=(fk,v)=>EQ_F.find(f=>f[1]===fk)[2].forEach(x=>{const g=C[x];if(noPeriodo(n,g.d0,'9999-12-31'))g.ent+=v*parte(fk,x)}),
       addC=(c,v)=>{const g=C[c];if(g&&noPeriodo(n,g.d0,'9999-12-31'))g.ent+=v};
+    if(n.transf){n.itens.forEach(it=>addC(EQ_AL[it.c]||it.c,it.kg));return}
     const cf=confDe(n),pes=(cf?.pes||[]).filter(e=>e.g!=='miudos'),quem=cf?.por||S.recs.find(r=>nkey(r)===nkey(n))?.por||'';
     if(pes.length){
       /* o que a nota deveria dar (pelo % da peça) e o que foi pesado */
@@ -2710,6 +2749,19 @@ const A={
   'ce-ir':el=>{S.tab='contagem';guardaAba();abrirCorr(+el.dataset.l,el.dataset.d);render();setTimeout(()=>document.getElementById('ced')?.scrollIntoView({behavior:'smooth',block:'start'}),50)},
   'es-ord':el=>{const v=el.dataset.v;if(!v)S.esOrd='';else if((S.esOrd??'dias')===v)S.esDir=-(S.esDir||-1);else{S.esOrd=v;S.esDir=v==='nome'?1:-1}render()},
   'es-lj':el=>{S.esLj=+el.dataset.v;render()},
+  'tf-add':()=>{S.tf.linhas.push({c:'',kg:'',pc:'',rk:''});render()},
+  'tf-rm':el=>{S.tf.linhas.splice(+el.dataset.i,1);render()},
+  'tf-limpar':()=>{S.tf=tfNova();render()},
+  'tf-ed':el=>{const t=S.transfs.find(x=>String(x.id)===el.dataset.id);if(!t)return;S.tf={edit:t.id,data:t.data,hora:t.hora||'',de:t.de,para:t.para,linhas:t.itens.map(i=>({c:i.c,kg:String(i.kg).replace('.',','),pc:i.pc?String(i.pc):'',rk:String(i.rk).replace('.',',')}))};S.vcpAb={...(S.vcpAb||{}),trf:true};render()},
+  'tf-del':el=>{const t=S.transfs.find(x=>String(x.id)===el.dataset.id);if(!t)return;if(!confirm(`Apagar a transferência de ${dBR(t.data)} (${lojaNome(t.de)} → ${lojaNome(t.para)})?`))return;S.transfs=S.transfs.filter(x=>x!==t);save();render();toast('Transferência apagada.')},
+  'tf-salvar':()=>{const f=S.tf;if(!f.data){toast('Escolha a data.');return}if(+f.de===+f.para){toast('A loja que envia e a que recebe são a mesma.');return}
+    const itens=f.linhas.filter(x=>x.c||x.kg).map(x=>({c:x.c,kg:r3(num(x.kg)),pc:x.pc?+x.pc:null,rk:r2(num(x.rk))}));
+    if(!itens.length){toast('Coloque pelo menos uma carne.');return}
+    if(itens.some(i=>!i.c)){toast('Escolha a carne de cada linha.');return}
+    if(itens.some(i=>!(i.kg>0))){toast('Coloque os kg de cada carne.');return}
+    if(itens.some(i=>!(i.rk>0))){toast('Coloque o custo do kg de cada carne.');return}
+    const old=f.edit?S.transfs.find(x=>x.id===f.edit):null,t={id:old?old.id:'tf'+Date.now(),data:f.data,hora:f.hora||'',de:+f.de,para:+f.para,itens,por:quemSou(),quando:nowBR(),...(old?{criada:old.criada||old.quando,criadaPor:old.criadaPor||old.por}:{})};
+    S.transfs=[...S.transfs.filter(x=>x!==old),t];S.tf=tfNova();save();render();toast(old?'Transferência corrigida.':'Transferência salva.')},
   'pend-tg':()=>{S.pendAb=!S.pendAb;render()},
   'vcp-tg':el=>{const k=el.dataset.v;S.vcpAb={...(S.vcpAb||{}),[k]:!vcpAb(k)};render()},
   'cmp-mes':el=>{const v=el.dataset.v;if(!v){S.cmpSel=null}else{const C=cmpDados(),cur=new Set(C.sel);cur.has(v)?cur.delete(v):cur.add(v);if(!cur.size){toast('Escolha pelo menos um mês.');return}S.cmpSel=[...cur].sort()}render()},
@@ -3031,6 +3083,10 @@ const C={
 document.addEventListener('change',e=>{const t=e.target,id=t.id||'';
   if(C[id])return C[id](t);
   let m;
+  if((m=id.match(/^tf-(data|hora|de|para)$/))&&S.tf){S.tf[m[1]]=m[1]==='de'||m[1]==='para'?+t.value:t.value;
+    if(m[1]==='de')S.tf.linhas.forEach(x=>{if(x.c)x.rk=String(r2(custoDe(S.tf.de,x.c))).replace('.',',')});render();return}
+  if((m=id.match(/^tf-(c|kg|pc|rk)-(\d+)$/))&&S.tf){const x=S.tf.linhas[+m[2]];if(!x)return;x[m[1]]=t.value;
+    if(m[1]==='c'&&t.value){const ck=custoDe(S.tf.de,t.value);x.rk=ck>0?String(r2(ck)).replace('.',','):''}render();return}
   if((m=id.match(/^ce-kg-(\d+)$/))){const x=S.cEd?.L[+m[1]];if(x){x.kg=t.value;render()}return}
   if(id==='ce-np'||id==='ce-nkg'){if(S.cEd)S.cEd[id.slice(3)]=t.value;return}
   if((m=id.match(/^lj-(nome|cidade|cnpj|cert|modo)-(\d+)$/))){const l=S.lojas.find(x=>x.id===+m[2]);if(!l)return;
