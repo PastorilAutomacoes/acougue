@@ -765,7 +765,7 @@ const linhasPadrao=()=>['traseiro','dianteiro','costela'].map(g=>({c:'G:'+g,kg:'
 function newNForm(loja){return{loja:loja||1,nf:'',forn:'',data:todayISO(),kg:'',v:''}}
 function newCd(loja){return{loja:loja||1,data:todayISO(),modo:'app',pes:[],prod:null,peso:'',linhas:[{c:'',kg:''}]}}
 const S={role:'conferente',loja:1,tab:'nf',openId:null,filtro:'todas',nfiltro:'todas',mesC:MES0,mesN:MES0,bal:{a:CONTS[0],b:CONTS[2]},set:structuredClone(DEF_SET),
-  lojas:structuredClone(DEF_LOJAS),prods:{},vimp:{},vend:{},custos:{},comps:{},pags:{},pn:{p:'semana',a:'',b:''},apps:[],notasApp:[],conts:[],mods:{},used:[],apel:{},
+  lojas:structuredClone(DEF_LOJAS),prods:{},vimp:{},vend:{},custos:{},comps:{},pags:{},pn:{p:'mes',a:'',b:''},apps:[],notasApp:[],conts:[],mods:{},used:[],apel:{},
   recs:[],rf:newRf(1),draft:newDraft(1),nForm:newNForm(1),cd:newCd(1),done:null,doneComp:false,confirm:false,cconfirm:false,resetAsk:false,users:[],user:null,uForm:{nome:'',usuario:'',perfil:'conferente',loja:1},uCode:null,
   lg:{modo:'entrar',usuario:'',erro:'',busy:false},boot:true};
 const curUser=()=>S.users.find(u=>u.id===S.user)||null;
