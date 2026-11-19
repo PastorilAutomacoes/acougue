@@ -502,6 +502,14 @@ table.vx{width:100%;border-collapse:collapse;font-size:.84rem;font-family:'IBM P
 .pn-nl{display:grid;grid-template-columns:1fr 46px 56px 96px 150px;gap:12px;align-items:center;padding:8px 4px;border:0;border-top:1px solid var(--line);background:none;font:inherit;color:inherit;text-align:left;width:100%}
 button.pn-nl{cursor:pointer}button.pn-nl:hover{background:var(--surface-2)}
 .pn-nk{color:var(--muted);font-size:.86rem;font-variant-numeric:tabular-nums}
+.cm4{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:760px}
+.cm4 th{background:#F3F6FC;padding:9px 10px;font-size:.85rem;text-align:center;border-bottom:1px solid var(--line)}
+.cm4 th small{display:block;color:var(--muted);font-weight:400;font-size:.7rem}.cm4 th:first-child{text-align:left;width:26%}.cm4 th.md{background:#E6ECF8}
+.cm4 td{padding:10px;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle}.cm4 tr:last-child td{border-bottom:0}.cm4 td:first-child{text-align:left}
+.cm4 .rt{font-weight:700;display:flex;align-items:center;gap:8px}.cm4 .rt i{width:11px;height:11px;border-radius:3px;display:inline-block;flex:none}
+.cm4 .rs{color:var(--muted);font-size:.75rem;margin-top:2px;padding-left:19px}
+.cm4 .v{font-family:Oswald,sans-serif;font-size:1.45rem;line-height:1.15;font-weight:600}.cm4 .s{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--muted);margin-top:2px}
+.cm4 td.best{background:#E8F6EE}.cm4 td.best .v{color:#16804A}.cm4 td.worst{background:#FDECEC}.cm4 td.worst .v{color:#C62828}.cm4 td.md{background:#F3F6FC}
 </style>
 
 <header class="top">
@@ -2350,51 +2358,23 @@ function vPainelLoja(l,a,b,pa,pb){const lj=S.lojas.find(x=>x.id===l),h=todayISO(
    Média = os últimos 3 meses fechados que todas as lojas com Brajan têm (ou um mês escolhido). */
 function cmpDados(){const LJ=S.lojas.map(l=>({l,D:vcpDados(l.id)})),com=LJ.filter(x=>x.D);
   const fech=com.length?com.map(x=>x.D.L.filter(r=>r.fechado).map(r=>r.m)).reduce((a,b)=>a.filter(m=>b.includes(m))):[];
-  const meses=fech.slice(-3),sel=S.cmpM&&fech.includes(S.cmpM)?[S.cmpM]:meses;
-  const K=['ck','cr','vk','vr','mck','mcr','mvk','mvr','sck','scr','svk','svr','pc','pmi','psu'];
-  LJ.forEach(x=>{if(!x.D||!sel.length)return;const R=x.D.L.filter(r=>sel.includes(r.m));x.t=Object.fromEntries(K.map(k=>[k,R.reduce((s,r)=>s+r[k],0)/sel.length]));
-    const a=sel[0]+'-01',b=fimMes(sel[sel.length-1]+'-01'),X=cortesDados(x.l.id,a,b);x.t.cgDev=X.deve/sel.length;x.t.cgVen=X.vk/sel.length;x.t.cgFal=Math.max(0,X.deve-X.vk)*X.pm/sel.length});
-  const T=com.length&&sel.length?Object.fromEntries([...K,'cgDev','cgVen','cgFal'].map(k=>[k,LJ.reduce((s,x)=>s+(x.t?.[k]||0),0)])):null;
-  return{LJ,fech,meses,sel,T}}
+  /* meses que dá para escolher: os que têm compra e venda em alguma loja (o aberto entra marcado "até dia N") */
+  const disp=[...new Set(com.flatMap(x=>x.D.L.filter(r=>r.ck>0&&r.vk>0).map(r=>r.m)))].sort();
+  const meses=fech.slice(-3),esc_=(S.cmpSel||[]).filter(m=>disp.includes(m)),sel=esc_.length?esc_:meses;
+  const K=['ck','cr','vk','vr','pc'];
+  LJ.forEach(x=>{if(!x.D||!sel.length)return;const R=x.D.L.filter(r=>sel.includes(r.m));x.t=Object.fromEntries(K.map(k=>[k,R.reduce((s,r)=>s+(r[k]||0),0)/sel.length]));x.temPag=x.D.temPag});
+  const T=com.length&&sel.length?Object.fromEntries(K.map(k=>[k,LJ.reduce((s,x)=>s+(x.t?.[k]||0),0)])):null;
+  const ab=sel.some(m=>!fech.includes(m)&&m>=todayISO().slice(0,7));
+  return{LJ,fech,meses,sel,T,disp,ab,escolhido:!!esc_.length}}
 /* linhas: [classe, rótulo, valor (para cor e média), formato, direção (1 maior é melhor, -1 menor é melhor, 0 sem cor), texto opcional] */
-const _sb=(v,c)=>v&&c?(v-c)/v:null,_al=t=>t.vk&&t.vr?(t.cr/t.vk)/(1-META_MG):null;
+const _sb=(v,c)=>v&&c?(v-c)/v:null;
+/* [rótulo, explicação, valor (cor: maior é melhor), número grande, linha de baixo] */
 const CMP_L=[
- ['sec s0','💰 Resumo do açougue (por mês)'],
- ['big','Lucro bruto total (carne + miúdos + suínos)',t=>(t.vr-t.cr)+(t.mvr-t.mcr)+(t.svr-t.scr),v=>kgI(v),1],
- ['','· da carne bovina',t=>t.vr-t.cr,v=>kgI(v),0],
- ['','· dos miúdos',t=>t.mvr-t.mcr,v=>kgI(v),0],
- ['','· dos suínos',t=>t.svr-t.scr,v=>kgI(v),0],
- ['sec s9','🔎 Conferência geral (tudo que deveria virar venda × tudo que foi vendido)'],
- ['key','Vendido ÷ deveria virar venda',t=>t.cgDev?t.cgVen/t.cgDev:null,v=>pc(v),1],
- ['','Faltou por mês (ao preço médio)',t=>t.cgFal,v=>v>1?rsK(v):'—',-1],
- ['sec','🥩 Carne bovina'],
- ['grp','Tudo que compro vende?'],
- ['','Compra kg',t=>t.ck,v=>kgI(v),0],['','Venda kg',t=>t.vk,v=>kgI(v),0],
- ['key','Venda ÷ Compra (kg)',t=>t.ck?t.vk/t.ck:null,v=>pc(v),1],
- ['','Compra R$ (com S.T.)',t=>t.cr,v=>kgI(v),0],['','Venda R$',t=>t.vr,v=>kgI(v),0],
- ['','R$ vendido por R$ 100 comprados',t=>t.cr?t.vr/t.cr*100:null,v=>kgI(v),1],
- ['grp','Dá lucro?'],
- ['','Custo do kg comprado',t=>t.ck?t.cr/t.ck:null,v=>F2.format(v),-1],
- ['','Custo do kg vendido',t=>t.vk?t.cr/t.vk:null,v=>F2.format(v),-1],
- ['','Preço médio de venda',t=>t.vk?t.vr/t.vk:null,v=>F2.format(v),1],
- ['','Sobra por kg vendido',t=>t.vk?(t.vr-t.cr)/t.vk:null,v=>F2.format(v),1],
- ['key','Sobra (Venda − Compra)',t=>_sb(t.vr,t.cr),v=>pc(v),1,t=>`${kgI(t.vr-t.cr)} · ${pc(_sb(t.vr,t.cr))}`],
- ['','Preço médio para chegar a 16%',t=>{const a=_al(t);return a&&t.vk?a/(t.vr/t.vk)-1:null},v=>pc(v),-1,t=>{const a=_al(t),pm=t.vk?t.vr/t.vk:0;return a&&pm?(a<=pm?`já acima (${F2.format(a)})`:`${F2.format(a)} (+${pc(a/pm-1)})`):'—'}],
- ['grp','E o pagamento?'],
- ['','Pago aos frigoríficos (parte da carne)',t=>t.pc,v=>kgI(v),0],
- ['key','Venda − Pago',t=>_sb(t.vr,t.pc),v=>pc(v),1,t=>t.pc?`${kgI(t.vr-t.pc)} · ${pc(_sb(t.vr,t.pc))}`:'—'],
- ['sec s2','🦴 Miúdos'],
- ['','Compra kg → Venda kg',t=>null,null,0,t=>`${kgI(t.mck)} → ${kgI(t.mvk)}`],
- ['key','Venda ÷ Compra (kg)',t=>t.mck?t.mvk/t.mck:null,v=>pc(v),1],
- ['','Compra R$ → Venda R$',t=>null,null,0,t=>`${kgI(t.mcr)} → ${kgI(t.mvr)}`],
- ['','R$ vendido por R$ 100 comprados',t=>t.mcr?t.mvr/t.mcr*100:null,v=>kgI(v),1],
- ['','Sobra (Venda − Compra)',t=>_sb(t.mvr,t.mcr),v=>pc(v),1,t=>`${kgI(t.mvr-t.mcr)} · ${pc(_sb(t.mvr,t.mcr))}`],
- ['sec s3','🐖 Suínos (corte)'],
- ['','Compra kg → Venda kg',t=>null,null,0,t=>`${kgI(t.sck)} → ${kgI(t.svk)}`],
- ['','Compra R$ → Venda R$',t=>null,null,0,t=>`${kgI(t.scr)} → ${kgI(t.svr)}`],
- ['','R$ vendido por R$ 100 comprados',t=>t.scr?t.svr/t.scr*100:null,v=>kgI(v),1],
- ['','Sobra (Venda − Compra)',t=>_sb(t.svr,t.scr),v=>pc(v),1,t=>`${kgI(t.svr-t.scr)} · ${pc(_sb(t.svr,t.scr))}`]];
-const cmpTxt=(r,t)=>{if(!t)return '';if(r[5])return r[5](t);const v=r[2](t);return v==null||!isFinite(v)?'—':r[3](v)};
+ ['Operação','Venda − Compra · quanto sobra da venda','#0E1A3A',t=>_sb(t.vr,t.cr),v=>pc(v),t=>`R$ ${kgI(t.vr-t.cr)}/mês`],
+ ['Financeiro','Venda − Pago · o que sobrou no caixa','#0E6B5A',t=>t.pc?_sb(t.vr,t.pc):null,v=>pc(v),t=>t.pc?`R$ ${kgI(t.vr-t.pc)}/mês`:'sem pagamentos'],
+ ['Venda ÷ compra (kg)','de cada 100 kg comprados, quantos viram venda','#1846C4',t=>t.ck?t.vk/t.ck:null,v=>pc(v),t=>`${kgI(t.vk)} de ${kgI(t.ck)} kg`],
+ ['Sobra por kg vendido','preço médio − custo do kg vendido','#E0A100',t=>t.vk?(t.vr-t.cr)/t.vk:null,v=>'R$ '+F2.format(v),t=>t.vk?`custo ${F2.format(t.cr/t.vk)} · preço ${F2.format(t.vr/t.vk)}`:'—']];
+const cmpTxt=(r,t)=>{if(!t)return '—';const v=r[3](t);return v==null||!isFinite(v)?'—':r[4](v)};
 /* ---------- estoque agora (prévia): última contagem + notas que chegaram − vendas do Brajan ---------- */
 /* famílias = como a carne entra (pelo % da peça); cada código aparece na sua linha, a entrada é repartida pela venda da própria loja */
 const EQ_F=[
@@ -2473,33 +2453,29 @@ function vEstoque(){if(S.role!=='gestor')return '';
   return `<section class="card es">${vcpSec('estq','📦 Estoque agora (prévia)',`${L.length} loja${L.length>1?"s":""}${nTot?` · ${nTot} carne${nTot>1?'s':''} parada${nTot>1?'s':''}`:''} · toque para abrir`,`<p class="hint" style="margin:0 0 8px">Última contagem + notas que chegaram − vendas do Brajan. 🟢 até ${EQ_LIM[0]} dias · 🟡 ${EQ_LIM[0]+1} a ${EQ_LIM[1]} · 🔴 mais de ${EQ_LIM[1]}. Só o gestor vê.</p>
     ${abas}<p class="hint" style="margin:6px 0">Contagem de ${dBR(E.ult).slice(0,5)} · dias de estoque = kg ÷ venda média dos últimos 14 dias</p>
     ${ord?`<button type="button" class="rc-ch" data-act="es-ord" data-v="" style="margin-bottom:6px">▤ Agrupar por peça</button>`:''}<div class="tw"><table class="vx es-t"><tr>${hs('nome','Carne')}${hs('kg','Estoque')}${hs('dia','Vende por dia')}${hs('dias','Dias de estoque')}</tr>${tb}</table></div>`)}</section>`}
-function vComparativo(){if(S.role!=='gestor')return '';const C=cmpDados();
-  if(!C.sel.length)return `<section class="card"><h3>Comparativo das lojas</h3><p class="pn-vazio">Ainda não tem um mês fechado com dados do Brajan em todas as lojas.</p></section>`;
-  const per=C.sel.length>1?`${mesRot(C.sel[0])} a ${mesRot(C.sel[C.sel.length-1])}`:mesRot(C.sel[0]),com=C.LJ.filter(x=>x.t),nm=x=>esc(x.l.nome);
-  const M=C.T?Object.fromEntries(Object.entries(C.T).map(([k,v])=>[k,v/com.length])):null; /* média das lojas por mês */
-  const th=`<tr><th></th>${C.LJ.map(x=>`<th>${x.D?`<button type="button" class="lnk" data-act="pn-loja" data-id="${x.l.id}">${nm(x)}</button>`:nm(x)}<small>${esc(x.l.cidade||'')}</small></th>`).join('')}<th class="m3">Média das lojas</th></tr>`;
-  const tb=CMP_L.map(r=>{if(r[0].startsWith('sec')||r[0]==='grp')return `<tr class="${r[0]}"><td colspan="${C.LJ.length+2}">${r[1]}</td></tr>`;
-    const vs=C.LJ.map(x=>x.t?r[2](x.t):null),ok=vs.filter(v=>v!=null&&isFinite(v));let hi=null,lo=null;
-    if(r[4]&&ok.length>1){const mx=Math.max(...ok),mn=Math.min(...ok);if(mx!==mn){hi=r[4]>0?mx:mn;lo=r[4]>0?mn:mx}}
-    return `<tr${r[0]?` class="${r[0]}"`:''}><td>${r[1]}</td>${C.LJ.map((x,i)=>!x.D?`<td class="na">sem Brajan</td>`:`<td${vs[i]!=null&&vs[i]===hi?' class="best"':vs[i]!=null&&vs[i]===lo?' class="worst"':''}>${cmpTxt(r,x.t)}</td>`).join('')}<td class="m3">${M?cmpTxt(r,M):'—'}</td></tr>`}).join('');
-  /* frase */
-  const lucro=t=>(t.vr-t.cr)+(t.mvr-t.mcr)+(t.svr-t.scr),ord=[...com].sort((a,b)=>lucro(b.t)-lucro(a.t));
-  const fr=[`💰 <b>Lucro bruto do açougue por mês</b> (carne + miúdos + suínos): ${ord.map(x=>`${nm(x)} <b>${rsK(lucro(x.t))}</b>`).join(' · ')}.`,
-    `🥩 <b>Para chegar a ${pc(META_MG)} na carne:</b> ${com.map(x=>{const a=_al(x.t),pm=x.t.vk?x.t.vr/x.t.vk:0;return a&&pm?`${nm(x)} ${a<=pm?'já está acima':`precisa subir o preço médio ${pc(a/pm-1)}`}`:''}).filter(Boolean).join('; ')}.`,
-    (()=>{const su=[...com].filter(x=>x.t.svr).sort((a,b)=>(b.t.svr-b.t.scr)-(a.t.svr-a.t.scr));return su.length>1&&(su[0].t.svr-su[0].t.scr)!==(su[su.length-1].t.svr-su[su.length-1].t.scr)?`🐖 <b>Suínos:</b> ${nm(su[0])} ganha ${rsK(su[0].t.svr-su[0].t.scr)}/mês; ${nm(su[su.length-1])} só ${rsK(su[su.length-1].t.svr-su[su.length-1].t.scr)}/mês.`:''})(),
-    (()=>{const mi=[...com].filter(x=>x.t.mck).sort((a,b)=>b.t.mvk/b.t.mck-a.t.mvk/a.t.mck);return mi.length>1&&mi[0].t.mvk/mi[0].t.mck!==mi[mi.length-1].t.mvk/mi[mi.length-1].t.mck?`🦴 <b>Miúdos:</b> ${nm(mi[0])} vende ${pc(mi[0].t.mvk/mi[0].t.mck)} do que compra; ${nm(mi[mi.length-1])} só ${pc(mi[mi.length-1].t.mvk/mi[mi.length-1].t.mck)}.`:''})()].filter(Boolean).join('<br>');
-  const bt=(v,t)=>`<button type="button" class="btn sm${(S.cmpM||'')===v?' on':''}" data-act="cmp-m" data-v="${v}">${t}</button>`;
-  return `<section class="card vcp"><div class="card-h"><div><h3>Comparativo das lojas</h3><p class="hint">Valores em R$ por mês, média de ${per}. Mesmas contas do quadro Venda × Compra × Pagamento de cada loja. Toque no nome da loja para abrir o painel dela.</p></div>
-    <div class="inrow">${bt('',`Média ${C.meses.length>1?C.meses.length+' meses':'do mês'}`)}${C.fech.slice(-3).map(m=>bt(m,mesRot(m))).join('')}<button type="button" class="btn sm xl" data-act="cmp-xls">⬇ Excel</button></div></div>
-    <div class="vcp-dec">${fr}</div>
-    <div class="tw"><table class="vx cmp"><thead>${th}</thead><tbody>${tb}</tbody></table></div>
-    <p class="hint"><span class="pill ok">verde</span> melhor loja na linha · <span class="pill crit">vermelho</span> pior · coluna verde = média das lojas por mês. Pago: cada boleto é dividido pela nota que paga. Suínos: o kg vendido passa do comprado porque um corte vira outro; compare pela sobra.</p></section>`}
+function vComparativo(){if(S.role!=='gestor')return '';const C=cmpDados(),com=C.LJ.filter(x=>x.t);
+  if(!C.sel.length||!com.length)return `<section class="card es">${vcpSec('cmp','⚖️ Comparativo das lojas','ainda não tem mês com dados do Brajan nas lojas','<p class="pn-vazio">Sem dados.</p>')}</section>`;
+  const per=C.sel.length>1?`${mesRot(C.sel[0])} a ${mesRot(C.sel[C.sel.length-1])}`:mesRot(C.sel[0]),nm=x=>esc(x.l.nome),hj=todayISO();
+  const M=Object.fromEntries(Object.entries(C.T).map(([k,v])=>[k,v/com.length])); /* média das lojas por mês */
+  const on=new Set(C.sel);
+  const chips=`<div class="rc-bar vcp-mes"><span class="l">Meses</span>${C.disp.slice(-4).map(m=>{const fe=C.fech.includes(m)||m<hj.slice(0,7);return `<button type="button" class="rc-ch${on.has(m)?' on':''}" data-act="cmp-mes" data-v="${m}">${on.has(m)?'✓ ':''}${mesRot(m)}${fe?'':` (até ${+hj.slice(8)})`}</button>`}).join('')}
+    ${C.escolhido?'<button type="button" class="rc-ch" data-act="cmp-mes" data-v="">↺ Padrão (3 últimos fechados)</button>':''}<span class="hint" style="margin:0 0 0 6px">${C.ab?'⚠ mês aberto na média: ainda tem nota por chegar':'toque para escolher os meses da média'}</span>
+    <button type="button" class="btn sm xl" data-act="cmp-xls" style="margin-left:auto">⬇ Excel</button></div>`;
+  const th=`<tr><th></th>${com.map(x=>`<th><button type="button" class="lnk" data-act="pn-loja" data-id="${x.l.id}">${nm(x)}</button><small>${esc(x.l.cidade||'')}</small></th>`).join('')}<th class="md">Média das ${com.length} lojas</th></tr>`;
+  const tb=CMP_L.map(r=>{const vs=com.map(x=>r[3](x.t)),ok=vs.filter(v=>v!=null&&isFinite(v));let hi=null,lo=null;
+    if(ok.length>1){const mx=Math.max(...ok),mn=Math.min(...ok);if(mx!==mn){hi=mx;lo=mn}}
+    const cel=(t,cls)=>`<td${cls?` class="${cls}"`:''}><div class="v">${cmpTxt(r,t)}</div><div class="s">${t?r[5](t):''}</div></td>`;
+    return `<tr><td><div class="rt"><i style="background:${r[2]}"></i>${r[0]}</div><div class="rs">${r[1]}</div></td>${com.map((x,i)=>cel(x.t,vs[i]!=null&&vs[i]===hi?'best':vs[i]!=null&&vs[i]===lo?'worst':'')).join('')}${cel(M,'md')}</tr>`}).join('');
+  const fora=C.LJ.filter(x=>!x.t).map(nm);
+  const res=`carne bovina · ${per} · operação média ${pc(_sb(M.vr,M.cr))} · toque para abrir`;
+  return `<section class="card es">${vcpSec('cmp','⚖️ Comparativo das lojas',res,`${chips}
+    <div class="tw"><table class="cm4">${th}${tb}</table></div>
+    <p class="hint" style="margin-top:8px"><span class="pill ok">verde</span> melhor loja no número · <span class="pill crit">vermelho</span> pior · valores por mês, mesmas contas do quadro Venda × Compra × Pagamento de cada loja · toque no nome da loja para abrir o painel dela${fora.length?` · ${fora.join(', ')} fica de fora (sem Brajan)`:''}.</p>`)}</section>`}
 function exportarCmp(){if(typeof XLSX==='undefined'){toast('Sem a biblioteca do Excel. Verifique a internet e tente de novo.');return}
-  const C=cmpDados();if(!C.sel.length)return;const com=C.LJ.filter(x=>x.t),M=C.T?Object.fromEntries(Object.entries(C.T).map(([k,v])=>[k,v/com.length])):null;
-  const aoa=[['Comparativo das lojas (R$ por mês)',C.sel.map(mesRot).join(', ')],[`Gerado em ${nowBR()}`],[],['',...C.LJ.map(x=>x.l.nome),'Média das lojas']];
-  CMP_L.forEach(r=>{if(r[0].startsWith('sec')||r[0]==='grp'){aoa.push(r[0]==='grp'?[]:[],[r[1].replace(/^\S+\s/,'')]);return}
-    aoa.push([r[1],...C.LJ.map(x=>x.t?cmpTxt(r,x.t):'sem Brajan'),M?cmpTxt(r,M):''])});
-  const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:40},...C.LJ.map(()=>({wch:20})),{wch:20}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Comparativo');
+  const C=cmpDados(),com=C.LJ.filter(x=>x.t);if(!C.sel.length||!com.length)return;const M=Object.fromEntries(Object.entries(C.T).map(([k,v])=>[k,v/com.length]));
+  const aoa=[['Comparativo das lojas · carne bovina (por mês)',C.sel.map(mesRot).join(', ')],[`Gerado em ${nowBR()}`],[],['',...com.map(x=>x.l.nome),`Média das ${com.length} lojas`]];
+  CMP_L.forEach(r=>{aoa.push([r[0],...com.map(x=>cmpTxt(r,x.t)),cmpTxt(r,M)],['  '+r[1],...com.map(x=>r[5](x.t)),r[5](M)])});
+  const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:44},...com.map(()=>({wch:26})),{wch:26}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Comparativo');
   XLSX.writeFile(wb,`Comparativo das lojas ${todayISO()}.xlsx`);toast('Planilha gerada.')}
 /* sobra real da carne bovina (venda − compra) na média dos meses fechados: o número que vale, no lugar da margem do cadastro */
 function sobraReal(l){const D=vcpDados(l),M=D?.med;if(!M||!M.vr)return null;return{v:(M.vr-M.cr)/M.vr,per:M.per}}
@@ -2736,7 +2712,7 @@ const A={
   'es-lj':el=>{S.esLj=+el.dataset.v;render()},
   'pend-tg':()=>{S.pendAb=!S.pendAb;render()},
   'vcp-tg':el=>{const k=el.dataset.v;S.vcpAb={...(S.vcpAb||{}),[k]:!vcpAb(k)};render()},
-  'cmp-m':el=>{S.cmpM=el.dataset.v||'';render()},
+  'cmp-mes':el=>{const v=el.dataset.v;if(!v){S.cmpSel=null}else{const C=cmpDados(),cur=new Set(C.sel);cur.has(v)?cur.delete(v):cur.add(v);if(!cur.size){toast('Escolha pelo menos um mês.');return}S.cmpSel=[...cur].sort()}render()},
   'cmp-xls':()=>exportarCmp(),
   'bal-x':el=>{S.balX=S.balX===el.dataset.k?null:el.dataset.k;render()},
   'pn-per':el=>{if(el.dataset.v==='livre'&&!(S.pn.a&&S.pn.b)){const x=pnPeriodo();S.pn.a=x.a;S.pn.b=x.b}S.pn.p=el.dataset.v;render()},
