@@ -2225,8 +2225,8 @@ function vPainelCortes(l){if(S.role!=='gestor')return null;const P=cortesPer(l);
   const gDr=t(`<tr><th>Dianteiro</th><th>Nossas lojas<small>${k0(R.kgD)} kg pesados</small></th><th>Embrapa</th><th>Usado</th></tr>`,
     R.D.filter(f=>!f.ocultar).map(f=>`<tr><td>${f.n}</td><td>${f.nos==null?'—':F1.format(f.nos)+'%'}</td><td>${f.emb==null?'—':F1.format(f.emb)+'%'}</td><td class="m3">${f.usa==null?'—':F1.format(f.usa)+'%'}</td></tr>`).join(''));
   const totF=ruins.reduce((s,x)=>s+fr(x),0);
-  const res=geral!=null?`conferência geral ${pc(geral)}${totF>1?` · onde olhar: ${rsK(totF)}`:''}`:'';
-  return {res,html:`<div class="cts">${kpis}${olhar}
+  const res=geral!=null?`conferência geral ${pc(geral)}`:'';
+  return {res,html:`<div class="cts">${kpis}
     ${vcpSec('cdet','Todos os cortes',`${cods.length} cortes vendidos · ordenar e filtrar`,barras+corpo,'sub')}
     ${vcpSec('ref','Como o esperado é calculado',`traseiro ${pc(REND_T)} (repartido nos cortes); dianteiro ${pc(CARNE_D)}; ponta de agulha ${pc(REND_PA)};  caixaria ${pc(REND_CX)}`,`<p class="hint">Usado = (nossas conferências pesadas corte a corte + Embrapa) ÷ 2. Melhora sozinho a cada conferência. No dianteiro a paleta e o acém viram segunda, corte americano e moída, por isso ele é conferido em grupo.</p><div class="pn-row2"><div>${g1}</div><div>${gDr}</div></div>`,'sub')}
   </div>`}}
