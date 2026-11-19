@@ -2463,7 +2463,7 @@ function vEstoque(){if(S.role!=='gestor')return '';
   const PN={T:'Traseiro',C:'Costela + fraldinha',D:'Dianteiro'};
   const cel=(c,g)=>g.sus?`<span class="es-c sus" title="contagem suspeita: confira e corrija">⚠ contagem suspeita</span>`:mp(c)?'<span class="es-c nd">vira moída/segunda</span>':g.neg?'<span class="es-c nd" title="vendeu mais do que entrou desde a contagem">acabou? conferir</span>':g.est<.5&&!g.dia?'<span class="es-c nd">—</span>':`<span class="es-c ${cl(g.dias)}"><b>${fd(g.dias)}</b></span>`;
   const linha=c=>{const g=E.G[c];return `<tr><td>${eqNome(c)}</td><td>${g.neg?'—':k1(g.est)+' kg'}</td><td>${g.dia>.05?k1(g.dia)+' kg':'—'}</td><td>${cel(c,g)}</td></tr>`};
-  const tem=c=>{const g=E.G[c];return g&&(g.est>=.5||g.v14>.5)},ord=S.esOrd||'',dir=S.esDir||-1;
+  const tem=c=>{const g=E.G[c];return g&&(g.est>=.5||g.v14>.5)},ord=S.esOrd??'dias',dir=S.esDir||-1; /* abre ordenado por dias de estoque (maior primeiro) */
   /* ordenar pelo título da coluna; sem ordem, agrupa por peça */
   const val={nome:c=>eqNome(c),kg:c=>E.G[c].neg?0:E.G[c].est,dia:c=>E.G[c].dia,dias:c=>{const g=E.G[c];return g.sus||mp(c)||g.neg?null:g.dias===Infinity?1e9:g.dias}}[ord];
   const tb=val?EQ_F.flatMap(f=>f[2]).filter(tem).sort((x,y)=>{const a=val(x),b=val(y);if(a==null||b==null)return (a==null)-(b==null);return (typeof a==='string'?a.localeCompare(b):a-b)*dir}).map(linha).join('')
@@ -2732,7 +2732,7 @@ const A={
   'ct-ord':el=>{const v=el.dataset.v;if(v==='grp'){S.ctOrd='grp'}else if(S.ctOrd===v){S.ctDir=-(S.ctDir||-1)}else{S.ctOrd=v;S.ctDir=['nome','tr','r'].includes(v)?1:-1}render()},'ct-fil':el=>{S.ctFil=el.dataset.v;render()},'ct-prob':()=>{S.ctProb=!S.ctProb;render()},
   'vcp-mes':el=>{const l=+el.dataset.id,v=el.dataset.v,M={...(S.vcpMes||{})};if(!v){delete M[l]}else{const D=vcpDados(l),cur=new Set(M[l]||D.F.map(r=>r.m));cur.has(v)?cur.delete(v):cur.add(v);if(!cur.size){toast('Escolha pelo menos um mês.');return}M[l]=[...cur].sort()}S.vcpMes=M;REF_C=null;render()},
   'ce-ir':el=>{S.tab='contagem';guardaAba();abrirCorr(+el.dataset.l,el.dataset.d);render();setTimeout(()=>document.getElementById('ced')?.scrollIntoView({behavior:'smooth',block:'start'}),50)},
-  'es-ord':el=>{const v=el.dataset.v;if(!v)S.esOrd='';else if(S.esOrd===v)S.esDir=-(S.esDir||-1);else{S.esOrd=v;S.esDir=v==='nome'?1:-1}render()},
+  'es-ord':el=>{const v=el.dataset.v;if(!v)S.esOrd='';else if((S.esOrd??'dias')===v)S.esDir=-(S.esDir||-1);else{S.esOrd=v;S.esDir=v==='nome'?1:-1}render()},
   'es-lj':el=>{S.esLj=+el.dataset.v;render()},
   'pend-tg':()=>{S.pendAb=!S.pendAb;render()},
   'vcp-tg':el=>{const k=el.dataset.v;S.vcpAb={...(S.vcpAb||{}),[k]:!vcpAb(k)};render()},
