@@ -1513,8 +1513,7 @@ function vContagem(){
       <div class="rows">${salvas.map(c=>`<div class="row static"><div class="row-main"><b>${dBR(c.data)}${S.loja?'':' · '+esc(lojaNome(c.loja))}</b><span>${c.modo==='exemplo'?'Contagem de exemplo':c.modo==='app'?'Pesada no app':'Lançada do papel'}${c.por!=='—'?' · '+esc(c.por):''}</span>${c.corr?`<span><span class="pill warn">Corrigida por ${esc(c.corr.por)}</span></span>`:''}</div>
         <div class="row-side"><span class="num">${kg(bovKg(c.itens))} kg</span>${g?`<span class="hint num">${rs(bovRs(c.itens))}</span>`:''}${c.modo==='exemplo'?'':`<div class="inrow"><button type="button" class="btn sm" data-act="zap" data-txt="${esc(msgCont(c))}" data-n="${esc(S.set.zap[c.loja]||S.set.zap.dir||'')}">WhatsApp</button>${S.role==='gestor'?`<button type="button" class="btn sm blue" data-act="ce-abre" data-l="${c.loja}" data-d="${c.data}">Corrigir</button>`:''}</div>`}</div></div>`).join('')}</div>
     </section>
-    ${vTransf()}
-  </div></div>`;
+  </div></div>${vTransf()}`;
 }
 /* transferência entre lojas: tira de uma loja e põe na outra (estoque, compras, balanço e rendimento) */
 const tfNova=()=>({data:todayISO(),hora:'',de:3,para:1,linhas:[{c:'',kg:'',pc:'',rk:''}]});
