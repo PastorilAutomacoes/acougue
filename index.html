@@ -2421,7 +2421,7 @@ const EQ_F=[
  ['D','bl',['33717','33721','31397','67866','33720','37608','Lmviigk94']],['D','peito',['31407']],['D','moida',['31400']]];
 /* códigos da pesagem do app que são a mesma carne do caixa */
 const EQ_AL={'1001':'31409','1012':'31405','1013':'31405','1003':'33730','1002':'31393','1007':'31402','1019':'31393','1004':'31396','1005':'31394','1006':'31395','1009':'31403','1008':'31404','1011':'33721','1014':'31397','1015':'31407','1016':'31400','1017':'31400'};
-const EQ_LIM=[4,6]; /* até 4 dias normal · 5 a 6 atenção · 7 ou mais parada (definido pelo gestor) */
+const EQ_LIM=[5,7]; /* até 5 dias normal · 5 a 7 atenção · mais de 7 parada (definido pelo gestor) */
 const eqNome=c=>PM[c]?.n||(NOME_BJ(c).replace(/^CB\s+/i,'').replace(/\s+KG$/i,'').toLowerCase().replace(/^./,x=>x.toUpperCase()))||c;
 function estqLoja(l){const h=todayISO(),R=refCortes(),fam={},susp=[];EQ_F.forEach(f=>f[2].forEach(c=>fam[c]=f));
   const cts=S.conts.filter(c=>c.loja===l).sort((a,b)=>a.data.localeCompare(b.data));if(!cts.length)return null;
@@ -2488,7 +2488,7 @@ function vEstoque(){if(S.role!=='gestor')return '';
     :['T','C','D'].map(p=>{const rows=EQ_F.filter(f=>f[0]===p).flatMap(f=>f[2]).filter(tem);if(!rows.length)return '';return `<tr class="es-g"><td colspan="4">${PN[p]}</td></tr>`+rows.map(linha).join('')}).join('');
   const hs=(k,t)=>`<th class="rc-s${ord===k?' on':''}" data-act="es-ord" data-v="${k}" title="Toque para ordenar">${t}${ord===k?(dir>0?' ▲':' ▼'):' <span class="rc-si">⇅</span>'}</th>`;
   const nTot=L.reduce((t,x)=>t+nPar(x),0);
-  return `<section class="card es">${vcpSec('estq','📦 Estoque agora (prévia)',`${L.length} loja${L.length>1?"s":""}${nTot?` · ${nTot} carne${nTot>1?'s':''} parada${nTot>1?'s':''}`:''} · toque para abrir`,`<p class="hint" style="margin:0 0 8px">Última contagem + notas que chegaram − vendas do Brajan. 🟢 até ${EQ_LIM[0]} dias · 🟡 ${EQ_LIM[0]+1} a ${EQ_LIM[1]} · 🔴 mais de ${EQ_LIM[1]}. Só o gestor vê.</p>
+  return `<section class="card es">${vcpSec('estq','📦 Estoque agora (prévia)',`${L.length} loja${L.length>1?"s":""}${nTot?` · ${nTot} carne${nTot>1?'s':''} parada${nTot>1?'s':''}`:''} · toque para abrir`,`<p class="hint" style="margin:0 0 8px">Última contagem + notas que chegaram − vendas do Brajan. 🟢 até ${EQ_LIM[0]} dias · 🟡 ${EQ_LIM[0]} a ${EQ_LIM[1]} · 🔴 mais de ${EQ_LIM[1]}. Só o gestor vê.</p>
     ${abas}<p class="hint" style="margin:6px 0">Contagem de ${dBR(E.ult).slice(0,5)} · dias de estoque = kg ÷ venda média dos últimos 14 dias</p>
     ${ord?`<button type="button" class="rc-ch" data-act="es-ord" data-v="" style="margin-bottom:6px">▤ Agrupar por peça</button>`:''}<div class="tw"><table class="vx es-t"><tr>${hs('nome','Carne')}${hs('kg','Estoque')}${hs('dia','Vende por dia')}${hs('dias','Dias de estoque')}</tr>${tb}</table></div>`)}</section>`}
 function vComparativo(){if(S.role!=='gestor')return '';const C=cmpDados(),com=C.LJ.filter(x=>x.t);
