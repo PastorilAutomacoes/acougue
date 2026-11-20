@@ -1670,7 +1670,7 @@ function vNF(){
   const listaHTML=()=>`<div class="rows">${recebidas.length?recebidas.map(r=>{const c=confDoRec(r),trav=!g&&(r.lock||!!c);
       return `<div class="row static"><div class="row-main"><b>NF ${esc(r.nf)} · ${esc(fnome(r))}</b><span>${S.loja?'':esc(lojaNome(r.loja))+' · '}${dBR(r.data)} ${r.hora} · ${esc(r.por)}${g?` · ${r.dig?'pesos digitados':'às cegas'} · ${notaDe(r)?'XML ✓':'aguardando XML'}`:''}</span></div>
       <div class="row-side">${S.recDel===r.id?`<span class="hint">${c?'Excluir a nota <b>e a conferência</b>?':'Excluir esta nota?'}</span><div class="inrow"><button type="button" class="btn sm" data-act="rec-del-no">Não</button><button type="button" class="btn sm pri" data-act="rec-del-ok" data-id="${r.id}">Excluir</button></div>`
-        :`${c?statusPill(analise(c)):`<button type="button" class="btn sm pri" data-act="startrec" data-id="${r.id}">Conferir</button>`}<div class="inrow">${!trav?`<button type="button" class="btn sm ghost" data-act="rec-edit" data-id="${r.id}">Corrigir</button>`:''}${podeExcluirRec(r)?`<button type="button" class="btn sm ghost" data-act="rec-del" data-id="${r.id}">Excluir</button>`:''}</div>`}</div></div>`}).join('')
+        :`${c?statusPill(analise(c)):`<button type="button" class="btn sm pri" data-act="startrec" data-id="${r.id}">${S.draft.rec===r.id&&S.draft.pes.length?`▶ Continuar (${S.draft.pes.length} pesos)`:'Conferir'}</button>`}<div class="inrow">${!trav?`<button type="button" class="btn sm ghost" data-act="rec-edit" data-id="${r.id}">Corrigir</button>`:''}${podeExcluirRec(r)?`<button type="button" class="btn sm ghost" data-act="rec-del" data-id="${r.id}">Excluir</button>`:''}</div>`}</div></div>`}).join('')
       :'<div class="empty">Nenhuma nota recebida ainda.</div>'}</div>`;
   return `<div class="nfwrap">
     ${acc('rec',1,ed?'Corrigir nota recebida':'Receber nota','',recebHTML)}
@@ -2834,6 +2834,8 @@ const A={
     save();render();toast(`NF ${r.nf} excluída das notas recebidas.`)},
   startrec:el=>{const d=S.draft,r=S.recs.find(x=>x.id===el.dataset.id);if(!r)return;
     if(d.pes.length&&d.rec!==r.id){toast('Há uma conferência em andamento. Finalize ou remova as pesagens dela antes.');S.tab='conferir';render();return}
+    /* mesma nota já com pesagens: só volta para a conferência, sem apagar nada */
+    if(d.rec===r.id&&d.pes.length){S.done=null;S.tab='conferir';guardaAba();render();scrollTo(0,0);toast(`Continuando a NF ${r.nf}: ${d.pes.length} pesage${d.pes.length>1?'ns':'m'} guardada${d.pes.length>1?'s':''}.`);return}
     S.draft={...newDraft(r.loja),rec:r.id,nf:r.nf,forn:r.forn,chave:r.chave,data:r.data,grupo:d.grupo,modo:d.modo,tara:d.tara};
     S.done=null;S.tab='conferir';save();render();scrollTo(0,0)},
   trocarnota:()=>{const d=S.draft;if(d.pes.length)return;d.rec=null;save();render()},
@@ -2862,7 +2864,8 @@ const A={
     window.open(waLink(el.dataset.n,txt),'_blank','noopener')},
   nova:()=>{S.done=null;render()},
   comp:el=>{const d=S.draft;
-    if(d.pes.length&&!d.comp){toast('Há uma conferência em andamento. Finalize ou remova as pesagens dela antes do complemento.');return}
+    if(d.pes.length&&d.comp!==el.dataset.id){toast('Há uma conferência em andamento. Finalize ou remova as pesagens dela antes do complemento.');S.tab='conferir';render();return}
+    if(d.pes.length){S.done=null;S.openId=null;S.tab='conferir';guardaAba();render();scrollTo(0,0);return} /* mesmo complemento: continua de onde parou */
     const c=getConf(el.dataset.id);S.draft={...newDraft(c.loja),comp:c.id,nf:c.nf,forn:c.forn,grupo:d.grupo,modo:d.modo,tara:d.tara};S.done=null;S.openId=null;S.tab='conferir';save();render();scrollTo(0,0)},
   'comp-cancel':()=>{S.draft=newDraft(S.draft.loja);S.confirm=false;save();render()},
   cmodo:el=>{S.cd.modo=el.dataset.v;S.cconfirm=false;save();render()},
