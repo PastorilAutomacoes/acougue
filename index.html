@@ -1994,6 +1994,8 @@ const CORES_LJ=['#1846C4','#16A39E','#E0A21B','#8E5BD0','#D0453A','#55627F'];
    mês ou semana em andamento compara só com os mesmos dias do período anterior (01–11/10 contra 01–11/11). */
 const fimMes=iso=>{const y=+iso.slice(0,4),m=+iso.slice(5,7);return `${iso.slice(0,8)}${pad(new Date(y,m,0).getDate())}`};
 const mesAntes=(iso,k)=>{const d=new Date(+iso.slice(0,4),+iso.slice(5,7)-1-k,1);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-01`};
+/* os cálculos do app só contam a partir desta data (definido pelo gestor) */
+const CALC_INI='2026-09-01',calcIni=d=>d&&d<CALC_INI?CALC_INI:d;
 function pnPeriodo(){const h=todayISO(),p=S.pn.p,livre=p==='livre'&&S.pn.a&&S.pn.b&&S.pn.a<=S.pn.b;let a,b,pa,pb;
   if(p==='hoje'){a=b=h;pa=pb=diaMais(h,-1)}
   else if(p==='mes'||livre){if(livre){a=S.pn.a;b=S.pn.b}else{a=h.slice(0,8)+'01';b=fimMes(h)}
@@ -2004,10 +2006,11 @@ function pnPeriodo(){const h=todayISO(),p=S.pn.p,livre=p==='livre'&&S.pn.a&&S.pn
       pa=mesAntes(a,1);const f=fimMes(pa),d=pa.slice(0,8)+e.slice(8);pb=d>f?f:d}
     else{const n=Math.max(1,Math.round((new Date(e)-new Date(a))/864e5)+1);pb=diaMais(a,-1);pa=diaMais(a,-n)}}
   else{b=h;a=diaMais(h,-6);pa=diaMais(a,-7);pb=diaMais(b,-7)} /* semana: hoje e os 6 dias antes; compara com os 7 dias anteriores */
-  S._pnCmp=pa===pb?dBR(pa).slice(0,5):`${dBR(pa).slice(0,5)} a ${dBR(pb).slice(0,5)}`;
+  a=calcIni(a);pa=calcIni(pa);if(pb<CALC_INI)pb=diaMais(CALC_INI,-1);
+  S._pnCmp=pa>pb?'sem comparação (antes de 09/2026)':pa===pb?dBR(pa).slice(0,5):`${dBR(pa).slice(0,5)} a ${dBR(pb).slice(0,5)}`;
   return{a,b,pa,pb}}
 /* números de uma loja num período: vendas do Brajan, compras pelas notas, perda da desossa pelas conferências */
-function pnLoja(l,a,b){const r={vk:0,vr:0,cv:0,ck:0,cr:0,nn:0,nf:0,conf:0,forn:{},crit:[],peca:{}};
+function pnLoja(l,a,b){a=calcIni(a);const r={vk:0,vr:0,cv:0,ck:0,cr:0,nn:0,nf:0,conf:0,forn:{},crit:[],peca:{}};
   Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||v.data<a||v.data>b)return;
     Object.entries(v.itens||{}).forEach(([c,x])=>{if(!bovBal(c,l))return;r.vk+=x.kg;r.vr+=x.rs;r.cv+=x.kg*custoDe(l,c)})});
   notasBal().forEach(n=>{if(n.loja!==l||n.data<a||n.data>b||!entrou(n))return;let tem=false;
@@ -2054,7 +2057,7 @@ function vcpDados(l){const h=todayISO(),cps=Object.values(S.comps||{}).filter(c=
   /* começa no 1º mês completo de notas lançadas no Brajan e de vendas (começou depois do dia 5: o mês fica de fora) */
   const ini=d=>+d.slice(8)>5?diaMais(fimMes(d),1).slice(0,7):d.slice(0,7),lc=cps.filter(c=>c.situacao==='lancada').map(c=>c.emissao).sort()[0],
     v0=Object.values(S.vend||{}).filter(v=>v.loja===l).map(v=>v.data).sort()[0];
-  if(!lc)return null;const m0=[ini(lc),v0?ini(v0):''].sort().pop();
+  if(!lc)return null;const m0=[ini(lc),v0?ini(v0):'',CALC_INI.slice(0,7)].sort().pop();
   const ms=[];for(let m=m0;m<=h.slice(0,7);m=diaMais(fimMes(m+'-01'),1).slice(0,7))ms.push(m);
   /* boleto → parte da carne bovina e parte dos miúdos, pela nota que ele paga; sem nota, pela média das notas do mesmo fornecedor */
   const SH={},porF={};cps.forEach(c=>{const n=notaBrajan(c);if(!(n.v>0))return;const q=bovDaNota(n).rs,mm=n.itens.reduce((t,it)=>t+(miudoIt(it)?valItem(n,it):0),0),ss=n.itens.reduce((t,it)=>t+(suiCod(it.cod0)?valItem(n,it):0),0);
@@ -2162,7 +2165,7 @@ function refCortes(){const n=S.apps.length;if(REF_C&&REF_C.n===n)return REF_C;
   const ajusta=(L,alvo)=>{const sm=L.reduce((t,f)=>t+(f.usa||0),0);return sm?L.map(f=>({...f,usa:f.usa==null?null:f.usa*alvo/sm})):L};
   const fixaF=L=>{const o=ajusta(L.filter(f=>f.k!=='fral'),REND_T*100-FRAL_T*100);const f=L.find(x=>x.k==='fral');return [...o.slice(0,FAM_T.findIndex(x=>x.k==='fral')),{...f,usa:FRAL_T*100},...o.slice(FAM_T.findIndex(x=>x.k==='fral'))]};
   return REF_C={n,T:fixaF(mk(FAM_T,'T',CARNE_T)),D:ajusta(mk(FAM_D,'D',CARNE_D),CARNE_D*100),kgT:tot.T,kgD:tot.D}}
-function cortesDados(l,a,b){const R=refCortes(),K={},V={},VR={};
+function cortesDados(l,a,b){a=calcIni(a);const R=refCortes(),K={},V={},VR={};
   Object.values(S.comps||{}).forEach(c=>{if(c.loja!==l||!c.emissao||c.emissao<a||c.emissao>b)return;const n=notaBrajan(c);if(c.situacao!=='lancada'&&!entrou(n))return;
     n.itens.forEach(it=>{const k=it.cod0||it.c;if(k)K[k]=(K[k]||0)+it.kg})});
   (S.transfs||[]).forEach(t=>{if(t.data<a||t.data>b||(t.de!==l&&t.para!==l))return;const sg=t.para===l?1:-1;(t.itens||[]).forEach(i=>{if(i.c&&+i.kg>0)K[i.c]=(K[i.c]||0)+sg*i.kg/REND_CX})});
