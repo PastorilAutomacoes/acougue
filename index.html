@@ -1001,7 +1001,20 @@ function notaBrajan(x){const F=FCNPJ[x.cnpj];
 const entrou=n=>!n.caminho||S.recs.some(r=>nkey(r)===nkey(n));
 /* só notas com carne bovina aparecem nas listas (o Brajan manda também frango e suíno) */
 const temBov=n=>!n.itens?.length||n.itens.some(it=>grupoItem(it)==='Bovino');
-function allNotas(){if(NOTAS_C)return NOTAS_C;const m=new Map();[...G.notas,...Object.values(S.comps||{}).filter(x=>x.emissao&&x.loja).map(notaBrajan),...S.notasApp].forEach(n=>m.set(nkey(n),n));return NOTAS_C=[...m.values()].sort((a,b)=>b.data.localeCompare(a.data)||(+b.nf)-(+a.nf))}
+/* nota repetida: mesma loja, mesmo fornecedor e a carne bovina com os mesmos pesos e valores (ex.: frigorífico mandou fígado a mais,
+   emitiu a nota corrigida e anulou a primeira com outra série). Fica só uma: a da série principal do fornecedor, a de número maior
+   (a corrigida sai depois); as outras não entram em nenhuma conta. */
+let DUP_C=null;
+function compDup(){if(DUP_C)return DUP_C;const cs=Object.values(S.comps||{}).filter(x=>x.emissao&&x.loja&&x.chave),ser={},G_={};
+  cs.forEach(c=>{const k=c.cnpj+'|'+(c.serie||'');ser[k]=(ser[k]||0)+1});
+  const princ=c=>Object.keys(ser).filter(k=>k.startsWith(c.cnpj+'|')).sort((a,b)=>ser[b]-ser[a])[0]===c.cnpj+'|'+(c.serie||'');
+  cs.forEach(c=>{const n=notaBrajan(c),it=n.itens.filter(i=>grupoItem(i)==='Bovino'&&!miudoIt(i)&&i.kg>0);if(!it.length)return;
+    const sig=c.loja+'|'+c.cnpj+'|'+it.map(i=>`${i.cod0||i.c}:${i.kg}:${i.vp}`).sort().join(';');(G_[sig]||(G_[sig]=[])).push(c)});
+  DUP_C=new Set();Object.values(G_).forEach(g=>{if(g.length<2)return;
+    const fica=g.slice().sort((a,b)=>(princ(b)-princ(a))||((+b.numero||0)-(+a.numero||0)))[0];g.forEach(c=>{if(c!==fica)DUP_C.add(c.chave)})});
+  return DUP_C}
+const compOk=c=>!compDup().has(c.chave);
+function allNotas(){if(NOTAS_C)return NOTAS_C;const m=new Map();[...G.notas,...Object.values(S.comps||{}).filter(x=>x.emissao&&x.loja&&compOk(x)).map(notaBrajan),...S.notasApp].forEach(n=>m.set(nkey(n),n));return NOTAS_C=[...m.values()].sort((a,b)=>b.data.localeCompare(a.data)||(+b.nf)-(+a.nf))}
 let NIDX=null,CIDX=null,NOTAS_C=null,NBAL_C=null;
 let LENDO_PDF=false; /* lendo nota pelo PDF/foto no balanço */
 function notaDe(c){if(!NIDX)NIDX=new Map(allNotas().map(n=>[nkey(n),n]));return NIDX.get(nkey(c))||null}
@@ -1042,7 +1055,7 @@ function divergencias(c){
   return out;
 }
 function confDe(n){if(!CIDX){CIDX=new Map();allConfs().forEach(c=>{if(!CIDX.has(nkey(c)))CIDX.set(nkey(c),c)})}return CIDX.get(nkey(n))||null}
-const resetIdx=()=>{NIDX=null;CIDX=null;NOTAS_C=null;NBAL_C=null;MP_C.clear();MP_L=null};
+const resetIdx=()=>{NIDX=null;CIDX=null;NOTAS_C=null;NBAL_C=null;DUP_C=null;MP_C.clear();MP_L=null};
 const fnome=x=>FM[x.forn]?.nome||x.fornNome||S.recs.find(r=>r.forn===x.forn&&r.fornNome)?.fornNome||'—';
 const quemSou=()=>curUser()?.nome||PERFIS[S.role];
 function mesSel(id,val,isos){
@@ -2052,7 +2065,7 @@ const META_MG=.16,MIUDO_OK=.9; /* miúdo não tem osso: abaixo de 90% vendido do
 const NOME_BJ=c=>{for(const x of Object.values(S.custos||{})){const n=x?.itens?.[c]?.n;if(n)return n}return ''};
 const suiCod=c=>{if(!c)return false;const n=NOME_BJ(c);return /^CS /i.test(n)&&!/SALAME|LINGUI|PAIO|SALSICH|TEMPERAD/i.test(n)};
 const suiNome=c=>{const n=NOME_BJ(c).replace(/^CS\s+/i,'').replace(/\s+KG$/i,'');return n?n[0]+n.slice(1).toLowerCase():c};
-function vcpDados(l){const h=todayISO(),cps=Object.values(S.comps||{}).filter(c=>c.loja===l&&c.emissao);
+function vcpDados(l){const h=todayISO(),cps=Object.values(S.comps||{}).filter(c=>c.loja===l&&c.emissao&&compOk(c));
   if(!cps.length)return null;
   /* começa no 1º mês completo de notas lançadas no Brajan e de vendas (começou depois do dia 5: o mês fica de fora) */
   const ini=d=>+d.slice(8)>5?diaMais(fimMes(d),1).slice(0,7):d.slice(0,7),lc=cps.filter(c=>c.situacao==='lancada').map(c=>c.emissao).sort()[0],
@@ -2166,7 +2179,7 @@ function refCortes(){const n=S.apps.length;if(REF_C&&REF_C.n===n)return REF_C;
   const fixaF=L=>{const o=ajusta(L.filter(f=>f.k!=='fral'),REND_T*100-FRAL_T*100);const f=L.find(x=>x.k==='fral');return [...o.slice(0,FAM_T.findIndex(x=>x.k==='fral')),{...f,usa:FRAL_T*100},...o.slice(FAM_T.findIndex(x=>x.k==='fral'))]};
   return REF_C={n,T:fixaF(mk(FAM_T,'T',CARNE_T)),D:ajusta(mk(FAM_D,'D',CARNE_D),CARNE_D*100),kgT:tot.T,kgD:tot.D}}
 function cortesDados(l,a,b){a=calcIni(a);const R=refCortes(),K={},V={},VR={};
-  Object.values(S.comps||{}).forEach(c=>{if(c.loja!==l||!c.emissao||c.emissao<a||c.emissao>b)return;const n=notaBrajan(c);if(c.situacao!=='lancada'&&!entrou(n))return;
+  Object.values(S.comps||{}).forEach(c=>{if(c.loja!==l||!c.emissao||c.emissao<a||c.emissao>b||!compOk(c))return;const n=notaBrajan(c);if(c.situacao!=='lancada'&&!entrou(n))return;
     n.itens.forEach(it=>{const k=it.cod0||it.c;if(k)K[k]=(K[k]||0)+it.kg})});
   (S.transfs||[]).forEach(t=>{if(t.data<a||t.data>b||(t.de!==l&&t.para!==l))return;const sg=t.para===l?1:-1;(t.itens||[]).forEach(i=>{if(i.c&&+i.kg>0)K[i.c]=(K[i.c]||0)+sg*i.kg/REND_CX})});
   Object.values(S.vend||{}).forEach(v=>{if(v.loja!==l||v.data<a||v.data>b)return;Object.entries(v.itens||{}).forEach(([c,x])=>{V[c]=(V[c]||0)+x.kg;VR[c]=(VR[c]||0)+x.rs})});
@@ -2561,7 +2574,7 @@ function vPainel(){
       <div class="pn-tags">${tags.map(([c,t])=>`<span class="pill ${c}">${t}</span>`).join('')}</div></button>`}).join('')}</div>`;
   const atras=L.filter(x=>!x.uc||dias(x.uc,h)>7).map(x=>x.l.nome);
   if(atras.length)pend.push(['',`Sem contagem há mais de 7 dias: ${esc(atras.join(', '))}`]);
-  Object.values(S.comps||{}).filter(c=>c.situacao==='a_caminho'&&bovDaNota(notaBrajan(c)).kg>0) /* só nota com carne bovina */.sort((x,y)=>(y.emissao||'').localeCompare(x.emissao||'')).slice(0,5)
+  Object.values(S.comps||{}).filter(c=>c.situacao==='a_caminho'&&compOk(c)&&bovDaNota(notaBrajan(c)).kg>0) /* só nota com carne bovina */.sort((x,y)=>(y.emissao||'').localeCompare(x.emissao||'')).slice(0,5)
     .forEach(c=>pend.push(['info',`${esc(c.fornecedor||'Nota')} NF ${esc(c.numero)} a caminho de ${esc(lojaNome(c.loja))} (${kgI(c.itens.reduce((t,i)=>t+(i.unidade==='KG'?i.qtd:0),0))} kg)`]));
   const semVend=L.filter(x=>!x.uv).map(x=>x.l.nome);if(semVend.length)pend.push(['',`Sem vendas do Brajan: ${esc(semVend.join(', '))}`]);
   const semCnpj=S.lojas.filter(l=>!l.cnpj).map(l=>l.nome);if(semCnpj.length)pend.push(['',`CNPJ faltando: ${esc(semCnpj.join(', '))}`]);
